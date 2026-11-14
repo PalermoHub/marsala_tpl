@@ -147,6 +147,15 @@ function stripState(now) {
   return navigator.onLine ? 'ok' : 'offline';
 }
 
+/** Link "torna alla linea" se si è arrivati alla fermata da una linea (resta valido tra più fermate). */
+function backToLine() {
+  const o = state.origin;
+  const ri = o ? routeById(o.rid) : -1;
+  if (ri < 0) return '';
+  const r = state.data.routes[ri];
+  return `<a class="back" href="#/linea/${esc(o.rid)}/fermata/${esc(o.stop)}">${icon('back', 22)}<span>${esc(t('backToLine'))} ${esc(r.short || r.long)}</span></a>`;
+}
+
 /** Schermata di una fermata: campo cobalto con la prossima partenza, poi le successive. */
 function stopScreen(si, { home = false, origin = null } = {}) {
   const now = romeNow();
@@ -191,6 +200,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
 <section class="hero" data-strip="${stripState(now)}" aria-labelledby="stop-title">
   ${first ? motifField(routeOfTrip(first.trip)) : ''}
   ${home ? brandBar() : ''}
+  ${backToLine()}
   <div class="hero-top">
     <div class="stopname">
       <h1 id="stop-title">${esc(name)}</h1>
@@ -437,6 +447,7 @@ function viewLine(rid, tripSel) {
   const upcoming = (focus >= 0 && isToday ? pool.find((x) => x.tr.s.includes(focus) && at(x) >= now.secs) : null)
     ?? (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
   const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
+  state.lineView = { rid, d: dsel, i: sel?.i, day: state.lineDay };
   const head = (d) => {
     const c = {};
     (todays.length ? todays : all).filter((x) => x.tr.d === d).forEach((x) => { c[headOf(x.tr)] = (c[headOf(x.tr)] ?? 0) + 1; });
@@ -922,7 +933,12 @@ const routes = [
   [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
   [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
-  [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => { state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1; return viewLine(decodeURIComponent(m[1])); }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
+  [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => {
+    state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1;
+    const rid = decodeURIComponent(m[1]), o = state.origin?.rid === rid ? state.origin : null;
+    if (o) { state.lineDir = o.d; state.lineDay = o.day; } // si torna alla linea di partenza: stessa direzione, giorno e corsa
+    return viewLine(rid, o?.i);
+  }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/altro$/, () => viewMore(), 'more'],
@@ -966,6 +982,7 @@ const syncParent = () => { if (embedded) parent.postMessage({ type: 'marsala-tpl
 window.addEventListener('hashchange', syncParent);
 window.addEventListener('hashchange', () => {
   state.lineDir = null; state.lineDay = null; state.lineFocus = -1;
+  if (!/^#\/(stop|linea)\//.test(location.hash)) state.origin = null; // fuori dal giro linea↔fermate si riparte da zero
   const swap = () => { render(true); window.scrollTo(0, 0); };
   const fromMap = current?.tab === 'map';
   if (document.startViewTransition && !reduceMotion.matches && !fromMap && !/^#\/(mappa|bus)/.test(location.hash)) document.startViewTransition(swap);
@@ -985,6 +1002,15 @@ $app.addEventListener('change', (e) => {
   if (!m) return;
   state.lineDay = Number(e.target.value.replaceAll('-', ''));
   $app.innerHTML = viewLine(decodeURIComponent(m[1]));
+});
+// Da una fermata della linea: si ricorda la linea (direzione, giorno, corsa, fermata) per poter tornare, anche dopo più fermate.
+$app.addEventListener('click', (e) => {
+  const a = e.target.closest('.route-stops a');
+  const v = state.lineView;
+  if (!a || !v) return;
+  const stop = decodeURIComponent(a.getAttribute('href').replace('#/stop/', ''));
+  if (!state.origin) state.origin = { ...v, stop };
+  else if (state.origin.rid === v.rid) state.origin = { ...state.origin, ...v, stop };
 });
 $app.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]');

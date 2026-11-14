@@ -1,0 +1,129 @@
+- generic [active] [ref=f3e1]:
+  - link "Vai al contenuto" [ref=f3e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f3e3]:
+    - heading "Linee" [level=1] [ref=f3e5]
+    - generic [ref=f3e6]:
+      - heading "In servizio oggi" [level=2] [ref=f3e7]
+      - list [ref=f3e8]:
+        - listitem [ref=f3e9]:
+          - link "Linea 1 Torreggiano - Petrosino 12 corse" [ref=f3e10] [cursor=pointer]:
+            - /url: "#/linea/1925"
+            - img "Linea 1" [ref=f3e11]:
+              - generic [ref=f3e13]: "1"
+            - generic [ref=f3e14]:
+              - generic [ref=f3e15]: Torreggiano - Petrosino
+              - generic [ref=f3e16]: 12 corse
+        - listitem [ref=f3e20]:
+          - link "Linea 2 Marsala - Ciancio 16 corse" [ref=f3e21] [cursor=pointer]:
+            - /url: "#/linea/1930"
+            - img "Linea 2" [ref=f3e22]:
+              - generic [ref=f3e24]: "2"
+            - generic [ref=f3e25]:
+              - generic [ref=f3e26]: Marsala - Ciancio
+              - generic [ref=f3e27]: 16 corse
+        - listitem [ref=f3e31]:
+          - link "Linea 3 Baglio Catalano 8 corse" [ref=f3e32] [cursor=pointer]:
+            - /url: "#/linea/1906"
+            - img "Linea 3" [ref=f3e33]:
+              - generic [ref=f3e35]: "3"
+            - generic [ref=f3e36]:
+              - generic [ref=f3e37]: Baglio Catalano
+              - generic [ref=f3e38]: 8 corse
+        - listitem [ref=f3e42]:
+          - link "Linea 4 Sappusi - Mothia - Birgi - S. Teodoro 12 corse" [ref=f3e43] [cursor=pointer]:
+            - /url: "#/linea/1909"
+            - img "Linea 4" [ref=f3e44]:
+              - generic [ref=f3e46]: "4"
+            - generic [ref=f3e47]:
+              - generic [ref=f3e48]: Sappusi - Mothia - Birgi - S. Teodoro
+              - generic [ref=f3e49]: 12 corse
+        - listitem [ref=f3e53]:
+          - link "Linea 5 Marsala - Ciavolo 12 corse" [ref=f3e54] [cursor=pointer]:
+            - /url: "#/linea/INV_1947"
+            - img "Linea 5" [ref=f3e55]:
+              - generic [ref=f3e57]: "5"
+            - generic [ref=f3e58]:
+              - generic [ref=f3e59]: Marsala - Ciavolo
+              - generic [ref=f3e60]: 12 corse
+        - listitem [ref=f3e64]:
+          - link "Linea 6 S. Padre 12 corse" [ref=f3e65] [cursor=pointer]:
+            - /url: "#/linea/1905"
+            - img "Linea 6" [ref=f3e66]:
+              - generic [ref=f3e68]: "6"
+            - generic [ref=f3e69]:
+              - generic [ref=f3e70]: S. Padre
+              - generic [ref=f3e71]: 12 corse
+        - listitem [ref=f3e75]:
+          - link "Linea 7/10 Granatello - Cutusio 12 corse" [ref=f3e76] [cursor=pointer]:
+            - /url: "#/linea/1912"
+            - img "Linea 7/10" [ref=f3e77]:
+              - generic [ref=f3e79]: 7/10
+            - generic [ref=f3e80]:
+              - generic [ref=f3e81]: Granatello - Cutusio
+              - generic [ref=f3e82]: 12 corse
+        - listitem [ref=f3e86]:
+          - link "Linea 8/13 Amabilina - Ospedale - Matarocco 16 corse" [ref=f3e87] [cursor=pointer]:
+            - /url: "#/linea/1944"
+            - img "Linea 8/13" [ref=f3e88]:
+              - generic [ref=f3e90]: 8/13
+            - generic [ref=f3e91]:
+              - generic [ref=f3e92]: Amabilina - Ospedale - Matarocco
+              - generic [ref=f3e93]: 16 corse
+        - listitem [ref=f3e97]:
+          - link "Linea 21 Supplemento Scuole 6 corse" [ref=f3e98] [cursor=pointer]:
+            - /url: "#/linea/1929"
+            - img "Linea 21" [ref=f3e99]:
+              - generic [ref=f3e101]: "21"
+            - generic [ref=f3e102]:
+              - generic [ref=f3e103]: Supplemento Scuole
+              - generic [ref=f3e104]: 6 corse
+      - heading "Non in servizio oggi" [level=2] [ref=f3e108]
+      - list [ref=f3e109]:
+        - listitem [ref=f3e110]:
+          - link "Linea N Navetta Stadio - Cimitero" [ref=f3e111] [cursor=pointer]:
+            - /url: "#/linea/NOV_NAV_STADIO"
+            - img "Linea N" [ref=f3e112]:
+              - generic [ref=f3e114]: "N"
+            - generic [ref=f3e115]: Navetta Stadio - Cimitero
+        - listitem [ref=f3e120]:
+          - link "Linea N Navetta Piazza del Popolo - Cimitero" [ref=f3e121] [cursor=pointer]:
+            - /url: "#/linea/NOV_NAV_POPOLO"
+            - img "Linea N" [ref=f3e122]:
+              - generic [ref=f3e124]: "N"
+            - generic [ref=f3e125]: Navetta Piazza del Popolo - Cimitero
+        - listitem [ref=f3e130]:
+          - link "Linea 2/5 Ciancio - Ciavolo" [ref=f3e131] [cursor=pointer]:
+            - /url: "#/linea/1947"
+            - img "Linea 2/5" [ref=f3e132]:
+              - generic [ref=f3e134]: 2/5
+            - generic [ref=f3e135]: Ciancio - Ciavolo
+        - listitem [ref=f3e140]:
+          - link "Linea 5/6 Ciavolo - Santo Padre (1 e 2 novembre)" [ref=f3e141] [cursor=pointer]:
+            - /url: "#/linea/NOV_56"
+            - img "Linea 5/6" [ref=f3e142]:
+              - generic [ref=f3e144]: 5/6
+            - generic [ref=f3e145]: Ciavolo - Santo Padre (1 e 2 novembre)
+        - listitem [ref=f3e150]:
+          - link "Linea 15 Lidi Sud - Sibiliana" [ref=f3e151] [cursor=pointer]:
+            - /url: "#/linea/1915"
+            - img "Linea 15" [ref=f3e152]:
+              - generic [ref=f3e154]: "15"
+            - generic [ref=f3e155]: Lidi Sud - Sibiliana
+        - listitem [ref=f3e160]:
+          - link "Linea DOM Linea Domenicale - Marsala - Sappusi - Amabilina - Ospedale" [ref=f3e161] [cursor=pointer]:
+            - /url: "#/linea/1920"
+            - img "Linea DOM" [ref=f3e162]:
+              - generic [ref=f3e164]: DOM
+            - generic [ref=f3e165]: Linea Domenicale - Marsala - Sappusi - Amabilina - Ospedale
+  - navigation "Marsala TPL" [ref=f3e170]:
+    - link "Home" [ref=f3e171] [cursor=pointer]:
+      - /url: "#/"
+    - link "Percorso" [ref=f3e176] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Linee" [ref=f3e182] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Mappa" [ref=f3e186] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Altro" [ref=f3e190] [cursor=pointer]:
+      - /url: "#/altro"
