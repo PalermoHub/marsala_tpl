@@ -72,13 +72,11 @@ export function motifField(route) {
 }
 
 export function tileSvg(route, size = 44) {
-  const { label: raw, glaze, motif } = lineStyle(route);
+  const { label: raw, glaze } = lineStyle(route);
   const label = escXml(raw);
-  const fs = raw.length <= 2 ? 15 : raw.length <= 4 ? 12 : 9.5;
+  const fs = raw.length <= 2 ? 22 : raw.length <= 4 ? 16 : 11;
   return `<svg class="tile" viewBox="0 0 48 48" width="${size}" height="${size}" role="img" aria-label="Linea ${label}" focusable="false">
-<rect width="48" height="48" rx="7" fill="${glaze.bg}"/>
-<g fill="none" stroke="${glaze.fg}" stroke-opacity=".42" stroke-linecap="round" color="${glaze.fg}">${MOTIFS[motif]()}</g>
-<rect x="8.5" y="13.5" width="31" height="21" rx="4.5" fill="#FBF7EE"/>
-<text x="24" y="29.2" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#14213D" font-family="Atkinson Hyperlegible, system-ui, sans-serif">${label}</text>
+<rect width="48" height="48" rx="10" fill="${glaze.bg}"/>
+<text x="24" y="${24 + fs * 0.36}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${glaze.fg}" font-family="Atkinson Hyperlegible, system-ui, sans-serif">${label}</text>
 </svg>`;
 }

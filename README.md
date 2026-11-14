@@ -8,7 +8,7 @@ Web app installabile (PWA) per il trasporto pubblico locale di Marsala: quando p
 
 - **Prossime partenze** da ogni fermata, con minuti mancanti in grande. Le partenze sono sempre etichettate *da orario*: il feed del Comune non dice a quale corsa appartiene un bus, quindi l'app non inventa ritardi.
 - **Fermate vicine** con la geolocalizzazione (resta nel browser, non viene inviata), ricerca per nome, fermate preferite, link condivisibile per ogni fermata (`#/stop/<id>`).
-- **Linee**: percorso, fermate e orari di ogni corsa. Ogni linea ha una piastrella con colore e motivo propri, così si riconosce anche senza distinguere i colori.
+- **Linee**: percorso, fermate e orari di ogni corsa. Ogni linea ha una piastrella semplice con colore e numero propri.
 - **Mappa** con i percorsi e i bus in servizio (posizione recente e fuori dal deposito).
 - Italiano e inglese, tema chiaro/scuro, calendario in fuso `Europe/Rome`, festivi e servizi speciali (es. 1-2 novembre).
 
@@ -50,7 +50,7 @@ css/app.css                               design system (maiolica siciliana)
 js/app.js                                 router e viste
 js/schedule.js                            logica orari, pura e testata
 js/planner.js                             pianificatore di percorso (diretto o un cambio), puro e testato
-js/tiles.js                               piastrelle-linea (colore + motivo)
+js/tiles.js                               piastrelle-linea (colore + numero)
 js/rt.js, js/map.js                       feed realtime e mappa (caricata solo quando serve)
 dati/                                     generato da scripts/build-gtfs.mjs
 scripts/                                  build dei dati e test
