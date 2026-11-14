@@ -335,7 +335,6 @@ button { font: inherit; color: inherit; }
   .app:has(> .page-head) > .page-head, .app:has(> .page-head) > .banner { padding-inline: max(24px, calc((100% - 640px) / 2)); }
   .app:has(> .page-head) > .page-head { position: static; min-height: 0; }
   .consent { max-width: 640px; }
-  .page-head h1 { font-size: 36px; }
 }
 
 /* ---------- home ---------- */
