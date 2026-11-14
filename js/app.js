@@ -18,9 +18,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const base = () => new URL('.', document.baseURI).href;
-// Dentro l'iframe di PalermoHub i link da condividere puntano alla pagina che incorpora l'app.
+// Modalità embed (solo con ?embed=1): usata dalla pagina PalermoHub che incorpora l'app in un iframe.
+// Qui i link da condividere puntano alla pagina esterna; l'apertura diretta resta invariata.
 const EMBED_URL = 'https://palermohub.opendatasicilia.it/marsala_tpl.html';
-const embedded = (() => { try { return window.self !== window.top; } catch { return true; } })();
+const embedded = new URLSearchParams(location.search).get('embed') === '1' && window.self !== window.top;
+if (embedded) document.documentElement.classList.add('embed');
 const shareUrl = (hash = location.hash) => (embedded ? `${EMBED_URL}${hash}` : `${base()}${hash}`);
 
 const ICON = {
@@ -186,7 +188,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   return `${banners(now)}
 <section class="hero" data-strip="${stripState(now)}" aria-labelledby="stop-title">
   ${first ? motifField(routeOfTrip(first.trip)) : ''}
-  ${home ? `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b><span>${esc(t('brandTag'))}</span></div>` : ''}
+  ${home ? brandBar() : ''}
   <div class="hero-top">
     <div class="stopname">
       <h1 id="stop-title">${esc(name)}</h1>
@@ -216,6 +218,9 @@ function stopRow(si, meters) {
 }
 
 // ---------- viste ----------
+/** Logo e nome dell'app in cima alla Home (sempre presente, anche nell'embed). */
+const brandBar = () => `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b><span>${esc(t('brandTag'))}</span></div>`;
+
 function viewNear(home = false) {
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const last = stopById(store.get('last', ''));
@@ -243,6 +248,7 @@ ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}$
   const active = activeRoutes();
   return `${banners(romeNow())}
 <section class="hero hero-first" data-strip="${stripState(romeNow())}">
+  ${home ? brandBar() : ''}
   <h1>${esc(t('whereAreYou'))}</h1>
   <p class="lead">${esc(t('whereHelp'))}</p>
   <div class="actions actions-hero">${geoBtn}${searchLink}</div>
