@@ -316,7 +316,11 @@ Blocco a raggio 10px su smalto, 15px/700, ombra morbida; variante "live" con pal
 Pulsante: 48px, raggio 10px, cobalto/`on-cobalt`, 700 17px, pressed 1px verso il basso. Quieto su `{colors.glaze-2}`. Sul campo cobalto: ocra con testo inchiostro. Campo ricerca: 52px, bordo 2px `{colors.edge}` (contrasto 3:1 sui controlli; `{colors.line}` resta solo per i filetti) su `{colors.glaze-2}`, in focus bordo `{colors.cobalt-hi}`. Avviso: banda `{colors.ocra-soft}` (info) o `{colors.terra-soft}` con testo terracotta (variazione di servizio).
 
 ### Movimento
-Un solo momento: `rise` all'apertura di una schermata (opacita' 0 e salita di 14px, 0.55s sulla cifra e sul titolo vuoto, 0.45s sulla destinazione, `cubic-bezier(0.16, 1, 0.3, 1)`). Per il resto solo transizioni di stato da 0.15-0.3s. Con `prefers-reduced-motion` tutto si ferma.
+Il momento principale resta `rise` all'apertura di una schermata (opacita' 0 e salita di 14px, 0.55s sulla cifra e sul titolo vuoto, 0.45s sulla destinazione, `cubic-bezier(0.16, 1, 0.3, 1)`). Altri tre momenti, tutti brevi e legati a un evento:
+- **Cambio schermata:** dissolvenza di 0.18s con View Transitions, solo dove esistono; non da/verso la mappa.
+- **Stella preferita:** `pop` di 0.35s quando una fermata viene salvata.
+- **Bus imminente (<= 2 min):** la cifra "respira" (opacita' 1 -> 0.72, 1.8s, solo 3 volte), mai all'infinito.
+Per il resto solo transizioni di stato da 0.15-0.3s. Con `prefers-reduced-motion` tutto si ferma, view transition comprese.
 
 ## Do's and Don'ts
 
@@ -331,5 +335,5 @@ Un solo momento: `rise` all'apertura di una schermata (opacita' 0 e salita di 14
 - **Don't** usare terracotta o ocra d'allarme per "da orario" o per stati normali.
 - **Don't** usare il verde rame fuori dai bus in movimento.
 - **Don't** usare gli smalti delle linee come colore di interfaccia.
-- **Don't** aggiungere ombre alle liste, ne' secondi font, ne' animazioni oltre `rise`.
+- **Don't** aggiungere ombre alle liste, ne' secondi font, ne' animazioni oltre `rise` e i tre momenti elencati in Movimento (mai cicli infiniti).
 - **Don't** esprimere una linea con il solo colore: serve sempre il motivo.

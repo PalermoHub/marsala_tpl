@@ -2,7 +2,7 @@
 // - Codice (html/js/css): prima la rete (con timeout), poi la cache: online si ha sempre una versione coerente.
 // - Dati, font, icone: dalla cache, aggiornati in background.
 // - MapLibre dalla CDN: cache al primo uso. Feed RT e tile della mappa non vengono mai messi in cache da qui.
-const VERSION = 'v41';
+const VERSION = 'v42';
 const CACHE = `marsala-tpl-${VERSION}`;
 const PRECACHE = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',

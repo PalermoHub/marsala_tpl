@@ -297,7 +297,15 @@ button { font: inherit; color: inherit; }
 .app.enter .next-when .num, .app.enter .empty-title { animation: rise 0.55s var(--ease) both; }
 .app.enter .next-head { animation: rise 0.45s var(--ease) both; }
 
+/* Momenti in più, tutti brevi: dissolvenza tra schermate, stella che "scatta" al salvataggio, cifra che respira quando il bus è imminente. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.18s; animation-timing-function: var(--ease); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.28) rotate(-8deg); } 100% { transform: scale(1); } }
+.icon-btn.pop { animation: pop 0.35s var(--ease); }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+.next-when.soon .num { animation: breathe 1.8s ease-in-out 3; }
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 @media (min-width: 700px) {

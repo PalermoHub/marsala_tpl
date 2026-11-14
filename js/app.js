@@ -154,7 +154,7 @@ function stopScreen(si, { home = false } = {}) {
     const trip = state.data.trips[first.trip];
     nextBlock = `<div class="next">
   <div class="next-line">${tileSvg(routeOfTrip(first.trip), 72)}<p class="next-head">${esc(headOf(trip))}</p></div>
-  <p class="next-when" aria-live="polite"><span class="num">${esc(w.num)}</span>${w.unit ? `<span class="unit">${esc(w.unit)}</span>` : ''}</p>
+  <p class="next-when${first.mins <= 2 ? ' soon' : ''}" aria-live="polite"><span class="num">${esc(w.num)}</span>${w.unit ? `<span class="unit">${esc(w.unit)}</span>` : ''}</p>
   <p class="next-sub">${icon('clock', 16)}<span>${esc(t('scheduled'))} · ${esc(w.sub || formatClock(first.secs))}</span></p>
 </div>`;
   } else {
@@ -920,7 +920,16 @@ function rerenderKeepScroll() {
 }
 
 document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); const g = e.target.dataset?.guide; if (g) e.target.open ? guideOpen.add(g) : guideOpen.delete(g); }, true);
-window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; state.lineFocus = -1; render(true); window.scrollTo(0, 0); });
+// Cambio schermata: dissolvenza breve con View Transitions dove esistono; senza, resta il solo `rise` della cifra.
+// Si salta con "riduci movimento" e da/verso la mappa (WebGL: l'istantanea costa più di quanto serve).
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+window.addEventListener('hashchange', () => {
+  state.lineDir = null; state.lineDay = null; state.lineFocus = -1;
+  const swap = () => { render(true); window.scrollTo(0, 0); };
+  const fromMap = current?.tab === 'map';
+  if (document.startViewTransition && !reduceMotion.matches && !fromMap && !/^#\/(mappa|bus)/.test(location.hash)) document.startViewTransition(swap);
+  else swap();
+});
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
 setInterval(() => {
@@ -940,7 +949,7 @@ $app.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
-  if (act === 'fav') { store.toggleFav(b.dataset.id); rerenderKeepScroll(); }
+  if (act === 'fav') { store.toggleFav(b.dataset.id); rerenderKeepScroll(); if (isFav(b.dataset.id)) document.querySelector('[data-act="fav"]')?.classList.add('pop'); }
   else if (act === 'share') {
     const url = `${base()}#/stop/${b.dataset.id}`;
     const title = document.title;
