@@ -18,6 +18,12 @@ colors:
   terra: "oklch(48% 0.15 38)"
   terra-soft: "oklch(94% 0.04 45)"
   focus: "oklch(48% 0.18 262)"
+  on-ocra: "oklch(24% 0.07 262)"
+  map-ink: "#14213D"
+  map-idle: "#8A93A6"
+  map-glaze: "#FBF7EE"
+  map-cobalt: "#1B3A94"
+  map-ocra: "#F2C14E"
   wash: "oklch(100% 0 0 / 0.12)"
   wash-quiet: "oklch(100% 0 0 / 0.14)"
   wash-hover: "oklch(100% 0 0 / 0.2)"
@@ -103,6 +109,11 @@ typography:
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.45
+  readout:
+    fontFamily: "Atkinson Hyperlegible, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 700
+    lineHeight: 1
   micro:
     fontFamily: "Atkinson Hyperlegible, system-ui, sans-serif"
     fontSize: "14px"
@@ -113,6 +124,8 @@ rounded:
   sm: "4px"
   tile-row: "8px"
   md: "10px"
+  lg: "14px"
+  pill: "99px"
   full: "50%"
 spacing:
   gutter-min: "16px"
@@ -171,6 +184,11 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.md}"
     padding: "9px 14px"
+  page-head:
+    backgroundColor: "{colors.cobalt}"
+    textColor: "{colors.on-cobalt}"
+    typography: "{typography.headline}"
+    padding: "20px 16px 26px"
   banner-warn:
     backgroundColor: "{colors.terra-soft}"
     textColor: "{colors.terra}"
@@ -237,6 +255,7 @@ Palette di smalti: cobalto saturo, bianchi caldi (tinta 85) e inchiostro indaco;
 - **Body** (400, 17px, 1.45): testo corrente, pulsanti 17px/700; lead 19px su 32ch.
 - **Label** (700, 15px, 1.3): sottotitoli di sezione in `{colors.ink-2}`, segmented, banner, chip mappa; note 16px.
 - **Tab** (700, 13px): etichette tab bar.
+- **Readout** (700, 11px): solo il valore di zoom nel cerchio della mappa (36px).
 
 ### Named Rules
 **The Minutes Are The Sign Rule.** In ogni schermata una sola cifra e' monumentale; il resto sta sotto i 30px.
@@ -254,12 +273,17 @@ Piatto per tono: la profondita' viene dal cambio di smalto (glaze / glaze-2 / co
 
 ## Shapes
 
+Token: `--r-sm` 4px, `--r-tile` 7px, `--r` 10px, `--r-lg` 14px (schede a fisarmonica, cornice degli screenshot della guida), `--r-pill` 99px (solo etichette tipo "Trasporti", segnaposto "bus tra due fermate" e cursore zoom).
+
 Angoli piccoli da bordo di piastrella: 10px per controlli, pulsanti, chip e righe attive (`--r`); 7px per le piastrelle-linea (8px sulla fila di piastrelle); 4px solo per l'anello di focus; cerchi (50%) per i nodi della timeline e il pallino live. Il segmented control e' un unico blocco con raggio 10px solo agli estremi e bordi da 2px. La striscia sul bordo del campo ripete un rombo ocra con due punti ai lati (modulo 24x12px, opacita' 0.85).
 
 ## Components
 
 ### Campo cobalto con striscia di piastrelle
 Zona superiore a tutta larghezza su `{colors.cobalt}`: nome fermata (700 22px, 30px da 700px), direzione in `{colors.on-cobalt-2}`, tre azioni da 44px (cerca/cambia fermata, preferita, condividi; sfondo bianco al 12%, preferita premuta in ocra), poi piastrella 72px + destinazione (700 20px) e minuti in ocra. Sullo sfondo, a destra, il motivo della linea in arrivo grande e tenue (13% di opacità, sfumato a sinistra), che non deve mai ridurre il contrasto del testo. In basso la striscia di piastrelle da 12px, colorata con una maschera: segue lo stato dei dati (`data-strip`): ocra = normale, terracotta chiara = orari in scadenza o scaduti, azzurro-grigio al 60% = offline. Non è decorazione neutra: cambia solo per questi stati. Focus in ocra dentro il campo.
+
+### Testata di pagina (`.page-head`)
+Per le schermate senza risposta immediata (Linee, Cerca, Avvisi, Guida, Info, Privacy): campo cobalto compatto (20px sopra, 26px sotto) con titolo 30px/700, sottotitolo opzionale 17px in `{colors.on-cobalt-2}` (max 46ch), link "indietro" 44px e la stessa striscia di piastrelle di stato del campo grande. Genera `pageHead()` in `js/app.js`; non è mai usata dove c'è una partenza da mostrare (Home, Fermata, Percorso, Linea usano il campo grande).
 
 ### Piastrella-linea
 SVG 48x48, raggio 7px, smalto della linea, motivo geometrico a tratto bianco al 42%, targhetta di smalto bianco (#FBF7EE, raggio 4.5) col numero in 700 (15px fino a 2 caratteri, 12px fino a 4, 9.5px oltre) in #14213D. Le linee note hanno coppia smalto/motivo fissa; le altre una coppia deterministica da hash. Il motivo ripete l'informazione del colore.

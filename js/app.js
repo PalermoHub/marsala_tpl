@@ -110,6 +110,13 @@ function banners(now) {
   return out.join('');
 }
 
+// Testata uniforme per le schermate senza risposta immediata (Linee, Cerca, Avvisi, Guida, Info, Privacy):
+// campo cobalto compatto con titolo, sottotitolo opzionale e striscia di stato come sulle altre schermate.
+function pageHead(title, { lead = '', back = null } = {}) {
+  const backHtml = back ? `<a class="back" href="${esc(back[0])}" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(back[1])}</span></a>` : '';
+  return `<section class="hero page-head" data-strip="${stripState(romeNow())}">${backHtml}<h1>${esc(title)}</h1>${lead ? `<p class="lead">${esc(lead)}</p>` : ''}</section>`;
+}
+
 function departureRow(item) {
   const trip = state.data.trips[item.trip];
   const clock = formatClock(item.secs);
@@ -312,8 +319,7 @@ function viewStop(id) {
 }
 
 function viewSearch() {
-  return `<section class="block search-block">
-  <h1 class="h1">${esc(t('searchStop'))}</h1>
+  return `${pageHead(t('searchStop'), { back: ['#/', t('tabHome')] })}<section class="block search-block">
   <label class="field">${icon('search', 20)}<input id="q" type="search" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(t('searchPh'))}" aria-label="${esc(t('searchStop'))}"></label>
   <ul class="plain" id="results"></ul>
 </section>`;
@@ -380,7 +386,7 @@ function viewLines() {
   <span class="row-main"><span class="row-title">${esc(state.data.routes[r].long)}</span>${todayN.has(r) ? `<span class="row-sub">${esc(t('trips', todayN.get(r)))}</span>` : ''}</span>
   <span class="chev">${icon('chevron', 20)}</span></a></li>`;
   const act = order.filter((r) => todayN.has(r)), off = order.filter((r) => !todayN.has(r));
-  return `${banners(now)}<section class="block"><h1 class="h1">${esc(t('lines'))}</h1>
+  return `${banners(now)}${pageHead(t('lines'))}<section class="block">
 <h2>${esc(t('activeToday'))}</h2><ul class="plain">${act.map(row).join('')}</ul>
 ${off.length ? `<h2>${esc(t('notToday'))}</h2><ul class="plain dim">${off.map(row).join('')}</ul>` : ''}</section>`;
 }
@@ -777,9 +783,7 @@ function avvisoItem(i) {
 function viewAvvisi() {
   const src = AVVISI_SOURCES.map(([u, k]) => `<li><a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(new URL(u).host)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
   const cont = COMUNE_CONTATTI.map(([u, ic, k, sub]) => `<li><a class="row" href="${esc(u)}"${u.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${icon(ic, 20)}<span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(sub)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
-  return `${banners(romeNow())}<section class="block"><a class="back back-ink" href="#/" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
-<h1 class="h1">${esc(t('news'))}</h1>
-<p class="note news-lead">${esc(t('newsLead'))}</p>
+  return `${banners(romeNow())}${pageHead(t('news'), { lead: t('newsLead'), back: ['#/', t('tabHome')] })}<section class="block">
 <div id="news-list" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
 <section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>
 <section class="block"><h2>${esc(t('contactsH'))}</h2><ul class="plain">${cont}</ul><p class="note">${esc(t('contactsNote'))}</p></section>`;
@@ -807,7 +811,7 @@ ${intro ? `<p>${esc(intro)}</p>` : ''}
 ${tip ? `<p class="guide-tip"><b>${esc(t('guideTip'))}:</b> ${esc(tip)}</p>` : ''}
 ${shots.map(([f, alt]) => `<figure class="guide-shot"><img src="img/guida/${esc(f)}.webp" width="390" height="720" loading="lazy" decoding="async" alt="${esc(alt)}"></figure>`).join('')}
 </div></details>`;
-  return `${banners(romeNow())}<section class="block"><h1 class="h1">${esc(t('guideTitle'))}</h1><p class="note">${esc(t('guideLead'))}</p><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
+  return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead') })}<section class="block"><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
 }
 
 function viewInfo() {
@@ -832,13 +836,12 @@ function viewInfo() {
     acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h3 class="h3">${esc(t('consentManage'))}</h3>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
     acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
   ];
-  return `${banners(now)}<section class="block"><h1 class="h1">${esc(t('info'))}</h1><div class="acc-list">${sections.join('')}</div></section>`;
+  return `${banners(now)}${pageHead(t('info'))}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
 }
 
 function viewPrivacy() {
   const link = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-  return `<section class="block prose"><a class="back back-ink" href="#/info">${icon('back', 20)}<span>${esc(t('back'))}</span></a>
-<h1 class="h1">${esc(t('privacyFull'))}</h1><p class="muted">${esc(t('privacyUpdated'))}</p>
+  return `${pageHead(t('privacyFull'), { lead: t('privacyUpdated'), back: ['#/info', t('info')] })}<section class="block prose">
 ${t('privacyDoc').map(([h, ps]) => `<h2>${esc(h)}</h2>${ps.map((p) => `<p>${link(p)}</p>`).join('')}`).join('')}
 <h2>${esc(t('consentManage'))}</h2>
 <div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn')], ['denied', t('consentOff')]].map(([v, l]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${esc(l)}</button>`).join('')}</div></section>`;
@@ -847,12 +850,13 @@ ${t('privacyDoc').map(([h, ps]) => `<h2>${esc(h)}</h2>${ps.map((p) => `<p>${link
 // Banner del consenso: non blocca l'uso dell'app, Accetta e Rifiuta hanno lo stesso peso.
 function renderConsent() {
   document.getElementById('consent')?.remove();
+  document.documentElement.style.setProperty('--consent-h', '0px');
   if (getConsent()) return;
   const el = document.createElement('section');
   el.id = 'consent';
   el.className = 'consent';
   el.setAttribute('aria-labelledby', 'consent-t');
-  el.innerHTML = `<h2 id="consent-t">${esc(t('consentTitle'))}</h2><p>${esc(t('consentText'))} <a href="#/privacy">${esc(t('consentInfo'))}</a></p>
+  el.innerHTML = `<h2 id="consent-t" class="sr">${esc(t('consentTitle'))}</h2><p>${esc(t('consentText'))} <a href="#/privacy">${esc(t('consentInfo'))}</a></p>
 <div class="consent-btns"><button class="btn btn-choice" data-act="consent" data-v="denied">${esc(t('consentReject'))}</button><button class="btn btn-choice" data-act="consent" data-v="granted">${esc(t('consentAccept'))}</button></div>`;
   el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act="consent"]');
@@ -863,6 +867,8 @@ function renderConsent() {
     toast(t('consentSaved'));
   });
   document.body.appendChild(el);
+  // l'altezza del banner entra nel padding dell'app e nei comandi in basso della mappa, così non copre nulla
+  document.documentElement.style.setProperty('--consent-h', `${el.offsetHeight + 10}px`);
 }
 
 // ---------- router ----------

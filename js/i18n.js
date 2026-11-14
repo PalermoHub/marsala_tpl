@@ -39,7 +39,7 @@ const IT = {
   reportError: 'Segnala un errore', reportHelp: 'Un orario o una fermata sbagliati? Scrivi al Comune: i dati sono suoi.',
   privacy: 'Privacy', privacyText: 'La tua posizione resta nel telefono e non viene mai inviata. Le statistiche d’uso (Google Analytics) si attivano solo se acconsenti.',
   privacyFull: 'Informativa privacy e cookie', privacyUpdated: 'Ultimo aggiornamento: 14 novembre 2026',
-  consentTitle: 'La tua privacy', consentText: 'Con il tuo consenso usiamo Google Analytics per statistiche anonime su come viene usata l’app. Senza consenso non viene caricato nulla da Google: l’app funziona uguale.',
+  consentTitle: 'La tua privacy', consentText: 'Statistiche anonime d’uso (Google Analytics) solo se acconsenti. Senza, l’app funziona uguale.',
   consentAccept: 'Accetta', consentReject: 'Rifiuta', consentInfo: 'Informativa',
   consentManage: 'Statistiche d’uso (Google Analytics)', consentOn: 'Acconsento', consentOff: 'Non acconsento', consentNone: 'Non hai ancora scelto: le statistiche sono disattivate.', consentSaved: 'Preferenza salvata',
   privacyDoc: [
@@ -218,7 +218,7 @@ const EN = {
   reportError: 'Report a mistake', reportHelp: 'Wrong time or stop? Write to the Comune: the data is theirs.',
   privacy: 'Privacy', privacyText: 'Your location stays on your phone and is never sent anywhere. Usage statistics (Google Analytics) only start if you agree.',
   privacyFull: 'Privacy and cookie notice', privacyUpdated: 'Last updated: 14 November 2026',
-  consentTitle: 'Your privacy', consentText: 'With your consent we use Google Analytics for anonymous statistics on how the app is used. Without consent nothing is loaded from Google: the app works the same.',
+  consentTitle: 'Your privacy', consentText: 'Anonymous usage statistics (Google Analytics) only if you agree. Without them the app works the same.',
   consentAccept: 'Accept', consentReject: 'Reject', consentInfo: 'Notice',
   consentManage: 'Usage statistics (Google Analytics)', consentOn: 'I agree', consentOff: 'I do not agree', consentNone: 'You have not chosen yet: statistics are off.', consentSaved: 'Preference saved',
   privacyDoc: [
