@@ -768,7 +768,7 @@ function bindAvvisi() {
     const tr = d.items.filter((i) => i.transport);
     const rest = d.items.filter((i) => !i.transport);
     el.innerHTML = `${tr.length ? `<h2>${esc(t('newsTransportH'))}</h2><ul class="plain news">${tr.map(avvisoItem).join('')}</ul>` : `<p class="note">${esc(t('newsNoTransport'))}</p>`}
-${rest.length ? `<h2>${esc(t('newsOther'))}</h2><ul class="plain news">${rest.map(avvisoItem).join('')}</ul>` : ''}
+${rest.length ? `<details class="news-more"><summary><span>${esc(t('newsOther'))} (${rest.length})</span>${icon('chevron', 20)}</summary><ul class="plain news">${rest.map(avvisoItem).join('')}</ul></details>` : ''}
 <p class="note">${esc(t('newsUpdated', new Date(d.updated).toLocaleString(getLang() === 'en' ? 'en-GB' : 'it-IT', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Rome' })))}</p>`;
   });
 }

@@ -1,0 +1,86 @@
+- generic [active] [ref=f52e1]:
+  - link "Vai al contenuto" [ref=f52e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f52e3]:
+    - generic [ref=f52e4]:
+      - link "Back" [ref=f52e5] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=f52e8]: Home
+      - heading "Notices" [level=1] [ref=f52e9]
+      - paragraph [ref=f52e10]: Announcements from the Comune di Marsala. Public transport ones come first.
+      - generic [ref=f52e11]:
+        - heading "Public transport" [level=2] [ref=f52e12]
+        - list [ref=f52e13]:
+          - listitem [ref=f52e14]:
+            - link "12 November 2026 Transport Autobus urbani in tempo reale Autobus urbani in tempo reale. Il Comune di Marsala avvia l'utile servizio digitale per cittadini e visitatori A Marsala, gli autobus urbani si seguon..." [ref=f52e15] [cursor=pointer]:
+              - /url: https://www.comune.marsala.tp.it/it/news/autobus-urbani-in-tempo-reale
+              - generic [ref=f52e16]:
+                - time [ref=f52e17]: 12 November 2026
+                - generic [ref=f52e18]: Transport
+              - generic [ref=f52e19]: Autobus urbani in tempo reale
+              - generic [ref=f52e20]: Autobus urbani in tempo reale. Il Comune di Marsala avvia l'utile servizio digitale per cittadini e visitatori A Marsala, gli autobus urbani si seguon...
+        - heading "Other news from the Comune" [level=2] [ref=f52e21]
+        - list [ref=f52e22]:
+          - listitem [ref=f52e23]:
+            - link "12 November 2026 A Palazzo Municipale Matt Alfieri A Palazzo Municipale Matt Alfieri. Il giovane americano ha donato alla sindaca Patti il volume in cui ha raccolto le sue radici siciliane “Un la..." [ref=f52e24] [cursor=pointer]:
+              - /url: https://www.comune.marsala.tp.it/it/news/a-palazzo-municipale-matt-alfieri
+              - time [ref=f52e26]: 12 November 2026
+              - generic [ref=f52e27]: A Palazzo Municipale Matt Alfieri
+              - generic [ref=f52e28]: A Palazzo Municipale Matt Alfieri. Il giovane americano ha donato alla sindaca Patti il volume in cui ha raccolto le sue radici siciliane “Un la...
+          - listitem [ref=f52e29]:
+            - link "12 November 2026 Concorso creativo \"Il rispetto che cambia la vita\"" [ref=f52e30] [cursor=pointer]:
+              - /url: https://www.comune.marsala.tp.it/it/news/concorso-creativo-il-rispetto-che-cambia-la-vita
+              - time [ref=f52e32]: 12 November 2026
+              - generic [ref=f52e33]: Concorso creativo "Il rispetto che cambia la vita"
+          - listitem [ref=f52e34]:
+            - link "12 November 2026 Concorso “Il Rispetto che Cambia la Vita” “Giornata internazionale per l'eliminazione della violenza contro le donne”. Il Comune di Marsala promuove il concorso creativo “Il ..." [ref=f52e35] [cursor=pointer]:
+              - /url: https://www.comune.marsala.tp.it/it/news/concorso-il-rispetto-che-cambia-la-vita
+              - time [ref=f52e37]: 12 November 2026
+              - generic [ref=f52e38]: Concorso “Il Rispetto che Cambia la Vita”
+              - generic [ref=f52e39]: “Giornata internazionale per l'eliminazione della violenza contro le donne”. Il Comune di Marsala promuove il concorso creativo “Il ...
+          - listitem [ref=f52e40]:
+            - 'link "10 November 2026 MAB Unesco: si illustra la candidatura MAB Unesco: si illustra la candidatura Sarà illustrata a Marsala il prossimo 4 dicembre - nel Complesso San Pietro (ore 18) - la candidatura al MAB Un..." [ref=f52e41] [cursor=pointer]':
+              - /url: https://www.comune.marsala.tp.it/it/news/mab-unesco-si-illustra-la-candidatura
+              - time [ref=f52e43]: 10 November 2026
+              - generic [ref=f52e44]: "MAB Unesco: si illustra la candidatura"
+              - generic [ref=f52e45]: "MAB Unesco: si illustra la candidatura Sarà illustrata a Marsala il prossimo 4 dicembre - nel Complesso San Pietro (ore 18) - la candidatura al MAB Un..."
+        - paragraph [ref=f52e46]: "Feed last checked: 14 Nov 2026, 14:42."
+    - generic [ref=f52e47]:
+      - heading "Official sources" [level=2] [ref=f52e48]
+      - list [ref=f52e49]:
+        - listitem [ref=f52e50]:
+          - link "Comune di Marsala news www.comune.marsala.tp.it" [ref=f52e51] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/news
+            - generic [ref=f52e52]:
+              - generic [ref=f52e53]: Comune di Marsala news
+              - generic [ref=f52e54]: www.comune.marsala.tp.it
+        - listitem [ref=f52e57]:
+          - link "Mobility and transport · Comune www.comune.marsala.tp.it" [ref=f52e58] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/page/mobilita-e-trasporti
+            - generic [ref=f52e59]:
+              - generic [ref=f52e60]: Mobility and transport · Comune
+              - generic [ref=f52e61]: www.comune.marsala.tp.it
+        - listitem [ref=f52e64]:
+          - link "AST · Sicilian Transport Company www.astsicilia.it" [ref=f52e65] [cursor=pointer]:
+            - /url: https://www.astsicilia.it/
+            - generic [ref=f52e66]:
+              - generic [ref=f52e67]: AST · Sicilian Transport Company
+              - generic [ref=f52e68]: www.astsicilia.it
+        - listitem [ref=f52e71]:
+          - link "News RSS feed www.comune.marsala.tp.it" [ref=f52e72] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/news/feed
+            - generic [ref=f52e73]:
+              - generic [ref=f52e74]: News RSS feed
+              - generic [ref=f52e75]: www.comune.marsala.tp.it
+      - paragraph [ref=f52e78]: "The Comune publishes a single RSS feed with its latest news of every kind. AST has no feed: check its website for changes and strikes."
+  - navigation "Marsala TPL" [ref=f52e79]:
+    - link "Home" [ref=f52e80] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f52e85] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f52e91] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f52e95] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f52e99] [cursor=pointer]:
+      - /url: "#/info"

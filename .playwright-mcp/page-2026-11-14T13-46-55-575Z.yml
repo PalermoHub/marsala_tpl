@@ -1,0 +1,87 @@
+- generic [ref=f53e1]:
+  - link "Vai al contenuto" [ref=f53e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f53e3]:
+    - generic [ref=f53e4]:
+      - link "Back" [ref=f53e5] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=f53e8]: Home
+      - heading "Notices" [level=1] [ref=f53e9]
+      - paragraph [ref=f53e10]: Announcements from the Comune di Marsala. Public transport ones come first.
+      - generic [ref=f53e11]:
+        - heading "Public transport" [level=2] [ref=f53e12]
+        - list [ref=f53e13]:
+          - listitem [ref=f53e14]:
+            - link "12 November 2026 Transport Autobus urbani in tempo reale Il Comune di Marsala avvia l'utile servizio digitale per cittadini e visitatori A Marsala, gli autobus urbani si seguon..." [ref=f53e15] [cursor=pointer]:
+              - /url: https://www.comune.marsala.tp.it/it/news/autobus-urbani-in-tempo-reale
+              - generic [ref=f53e16]:
+                - time [ref=f53e17]: 12 November 2026
+                - generic [ref=f53e18]: Transport
+              - generic [ref=f53e19]: Autobus urbani in tempo reale
+              - generic [ref=f53e20]: Il Comune di Marsala avvia l'utile servizio digitale per cittadini e visitatori A Marsala, gli autobus urbani si seguon...
+        - group [ref=f53e21]:
+          - generic "Other news from the Comune (4)" [active] [ref=f53e22] [cursor=pointer]
+          - list [ref=f53e26]:
+            - listitem [ref=f53e27]:
+              - link "12 November 2026 A Palazzo Municipale Matt Alfieri Il giovane americano ha donato alla sindaca Patti il volume in cui ha raccolto le sue radici siciliane “Un la..." [ref=f53e28] [cursor=pointer]:
+                - /url: https://www.comune.marsala.tp.it/it/news/a-palazzo-municipale-matt-alfieri
+                - time [ref=f53e30]: 12 November 2026
+                - generic [ref=f53e31]: A Palazzo Municipale Matt Alfieri
+                - generic [ref=f53e32]: Il giovane americano ha donato alla sindaca Patti il volume in cui ha raccolto le sue radici siciliane “Un la...
+            - listitem [ref=f53e33]:
+              - link "12 November 2026 Concorso creativo \"Il rispetto che cambia la vita\"" [ref=f53e34] [cursor=pointer]:
+                - /url: https://www.comune.marsala.tp.it/it/news/concorso-creativo-il-rispetto-che-cambia-la-vita
+                - time [ref=f53e36]: 12 November 2026
+                - generic [ref=f53e37]: Concorso creativo "Il rispetto che cambia la vita"
+            - listitem [ref=f53e38]:
+              - link "12 November 2026 Concorso “Il Rispetto che Cambia la Vita” “Giornata internazionale per l'eliminazione della violenza contro le donne”. Il Comune di Marsala promuove il concorso creativo “Il ..." [ref=f53e39] [cursor=pointer]:
+                - /url: https://www.comune.marsala.tp.it/it/news/concorso-il-rispetto-che-cambia-la-vita
+                - time [ref=f53e41]: 12 November 2026
+                - generic [ref=f53e42]: Concorso “Il Rispetto che Cambia la Vita”
+                - generic [ref=f53e43]: “Giornata internazionale per l'eliminazione della violenza contro le donne”. Il Comune di Marsala promuove il concorso creativo “Il ...
+            - listitem [ref=f53e44]:
+              - 'link "10 November 2026 MAB Unesco: si illustra la candidatura Sarà illustrata a Marsala il prossimo 4 dicembre - nel Complesso San Pietro (ore 18) - la candidatura al MAB Un..." [ref=f53e45] [cursor=pointer]':
+                - /url: https://www.comune.marsala.tp.it/it/news/mab-unesco-si-illustra-la-candidatura
+                - time [ref=f53e47]: 10 November 2026
+                - generic [ref=f53e48]: "MAB Unesco: si illustra la candidatura"
+                - generic [ref=f53e49]: Sarà illustrata a Marsala il prossimo 4 dicembre - nel Complesso San Pietro (ore 18) - la candidatura al MAB Un...
+        - paragraph [ref=f53e50]: "Feed last checked: 14 Nov 2026, 14:43."
+    - generic [ref=f53e51]:
+      - heading "Official sources" [level=2] [ref=f53e52]
+      - list [ref=f53e53]:
+        - listitem [ref=f53e54]:
+          - link "Comune di Marsala news www.comune.marsala.tp.it" [ref=f53e55] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/news
+            - generic [ref=f53e56]:
+              - generic [ref=f53e57]: Comune di Marsala news
+              - generic [ref=f53e58]: www.comune.marsala.tp.it
+        - listitem [ref=f53e61]:
+          - link "Mobility and transport · Comune www.comune.marsala.tp.it" [ref=f53e62] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/page/mobilita-e-trasporti
+            - generic [ref=f53e63]:
+              - generic [ref=f53e64]: Mobility and transport · Comune
+              - generic [ref=f53e65]: www.comune.marsala.tp.it
+        - listitem [ref=f53e68]:
+          - link "AST · Sicilian Transport Company www.astsicilia.it" [ref=f53e69] [cursor=pointer]:
+            - /url: https://www.astsicilia.it/
+            - generic [ref=f53e70]:
+              - generic [ref=f53e71]: AST · Sicilian Transport Company
+              - generic [ref=f53e72]: www.astsicilia.it
+        - listitem [ref=f53e75]:
+          - link "News RSS feed www.comune.marsala.tp.it" [ref=f53e76] [cursor=pointer]:
+            - /url: https://www.comune.marsala.tp.it/it/news/feed
+            - generic [ref=f53e77]:
+              - generic [ref=f53e78]: News RSS feed
+              - generic [ref=f53e79]: www.comune.marsala.tp.it
+      - paragraph [ref=f53e82]: "The Comune publishes a single RSS feed with its latest news of every kind. AST has no feed: check its website for changes and strikes."
+  - navigation "Marsala TPL" [ref=f53e83]:
+    - link "Home" [ref=f53e84] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f53e89] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f53e95] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f53e99] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f53e103] [cursor=pointer]:
+      - /url: "#/info"
