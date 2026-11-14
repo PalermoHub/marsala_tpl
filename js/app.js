@@ -27,6 +27,7 @@ const ICON = {
   map: '<path d="M9 4L3.500 6v14L9 18l6 2 5.500-2V4L15 6z M9 4v14M15 6v14"/>',
   bell: '<path d="M6 17V11a6 6 0 0112 0v6l1.500 2h-15zM10 21h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.500h.01"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 115 0c0 1.700-2.500 2-2.500 3.800M12 17h.01"/>',
   search: '<circle cx="11" cy="11" r="6.500"/><path d="M16 16l4.500 4.500"/>',
   clock: '<circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/>',
   locate: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.500v3M12 19.500v3M1.500 12h3M19.500 12h3"/>',
@@ -247,6 +248,7 @@ function viewHome() {
     ${card('#/vicino', 'pin', 'homeNext', 'homeNextSub')}
     ${card('#/mappa', 'map', 'homeMap', 'homeMapSub')}
     ${card('#/avvisi', 'bell', 'homeNews', 'homeNewsSub')}
+    ${card('#/guida', 'help', 'homeGuide', 'homeGuideSub')}
   </nav>
 </section>
 ${banners(now)}
@@ -797,6 +799,17 @@ ${rest.length ? `<details class="news-more"><summary><span>${esc(t('newsOther'))
 }
 
 const infoOpen = new Set(['look']);
+const guideOpen = new Set(['start']);
+function viewGuida() {
+  const sec = ([id, ic, title, intro, steps, tip, shots]) => `<details class="acc" data-guide="${id}"${guideOpen.has(id) ? ' open' : ''}><summary><span class="acc-ico acc-cobalt">${icon(ic, 26)}</span><span class="acc-t">${esc(title)}</span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body guide-body">
+${intro ? `<p>${esc(intro)}</p>` : ''}
+<ol class="guide-steps">${steps.map((s) => `<li>${s}</li>`).join('')}</ol>
+${tip ? `<p class="guide-tip"><b>${esc(t('guideTip'))}:</b> ${esc(tip)}</p>` : ''}
+${shots.map(([f, alt]) => `<figure class="guide-shot"><img src="img/guida/${esc(f)}.webp" width="390" height="720" loading="lazy" decoding="async" alt="${esc(alt)}"></figure>`).join('')}
+</div></details>`;
+  return `${banners(romeNow())}<section class="block"><h1 class="h1">${esc(t('guideTitle'))}</h1><p class="note">${esc(t('guideLead'))}</p><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
+}
+
 function viewInfo() {
   const m = state.data.meta;
   const now = romeNow();
@@ -863,6 +876,7 @@ const routes = [
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/avvisi$/, () => viewAvvisi(), 'news', bindAvvisi],
+  [/^\/guida$/, () => viewGuida(), 'guide'],
   [/^\/info$/, () => viewInfo(), 'info'],
   [/^\/privacy$/, () => viewPrivacy(), 'info'],
 ];
@@ -892,7 +906,7 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
-document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); }, true);
+document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); const g = e.target.dataset?.guide; if (g) e.target.open ? guideOpen.add(g) : guideOpen.delete(g); }, true);
 window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; state.lineFocus = -1; render(true); window.scrollTo(0, 0); });
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
@@ -991,7 +1005,7 @@ function applyTheme() {
 
 function renderChrome() {
   $nav.setAttribute('aria-label', t('appName'));
-  const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['info', '#/info', 'info', 'tabInfo']];
+  const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['guide', '#/guida', 'help', 'tabGuide'], ['info', '#/info', 'info', 'tabInfo']];
   $nav.innerHTML = items.map(([tab, href, ic, key]) => `<a href="${href}" data-tab="${tab}">${icon(ic, 24)}<span>${esc(t(key))}</span></a>`).join('');
 }
 

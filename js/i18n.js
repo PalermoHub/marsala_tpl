@@ -88,6 +88,87 @@ const IT = {
   sourcePage: 'Comune di Marsala · Orari del trasporto pubblico locale',
   communityNote: 'App non ufficiale, realizzata dalla community di Open Data Sicilia con i dati aperti del Comune di Marsala. Non è un servizio del Comune.',
   planFar: 'Nessuna fermata a meno di 800 m dalla tua posizione.',
+  tabGuide: 'Guida', guideTitle: 'Guida all’uso', homeGuide: 'Guida all’uso', homeGuideSub: 'Come usare l’app, passo dopo passo',
+  guideLead: 'Tocca un argomento per aprirlo. Le foto vengono dall’app vera, così riconosci subito i pulsanti.',
+  guideTip: 'Consiglio',
+  // [id, icona, titolo, introduzione, passi, consiglio, [[foto, descrizione]...]]
+  guideDoc: [
+    ['start', 'home', 'Come è fatta l’app', 'In basso c’è sempre una barra con i pulsanti per spostarti. Eccoli da sinistra a destra:', [
+      '<b>Home</b>: la pagina di partenza, con le scorciatoie e le tue fermate salvate.',
+      '<b>Percorso</b>: ti dice quale bus prendere per andare da un posto a un altro.',
+      '<b>Linee</b>: l’elenco di tutte le linee, con fermate e orari.',
+      '<b>Mappa</b>: la mappa con i percorsi e i bus che stanno circolando.',
+      '<b>Guida</b>: questa pagina.',
+      '<b>Info</b>: lingua, aspetto (chiaro o scuro), fonti dei dati e privacy.',
+    ], 'Nella Home trovi anche il pulsante «Prossimo bus» e gli «Avvisi» del Comune sul trasporto.', [['home', 'La pagina Home con i pulsanti principali e la barra in basso']]],
+    ['stop', 'pin', 'Come cercare una fermata', 'Ci sono tre modi, scegli quello che ti viene più comodo.', [
+      '<b>Per nome.</b> Tocca «Cerca una fermata» (nella Home o nella pagina «Prossimo bus») e scrivi qualche lettera, per esempio «crispi» o «piazza rep». Non servono le maiuscole né gli accenti. Tocca il risultato giusto per aprire la fermata.',
+      '<b>Dove ti trovi.</b> Tocca «Usa la mia posizione» e consenti al telefono di usarla: l’app ti mostra le fermate più vicine, con la distanza. La tua posizione resta nel telefono e non viene inviata a nessuno.',
+      '<b>Dalla mappa.</b> Apri «Mappa», ingrandisci con due dita fino a vedere i puntini delle fermate e toccane uno: si apre la fermata.',
+    ], 'La stessa strada ha di solito due fermate, una per senso di marcia. Guarda la scritta «direzione…» sotto il nome per scegliere quella giusta. Se hai sbagliato lato, in fondo alla pagina c’è «Altro senso di marcia».', [['cerca', 'La pagina di ricerca con alcune lettere scritte e l’elenco dei risultati']]],
+    ['next', 'clock', 'Come vedere quando passa il bus', 'Apri una fermata (vedi sopra). In alto vedi subito il prossimo bus.', [
+      'Il numero grande è l’attesa in minuti: «21 min» significa che il bus passa tra 21 minuti. L’orario preciso è scritto sotto.',
+      'La targhetta colorata con il numero è la linea, accanto c’è la destinazione.',
+      'Sotto, nell’elenco, trovi i bus successivi, uno per riga.',
+      'La scritta «da orario» vuol dire che è l’orario previsto dal Comune, non la posizione reale del bus: in caso di traffico il bus può passare un po’ prima o dopo.',
+      'Tocca la stella in alto per salvare la fermata: la ritrovi nella Home sotto «Le tue fermate».',
+    ], 'La freccia in alto a destra serve a condividere la fermata con un amico (vedi «Come condividere»).', [['fermata', 'Una fermata con il tempo di attesa del prossimo bus e l’elenco dei successivi']]],
+    ['same', 'list', 'Come capire quali linee passano dalla stessa fermata', 'Ci sono due modi veloci.', [
+      '<b>Dall’elenco.</b> Quando cerchi una fermata, a destra di ogni riga vedi le targhette colorate: ognuna è una linea che ci passa. Se sono tante, c’è un «+» con il numero delle altre.',
+      '<b>Dalla pagina della fermata.</b> Apri la fermata e scorri in basso fino a «Linee che passano di qui»: trovi l’elenco completo, con il nome di ogni linea (per esempio «Marsala - Ciancio»).',
+      'Tocca una linea per vedere tutte le sue fermate con gli orari. La pagina si apre già sulla tua fermata, così capisci subito quando passa.',
+      'Per i bus che vanno nell’altra direzione, torna indietro e tocca «Altro senso di marcia».',
+    ], 'Se devi solo arrivare in un posto, è più facile usare «Percorso»: l’app sceglie lei la linea giusta.', [['linee-fermata', 'L’elenco «Linee che passano di qui» nella pagina di una fermata']]],
+    ['plan', 'route', 'Come fare un percorso', 'Il pulsante «Percorso» ti dice quale bus prendere, dove salire, dove scendere e se devi cambiare.', [
+      'Tocca «Percorso» nella barra in basso.',
+      'Nella casella «Da» scrivi dove parti (nome della fermata o della strada) e tocca il risultato giusto. Se sei già sul posto, scegli «La mia posizione».',
+      'Nella casella «A» scrivi la fermata dove vuoi arrivare e tocca il risultato.',
+      'Appena hai scelto tutte e due, l’app mostra le soluzioni. Non c’è un pulsante da premere.',
+      'Per partire adesso lascia «Adesso». Per partire più tardi tocca «Parto alle» e scegli l’ora.',
+      'Hai sbagliato l’ordine? Il pulsante con le due frecce, in mezzo alle caselle, inverte «Da» e «A» (comodo per il ritorno).',
+    ], '', [['percorso-da', 'Il pianificatore con «Via Crispi» scelta come partenza'], ['percorso-risultati', 'Le soluzioni trovate, con orari e linee']]],
+    ['read', 'info', 'Come leggere il risultato', 'Ogni riquadro è una possibile soluzione, la prima (con il bordo blu) è la più rapida.', [
+      'In alto vedi l’orario di partenza e di arrivo e quanti minuti dura il viaggio.',
+      '«Diretto» vuol dire che non devi cambiare. «1 cambio» vuol dire che userai due bus.',
+      'Il primo riquadro è già aperto, gli altri si aprono toccandoli. «Sali a…» dice dove salire e a che ora, «Scendi a…» dove scendere.',
+      'Se c’è un pezzo a piedi, trovi scritto «Cammina» con i minuti.',
+      'Con un cambio, la scritta «Cambio» ti dice dove scendere dal primo bus e prendere il secondo.',
+    ], 'Sono orari programmati, non in tempo reale. Arriva alla fermata con qualche minuto di anticipo.', []],
+    ['share', 'share', 'Come condividere il percorso', 'Puoi mandare a un amico il percorso già pronto, con partenza, arrivo e ora.', [
+      'Fai il percorso come spiegato sopra.',
+      'In fondo ai risultati tocca «Condividi percorso».',
+      'Sul telefono si apre l’elenco delle app (WhatsApp, Messaggi, e-mail…): scegli la persona a cui mandarlo.',
+      'Se il tuo dispositivo non apre l’elenco, l’app copia il link e compare la scritta «Link copiato»: incollalo dove vuoi.',
+      'Chi riceve il messaggio tocca il link e vede subito lo stesso percorso.',
+    ], 'Anche una fermata si può condividere: apri la fermata e tocca la freccia in alto a destra.', [['percorso-condividi', 'Il pulsante «Condividi percorso» in fondo ai risultati']]],
+    ['lines', 'list', 'Come vedere una linea', 'Se vuoi sapere dove passa una linea e a che ora parte.', [
+      'Tocca «Linee» nella barra in basso. Sopra ci sono le linee in servizio oggi, sotto quelle che oggi non circolano.',
+      'Tocca una linea per aprirla. Vedi tutte le fermate in ordine, con l’ora di passaggio.',
+      'I pulsanti «verso…» cambiano direzione (andata o ritorno).',
+      'Le caselle con gli orari sono le partenze del giorno: tocca un orario per vedere i passaggi di quella corsa.',
+      'Con «Giorno» scegli un’altra data, per esempio la domenica.',
+    ], '«DOM» è la linea della domenica. Un numero doppio come «7/10» è una sola linea che porta tutti e due i numeri.', [['linee', 'L’elenco delle linee in servizio oggi']]],
+    ['map', 'map', 'Come usare la mappa', 'La mappa mostra i percorsi delle linee e i bus che circolano in questo momento.', [
+      'Tocca «Mappa» nella barra in basso. Serve la connessione a internet.',
+      'Trascina con un dito per spostarti, con due dita per ingrandire o rimpicciolire.',
+      'Ingrandendo compaiono le fermate: tocca un puntino per aprirla.',
+      'I piccoli bus sono i mezzi in servizio. Toccane uno per seguirlo lungo il percorso.',
+      'Il pulsante «Legenda» in basso spiega i simboli.',
+    ], 'La linea di un bus è stimata dal suo percorso: può non essere esatta.', [['mappa', 'La mappa con i percorsi delle linee e i bus in servizio']]],
+    ['extra', 'sliders', 'Altre cose utili', '', [
+      '<b>Senza internet.</b> Gli orari restano salvati nel telefono: l’app funziona anche offline (la mappa e le posizioni dei bus no).',
+      '<b>Installarla.</b> Dal menu del browser scegli «Aggiungi a schermata Home»: l’app si apre come tutte le altre.',
+      '<b>Lingua e aspetto.</b> In «Info» puoi scegliere italiano o inglese e il tema chiaro o scuro.',
+      '<b>Orari scaduti.</b> Se vedi un avviso sugli orari, sono quelli ufficiali del Comune e potrebbero non essere aggiornati.',
+      '<b>Errori.</b> Un orario o una fermata sbagliati? In «Info» → «Segnala un errore» trovi come scrivere al Comune.',
+    ], '', []],
+    ['trouble', 'flag', 'Se qualcosa non va', '', [
+      '<b>«Nessun collegamento trovato».</b> Non c’è un percorso con al massimo un cambio. Prova con un’altra fermata vicina o un altro orario.',
+      '<b>«Oggi non c’è servizio da questa fermata».</b> Oggi nessun bus passa di qui (capita nei festivi). Controlla l’altro senso di marcia o un altro giorno.',
+      '<b>La posizione non funziona.</b> Controlla di aver consentito la posizione al browser, oppure cerca la fermata per nome.',
+      '<b>La mappa non si carica.</b> Serve internet: riprova quando sei connesso.',
+    ], '', []],
+  ],
 };
 
 const EN = {
@@ -176,6 +257,8 @@ const EN = {
   sourcePage: 'Comune di Marsala · Local public transport timetables',
   communityNote: 'Unofficial app, built by the Open Data Sicilia community from the Comune di Marsala open data. It is not a Comune service.',
   planFar: 'No stop within 800 m of your location.',
+  tabGuide: 'Guide', guideTitle: 'How to use the app', homeGuide: 'User guide', homeGuideSub: 'How to use the app, step by step',
+  guideLead: 'Tap a topic to open it. The pictures come from the real app (the guide text is in Italian).', guideTip: 'Tip',
 };
 
 const DICT = { it: IT, en: EN };
