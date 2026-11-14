@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Slider Marsala TPL</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<style>
+@font-face{font-family:Atk;src:url(../fonts/atkinson-hyperlegible-400.woff2);font-weight:400}
+@font-face{font-family:Atk;src:url(../fonts/atkinson-hyperlegible-700.woff2);font-weight:700}
+*{box-sizing:border-box;margin:0}
+html,body{width:1900px;height:400px;overflow:hidden;background:#1B3A94;font-family:Atk,system-ui,sans-serif}
+#card{position:relative;width:1900px;height:400px;background:#1B3A94;color:#FBF7EE;overflow:hidden}
+#map{position:absolute;left:700px;top:0;width:1200px;height:400px}
+#fade{position:absolute;left:700px;top:0;width:420px;height:400px;background:linear-gradient(90deg,#1B3A94 0%,rgba(27,58,148,.92) 25%,rgba(27,58,148,.55) 60%,rgba(27,58,148,0) 100%);pointer-events:none;z-index:3}
+#left{position:absolute;left:0;top:0;width:900px;height:400px;padding:76px 0 0 70px;z-index:4;display:flex;flex-direction:column}
+.chip{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:21px;color:#F4D58A}
+.chip i{width:16px;height:16px;border-radius:50%;background:#E8B93A;box-shadow:0 0 0 5px rgba(232,185,58,.28)}
+h1{margin-top:18px;font-size:58px;line-height:1.04;letter-spacing:-.02em;font-weight:700;width:900px;white-space:nowrap}
+h1 em{font-style:normal;color:#F2C14E}
+.panel{margin-top:24px;width:auto;display:inline-block;background:#FBF7EE;color:#14213D;border-radius:22px;padding:16px 22px 16px;box-shadow:0 14px 40px rgba(8,16,48,.4)}
+.panel small{font-size:16px;color:#43507a;display:block}
+.panel b.t{display:none}.panel small{display:none}
+.tiles{display:grid;grid-template-columns:repeat(15,40px);gap:8px}
+.tiles svg{display:block;border-radius:10px}
+.stats{display:flex;gap:26px;margin-top:12px;font-size:18px;color:#43507a}
+.stats b{font-size:26px;color:#1B3A94;margin-right:5px}
+.foot{display:none;align-items:center;gap:16px}
+.foot img{width:54px;height:62px;background:#fff;border-radius:12px;padding:4px;object-fit:contain}
+.foot b{font-size:22px;display:block}.foot span{font-size:16px;color:#C9D4F5}
+.url{position:absolute;right:30px;bottom:24px;z-index:5;background:#FBF7EE;color:#1B3A94;font-weight:700;font-size:18px;padding:8px 16px;border-radius:999px}
+.attr{position:absolute;right:30px;bottom:64px;z-index:5;font-size:11px;color:#14213D;background:rgba(251,247,238,.85);padding:2px 7px;border-radius:6px}
+.bus{width:0;height:0;position:relative}
+.bus .n{position:absolute;left:-40px;width:80px;top:-30px;text-align:center;font-weight:700;font-size:14px;color:#14213D;text-shadow:0 0 3px #FBF7EE,0 0 3px #FBF7EE,0 0 3px #FBF7EE,0 0 3px #FBF7EE}
+.bus svg{position:absolute;left:-22px;top:-10px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.maplibregl-ctrl-bottom-left,.maplibregl-ctrl-bottom-right{display:none}
+</style></head><body>
+<div id="card">
+  <div id="map"></div><div id="fade"></div>
+  <div id="left">
+    <div class="chip"><i></i>Orari, percorsi e mappa 3D · anche offline</div>
+    <h1>Quando passa il <em>bus</em> a Marsala?</h1>
+    <div class="panel"><small>Trasporto pubblico locale</small><b class="t">Tutte le linee, sulla mappa</b>
+      <div class="tiles" id="tiles"></div>
+      <div class="stats" id="stats"></div></div>
+  </div>
+  <div class="foot"><img src="../img/opendatasicilia.png" alt=""><div><b>Marsala TPL</b><span>app della community · #opendatasicilia</span></div></div>
+  <div class="url">palermohub.opendatasicilia.it/marsala_tpl.html</div>
+  <div class="attr">© OpenStreetMap · OpenFreeMap · Edifici 3D: GlobalBuildingAtlas (TUM)</div>
+</div>
+<script type="module">
+import { lineStyle, tileSvg } from '../js/tiles.js';
+const [data, shapes] = await Promise.all([fetch('../dati/app.json').then(r=>r.json()), fetch('../dati/shapes.json').then(r=>r.json())]);
+document.getElementById('tiles').innerHTML = data.routes.map(r => tileSvg(r, 40)).join('');
+document.getElementById('stats').innerHTML = `<span><b>${data.routes.length}</b>linee</span><span><b>${data.stops.length}</b>fermate</span><span><b>${data.trips.length}</b>corse</span>`;
+const coordsOf = (sh) => { const f = shapes[sh], c = []; for (let i = 0; i < f.length; i += 2) c.push([f[i+1], f[i]]); return c; };
+const seen = new Set(), feats = [], byRoute = new Map();
+data.trips.forEach(t => { if (!t.sh || seen.has(t.sh) || !shapes[t.sh]) return; seen.add(t.sh); const c = coordsOf(t.sh);
+  feats.push({ type:'Feature', properties:{ color: lineStyle(data.routes[t.r]).glaze.bg, label: lineStyle(data.routes[t.r]).label }, geometry:{ type:'LineString', coordinates:c } });
+  if (!byRoute.has(t.r)) byRoute.set(t.r, c); });
+const stops = data.stops.map(s => ({ type:'Feature', properties:{}, geometry:{ type:'Point', coordinates:[s.lon, s.lat] } }));
+const buildings = await fetch('../dati/edifici3d.json').then(r=>r.json());
+const core = [[12.405,37.768],[12.49,37.835]];
+const map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/positron', center:[12.46,37.80], zoom:13.3, pitch:60, bearing:-12, interactive:false, attributionControl:false, fadeDuration:0, canvasContextAttributes:{ preserveDrawingBuffer:true } });
+map.setPadding({ left:240, right:0, top:0, bottom:0 });
+await new Promise(r => map.once('load', r));
+map.addSource('lines',{type:'geojson',data:{type:'FeatureCollection',features:feats}});
+map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:stops}});
+map.addSource('edifici3d',{type:'geojson',data:buildings});
+map.addLayer({id:'bld',type:'fill-extrusion',source:'edifici3d',paint:{'fill-extrusion-color':'#E4E0D8','fill-extrusion-height':['get','h'],'fill-extrusion-base':0,'fill-extrusion-opacity':.92}});
+map.addLayer({id:'cas',type:'line',source:'lines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#fff','line-width':7,'line-opacity':.95}});
+map.addLayer({id:'ln',type:'line',source:'lines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':3.6,'line-opacity':.95}});
+map.addLayer({id:'st',type:'circle',source:'stops',paint:{'circle-radius':3.2,'circle-color':'#FBF7EE','circle-stroke-color':'#1B3A94','circle-stroke-width':1.6}});
+map.addLayer({id:'lb',type:'symbol',source:'lines',layout:{'symbol-placement':'line','symbol-spacing':420,'text-field':['get','label'],'text-font':['Noto Sans Bold'],'text-size':14,'text-rotation-alignment':'viewport','text-keep-upright':true},paint:{'text-color':'#14213D','text-halo-color':'#FBF7EE','text-halo-width':2.6}});
+// Bus illustrativi come nell'app in 3D: parallelepipedi (fill-extrusion) con muso scuro, dimensione costante a schermo.
+const quad = (lon, lat, brg, s0, s1, hw) => { const r = brg*Math.PI/180, fx = Math.sin(r), fy = Math.cos(r), rx = fy, ry = -fx, kx = 111320*Math.cos(lat*Math.PI/180), ky = 110540;
+  const pt = (s, w) => [lon + (s*fx + w*rx)/kx, lat + (s*fy + w*ry)/ky]; return [pt(s0,-hw), pt(s1,-hw), pt(s1,hw), pt(s0,hw), pt(s0,-hw)]; };
+const mpp = (lat) => 78271.517 * Math.cos(lat*Math.PI/180) / 2 ** map.getZoom();
+const picks = [[0,.5],[1,.3],[2,.7],[3,.45],[4,.6],[5,.25],[6,.55],[7,.4],[8,.8],[9,.2],[10,.65],[11,.5],[12,.35]];
+const body = [], nose = [], pts = [];
+picks.forEach(([ri, f]) => {
+  const c = byRoute.get(ri); if (!c) return;
+  const inCore = c.map((q, i) => i).filter(i => c[i][0] > core[0][0] && c[i][0] < core[1][0] && c[i][1] > core[0][1] && c[i][1] < core[1][1]);
+  if (inCore.length < 3) return;
+  const k = Math.max(1, inCore[Math.floor((inCore.length - 1) * f)]), a = c[k-1], p = c[k];
+  const brg = Math.atan2((p[0]-a[0]) * Math.cos(p[1]*Math.PI/180), p[1]-a[1]) * 180 / Math.PI;
+  const color = lineStyle(data.routes[ri]).glaze.bg, m = mpp(p[1]) * 1.5, L = 30*m, W = 10*m;
+  body.push({ type:'Feature', properties:{ color, h:L*.25 }, geometry:{ type:'Polygon', coordinates:[quad(p[0],p[1],brg,-L/2,L/2,W/2)] } });
+  nose.push({ type:'Feature', properties:{ h:L*.28 }, geometry:{ type:'Polygon', coordinates:[quad(p[0],p[1],brg,L/2-L*.22,L/2,W/2)] } });
+  pts.push({ type:'Feature', properties:{ num:String(100 + ri*7 + 13), color }, geometry:{ type:'Point', coordinates:p } });
+});
+map.addSource('bb',{type:'geojson',data:{type:'FeatureCollection',features:body}});
+map.addSource('bn',{type:'geojson',data:{type:'FeatureCollection',features:nose}});
+map.addSource('bp',{type:'geojson',data:{type:'FeatureCollection',features:pts}});
+map.addLayer({id:'busb',type:'fill-extrusion',source:'bb',paint:{'fill-extrusion-color':['get','color'],'fill-extrusion-height':['get','h'],'fill-extrusion-base':0,'fill-extrusion-opacity':1}});
+map.addLayer({id:'busn',type:'fill-extrusion',source:'bn',paint:{'fill-extrusion-color':'#14213D','fill-extrusion-height':['get','h'],'fill-extrusion-base':0,'fill-extrusion-opacity':1}});
+map.addLayer({id:'busl',type:'symbol',source:'bp',layout:{'text-field':['get','num'],'text-font':['Noto Sans Bold'],'text-size':12,'text-offset':[0,-1.6],'text-allow-overlap':true,'text-ignore-placement':true},paint:{'text-color':'#fff','text-halo-color':['get','color'],'text-halo-width':3}});
+await new Promise(r => map.once('idle', r));
+document.title = 'ready';
+</script></body></html>

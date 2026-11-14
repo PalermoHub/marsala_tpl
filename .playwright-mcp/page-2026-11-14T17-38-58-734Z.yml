@@ -1,0 +1,45 @@
+- generic [ref=f23e2]:
+  - generic [ref=f23e4]:
+    - generic [ref=f23e5]: Orari, percorsi e mappa 3D · anche offline
+    - heading [level=1] [ref=f23e7]:
+      - text: Quando passa il
+      - emphasis [ref=f23e8]: bus
+      - text: a Marsala?
+    - generic [ref=f23e9]:
+      - generic [ref=f23e10]:
+        - img "Linea 1" [ref=f23e11]:
+          - generic [ref=f23e13]: "1"
+        - img "Linea 2/5" [ref=f23e14]:
+          - generic [ref=f23e16]: 2/5
+        - img "Linea 3" [ref=f23e17]:
+          - generic [ref=f23e19]: "3"
+        - img "Linea 4" [ref=f23e20]:
+          - generic [ref=f23e22]: "4"
+        - img "Linea 6" [ref=f23e23]:
+          - generic [ref=f23e25]: "6"
+        - img "Linea 7/10" [ref=f23e26]:
+          - generic [ref=f23e28]: 7/10
+        - img "Linea 8/13" [ref=f23e29]:
+          - generic [ref=f23e31]: 8/13
+        - img "Linea 15" [ref=f23e32]:
+          - generic [ref=f23e34]: "15"
+        - img "Linea 2" [ref=f23e35]:
+          - generic [ref=f23e37]: "2"
+        - img "Linea 5" [ref=f23e38]:
+          - generic [ref=f23e40]: "5"
+        - img "Linea DOM" [ref=f23e41]:
+          - generic [ref=f23e43]: DOM
+        - img "Linea 21" [ref=f23e44]:
+          - generic [ref=f23e46]: "21"
+        - img "Linea 5/6" [ref=f23e47]:
+          - generic [ref=f23e49]: 5/6
+        - img "Linea N" [ref=f23e50]:
+          - generic [ref=f23e52]: "N"
+        - img "Linea N" [ref=f23e53]:
+          - generic [ref=f23e55]: "N"
+      - generic [ref=f23e56]:
+        - generic [ref=f23e57]: 15linee
+        - generic [ref=f23e58]: 582fermate
+        - generic [ref=f23e59]: 334corse
+  - generic [ref=f23e60]: palermohub.github.io/marsala_tpl
+  - generic [ref=f23e61]: "© OpenStreetMap · OpenFreeMap · Edifici 3D: GlobalBuildingAtlas (TUM)"
