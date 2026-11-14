@@ -291,6 +291,9 @@ SVG 48x48, raggio 7px, smalto della linea, motivo geometrico a tratto bianco al 
 ### Riga partenza
 Griglia piastrella - destinazione - quando, minimo 64px, filetto 1px sotto. Destinazione 18px/700. A destra due righe allineate a destra: sotto i 60 minuti, i minuti in 24px/700 sopra e l'orario 15px in `{colors.ink-2}` sotto; da 60 minuti in poi l'orario 24px/700 sopra e il "tra 2 h 19 min" sotto. I minuti guidano, come nel campo cobalto. Hover: sottolineatura del titolo.
 
+### Stati delle righe
+Hover (solo con puntatore) e pressione: velo cobalto vivo al 7% / 10% che sborda di 8px ai lati senza spostare filetti e testo; nessuna ombra. Contrasti verificati (AA): `ink-2` su `glaze` 7,6:1 e su `glaze-2` 6,9:1; `on-cobalt-2` su `cobalt` 7,1:1; ocra su cobalto 6,4:1; terracotta su `terra-soft` 5,8:1; in scuro tutte le coppie ≥7,4:1 (bordi dei controlli ≥3,6:1).
+
 ### Riga fermata
 Titolo 18px/700 + sottotitolo 15px, a destra fila di piastrelle (gap 4px, "+N" 14px) e chevron in `{colors.ink-2}`.
 

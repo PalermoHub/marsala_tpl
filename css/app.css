@@ -221,6 +221,10 @@ button { font: inherit; color: inherit; }
 .row-tiles { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .more { min-width: 26px; padding-left: 2px; font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .chev { color: var(--ink-2); display: grid; }
+.row { transition: background-color 0.15s, box-shadow 0.15s; }
+/* sfondo di pressione/hover che sborda di 8px ai lati senza spostare filetti e testo */
+.row:active, .dep-link:active { --row-bg: color-mix(in srgb, var(--cobalt-hi) 10%, transparent); background: var(--row-bg); box-shadow: -8px 0 0 var(--row-bg), 8px 0 0 var(--row-bg); }
+@media (hover: hover) { .row:hover, .dep-link:hover { --row-bg: color-mix(in srgb, var(--cobalt-hi) 7%, transparent); background: var(--row-bg); box-shadow: -8px 0 0 var(--row-bg), 8px 0 0 var(--row-bg); } }
 .row:hover .row-title, .dep-link:hover .dep-head { text-decoration: underline; text-underline-offset: 3px; }
 
 .tile-row { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; }
