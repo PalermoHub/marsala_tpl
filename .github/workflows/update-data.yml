@@ -1,0 +1,58 @@
+name: Aggiorna orari dal Comune
+
+on:
+  schedule:
+    - cron: "30 3 * * *"   # ogni notte, 03:30 UTC
+  workflow_dispatch:
+
+# contents: per committare i dati; pages: per chiedere la ripubblicazione del sito.
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scarica il GTFS ufficiale
+        run: |
+          mkdir -p "$RUNNER_TEMP/gtfs"
+          curl -fsSL --retry 3 --retry-delay 10 -o "$RUNNER_TEMP/gtfs.zip" https://www.comune.marsala.tp.it/s3/3885/allegati/gtfs.zip
+          unzip -oq "$RUNNER_TEMP/gtfs.zip" -d "$RUNNER_TEMP/gtfs"
+      - name: Compila i dati
+        run: node scripts/build-gtfs.mjs "$RUNNER_TEMP/gtfs"
+      - name: Controlli di sanità sul nuovo feed
+        run: |
+          node -e "
+          const d = JSON.parse(require('fs').readFileSync('dati/app.json','utf8'));
+          const ok = d.routes.length >= 5 && d.stops.length >= 100 && d.trips.length >= 100;
+          if (!ok) { console.error('Feed sospetto: linee=' + d.routes.length + ' fermate=' + d.stops.length + ' corse=' + d.trips.length); process.exit(1); }
+          const end = String(d.meta.validTo);
+          const days = Math.round((Date.UTC(+end.slice(0,4), +end.slice(4,6)-1, +end.slice(6,8)) - Date.now()) / 864e5);
+          if (days <= 14) console.log('::warning::Il GTFS del Comune scade tra ' + days + ' giorni (' + end + ')');
+          console.log('Feed ' + d.meta.feedVersion + ', valido fino al ' + end + ': ' + d.routes.length + ' linee, ' + d.stops.length + ' fermate, ' + d.trips.length + ' corse');
+          "
+      - name: Test logica orari e dati
+        run: node --test scripts/test.mjs
+      - name: Commit e ripubblicazione se i dati sono cambiati
+        run: |
+          # L'output è deterministico: se non c'è differenza, il Comune non ha pubblicato novità.
+          if [ -z "$(git status --porcelain dati)" ]; then echo "Nessuna novità."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dati/app.json dati/shapes.json
+          git commit -m "chore(dati): aggiorna orari GTFS dal Comune"
+          git push
+          # I push fatti con il token delle Actions non fanno ripartire Pages da soli: si chiede la build.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+        env:
+          GH_TOKEN: ${{ github.token }}

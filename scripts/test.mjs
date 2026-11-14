@@ -1,0 +1,107 @@
+// Test della logica orari e dell'integrità dei dati. Uso: node --test scripts/
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { romeNow, dowOf, addDays, isServiceActive, buildIndex, nextDepartures, splitStopName, siblingStops, feedStatus, formatClock } from '../js/schedule.js';
+
+const data = JSON.parse(readFileSync(new URL('../dati/app.json', import.meta.url), 'utf8'));
+const index = buildIndex(data);
+const svcIdx = (id) => data.services.findIndex((s) => s.id === id);
+const activeIds = (ymd) => data.services.filter((s) => isServiceActive(s, ymd)).map((s) => s.id).sort();
+
+test('romeNow usa Europe/Rome, non il fuso del dispositivo', () => {
+  assert.deepEqual(romeNow(new Date('2026-11-14T23:30:00Z')), { ymd: 20261115, dow: 6, secs: 1800 }); // CET
+  assert.deepEqual(romeNow(new Date('2026-07-01T22:30:00Z')), { ymd: 20260702, dow: 3, secs: 1800 }); // CEST
+});
+
+test('giorni della settimana e aritmetica delle date', () => {
+  assert.equal(dowOf(20261114), 5); // sabato
+  assert.equal(dowOf(20261115), 6); // domenica
+  assert.equal(addDays(20261231, 1), 20270101);
+  assert.equal(addDays(20260301, -1), 20260228);
+});
+
+test('servizi: feriale, domenica, festivi e servizio solo-eccezioni', () => {
+  assert.deepEqual(activeIds(20261116), ['FER5_INV_2627', 'FER6_INV_2627']); // lunedì: FER5 (lun-ven) + FER6 (lun-sab)
+  assert.deepEqual(activeIds(20261114), ['FER6_INV_2627']);                // sabato: solo FER6, niente supplemento scuole
+  assert.deepEqual(activeIds(20261115), ['DOM_INV_2627']);                 // domenica
+  assert.deepEqual(activeIds(20261101), ['NOV12_2026']);                   // 1 nov: solo servizio speciale, definito solo in calendar_dates
+  assert.deepEqual(activeIds(20261208), ['DOM_INV_2627']);                 // festivo infrasettimanale
+  assert.deepEqual(activeIds(20261225), ['DOM_INV_2627']);                 // Natale
+  assert.deepEqual(activeIds(20260720), ['EST_FER']);                      // estate feriale
+});
+
+test('nessun servizio fuori dalla validità del feed (gennaio 2028)', () => {
+  assert.deepEqual(activeIds(20280110), []);
+});
+
+test('di domenica compaiono solo corse del servizio domenicale', () => {
+  const dom = svcIdx('DOM_INV_2627');
+  const now = { ymd: 20261115, dow: 6, secs: 6 * 3600 };
+  let checked = 0;
+  for (const si of index.keys()) {
+    const { items } = nextDepartures(data, index, si, now, 50);
+    for (const it of items) { assert.equal(data.trips[it.trip].v, dom); checked++; }
+  }
+  assert.ok(checked > 0, 'almeno una partenza domenicale');
+});
+
+test('le partenze sono ordinate, future e non includono il capolinea di arrivo', () => {
+  const now = { ymd: 20261116, dow: 0, secs: 9 * 3600 };
+  for (const si of index.keys()) {
+    const { items } = nextDepartures(data, index, si, now, 50);
+    for (let i = 0; i < items.length; i++) {
+      assert.ok(items[i].secs >= now.secs);
+      if (i) assert.ok(items[i].secs >= items[i - 1].secs);
+      assert.ok(items[i].pos < data.trips[items[i].trip].s.length - 1);
+    }
+  }
+});
+
+test('a fine giornata compare la prima partenza di domani', () => {
+  const now = { ymd: 20261116, dow: 0, secs: 86399 };
+  const si = [...index.keys()][0];
+  const r = nextDepartures(data, index, si, now, 6);
+  assert.equal(r.items.length, 0);
+  assert.ok(r.tomorrow && r.tomorrow.dayOffset === 1 && r.tomorrow.mins > 0);
+});
+
+test('orari oltre le 24:00 restano visibili dopo la mezzanotte (se presenti nel feed)', () => {
+  const late = [];
+  data.trips.forEach((t, ti) => t.t.forEach((x, pos) => { if (x >= 86400 && pos < t.s.length - 1) late.push({ ti, pos, x }); }));
+  if (!late.length) return; // il feed attuale non ha corse oltre la mezzanotte
+  const l = late[0];
+  const day = data.services[data.trips[l.ti].v];
+  const ymd = [...Array(60).keys()].map((n) => addDays(day.start, n)).find((d) => isServiceActive(day, d));
+  const after = { ymd: addDays(ymd, 1), dow: dowOf(addDays(ymd, 1)), secs: 0 };
+  const r = nextDepartures(data, index, data.trips[l.ti].s[l.pos], after, 50);
+  assert.ok(r.items.some((i) => i.trip === l.ti));
+});
+
+test('integrità: orari crescenti, fermate e servizi esistenti, nomi puliti', () => {
+  for (const t of data.trips) {
+    assert.equal(t.s.length, t.t.length);
+    for (let i = 1; i < t.t.length; i++) assert.ok(t.t[i] >= t.t[i - 1]);
+    assert.ok(t.v >= 0 && t.v < data.services.length);
+    assert.ok(t.r >= 0 && t.r < data.routes.length);
+    t.s.forEach((s) => assert.ok(data.stops[s]));
+  }
+  data.stops.forEach((s) => assert.equal(s.name, s.name.replace(/\s+/g, ' ').trim()));
+});
+
+test('nomi fermata e fermate sull\'altro senso', () => {
+  assert.deepEqual(splitStopName('Corso Calatafimi dir. Autostazione'), { base: 'Corso Calatafimi', dir: 'Autostazione' });
+  assert.deepEqual(splitStopName('Via Mazzini dir.FF.SS.'), { base: 'Via Mazzini', dir: 'FF.SS.' });
+  assert.deepEqual(splitStopName('Via Mazzini dir Inam'), { base: 'Via Mazzini', dir: 'Inam' });
+  assert.deepEqual(splitStopName('Via Dirk'), { base: 'Via Dirk', dir: '' });
+  assert.deepEqual(splitStopName('Via Roma'), { base: 'Via Roma', dir: '' });
+  const withSib = data.stops.findIndex((_, i) => siblingStops(data, i).length > 0);
+  assert.ok(withSib >= 0);
+});
+
+test('validità del feed', () => {
+  assert.equal(feedStatus({ validTo: 20270613 }, 20261114).state, 'ok');
+  assert.equal(feedStatus({ validTo: 20270613 }, 20270601).state, 'soon');
+  assert.equal(feedStatus({ validTo: 20270613 }, 20270614).state, 'expired');
+  assert.equal(formatClock(86400 + 5 * 60), '00:05');
+});
