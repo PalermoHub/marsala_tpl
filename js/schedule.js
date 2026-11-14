@@ -50,7 +50,7 @@ export function buildIndex(data) {
   return byStop;
 }
 
-function activeSet(data, ymd) {
+export function activeSet(data, ymd) {
   const set = new Set();
   data.services.forEach((s, i) => { if (isServiceActive(s, ymd)) set.add(i); });
   return set;

@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { planJourney, groupOf, walkable } from '../js/planner.js';
 import { romeNow, dowOf, addDays, isServiceActive, buildIndex, nextDepartures, splitStopName, siblingStops, feedStatus, formatClock } from '../js/schedule.js';
 
 const data = JSON.parse(readFileSync(new URL('../dati/app.json', import.meta.url), 'utf8'));
@@ -104,4 +105,46 @@ test('validità del feed', () => {
   assert.equal(feedStatus({ validTo: 20270613 }, 20270601).state, 'soon');
   assert.equal(feedStatus({ validTo: 20270613 }, 20270614).state, 'expired');
   assert.equal(formatClock(86400 + 5 * 60), '00:05');
+});
+
+test('planner: la corsa diretta si trova, con orari coerenti', () => {
+  const ymd = 20261116; // lunedì
+  const ti = data.trips.findIndex((t) => isServiceActive(data.services[t.v], ymd) && t.s.length > 3);
+  const tr = data.trips[ti];
+  const a = tr.s[0], b = tr.s[tr.s.length - 1];
+  const opts = planJourney(data, index, { from: [{ stop: a, walk: 0 }], to: [{ stop: b, walk: 0 }], ymd, secs: tr.t[0] - 60 });
+  assert.ok(opts.length > 0);
+  const o = opts[0];
+  assert.ok(o.end > o.start);
+  for (const l of o.legs.filter((x) => x.kind === 'bus')) {
+    assert.ok(l.arr > l.dep && l.to > l.from);
+  }
+});
+
+test('planner: con un cambio i tempi sono consistenti e non si parte prima dell\'ora scelta', () => {
+  const ymd = 20261116;
+  let found = null;
+  const n = data.stops.length;
+  for (let i = 0; i < n && !found; i += 7) {
+    for (let j = 3; j < n && !found; j += 11) {
+      if (i === j) continue;
+      const o = planJourney(data, index, { from: [{ stop: i, walk: 0 }], to: [{ stop: j, walk: 0 }], ymd, secs: 8 * 3600 }).find((x) => x.transfers === 1);
+      if (o) found = o;
+    }
+  }
+  assert.ok(found, 'nessun percorso con cambio trovato nella rete');
+  const bus = found.legs.filter((l) => l.kind === 'bus');
+  assert.equal(bus.length, 2);
+  assert.ok(bus[0].dep >= 8 * 3600);
+  assert.ok(bus[1].dep > bus[0].arr, 'la seconda corsa parte dopo l\'arrivo della prima');
+});
+
+test('planner: stessa fermata, nessun risultato assurdo; gruppi e posizione', () => {
+  const ymd = 20261116;
+  assert.ok(groupOf(data, 0).includes(0));
+  const c = data.stops[0];
+  const w = walkable(data, c.lat, c.lon);
+  assert.ok(w.length > 0 && w[0].walk <= 800);
+  const o = planJourney(data, index, { from: [{ stop: 0, walk: 0 }], to: [{ stop: 0, walk: 0 }], ymd, secs: 8 * 3600 });
+  assert.equal(o.length, 0);
 });

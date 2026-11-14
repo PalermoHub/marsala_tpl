@@ -1,13 +1,14 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays } from './schedule.js';
-import { tileSvg, motifField } from './tiles.js';
+import { tileSvg, motifField, lineStyle } from './tiles.js';
+import { planJourney, groupOf, walkable } from './planner.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
 
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', cleanup: null };
+const state = { plan: { from: null, to: null, time: null }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', cleanup: null };
 
 // ---------- utilità ----------
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,6 +28,9 @@ const ICON = {
   locate: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.500v3M12 19.500v3M1.500 12h3M19.500 12h3"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',
   back: '<path d="M15 6l-6 6 6 6"/>',
+  home: '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>',
+  route: '<circle cx="6" cy="18" r="2.500"/><circle cx="18" cy="6" r="2.500"/><path d="M8.500 18H15a3 3 0 000-6H9a3 3 0 010-6h6.500"/>',
+  swap: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/>',
 };
 const icon = (name, size = 22, filled = false) =>
   `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICON[name]}</svg>`;
@@ -165,7 +169,7 @@ function stopRow(si, meters) {
 }
 
 // ---------- viste ----------
-function viewHome() {
+function viewNear() {
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const last = stopById(store.get('last', ''));
   const current = last >= 0 ? last : favs[0] ?? -1;
@@ -200,6 +204,58 @@ ${nearBlock}
 <section class="block"><h2>${esc(t('mainStops'))}</h2><ul class="plain">${mainStops().map((i) => stopRow(i)).join('')}</ul></section>
 <section class="block"><h2>${esc(t('lines'))}</h2>
 <ul class="tile-row">${active.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>`;
+}
+
+function viewHome() {
+  const now = romeNow();
+  const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
+  const card = (href, ic, title, sub, main) => `<a class="card${main ? ' card-main' : ''}" href="${href}">${icon(ic, 28)}<span class="card-text"><b>${esc(t(title))}</b><small>${esc(t(sub))}</small></span>${icon('chevron', 20)}</a>`;
+  return `${banners(now)}
+<section class="hero hero-first" data-strip="${stripState(now)}">
+  <h1>${esc(t('appName'))}</h1>
+  <p class="lead">${esc(t('homeLead'))}</p>
+  <nav class="home-cards" aria-label="${esc(t('appName'))}">
+    ${card('#/percorso', 'route', 'homePlan', 'homePlanSub', true)}
+    ${card('#/vicino', 'pin', 'homeNext', 'homeNextSub')}
+    ${card('#/mappa', 'map', 'homeMap', 'homeMapSub')}
+  </nav>
+</section>
+${favs.length ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>` : ''}
+<section class="block"><h2>${esc(t('lines'))}</h2>
+<ul class="tile-row">${activeRoutes().map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>
+<section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>`;
+}
+
+/** Il tracciato di una linea com'è sulla mappa: striscia colorata con il numero scritto sopra. */
+function lineSample(route) {
+  const { label, glaze } = lineStyle(route);
+  return `<svg class="sample" viewBox="0 0 64 28" width="64" height="28" aria-hidden="true" focusable="false"><path d="M2 14h60" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M2 14h60" stroke="${glaze.bg}" stroke-width="5" stroke-linecap="round"/><text x="32" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="#14213D" stroke="#FBF7EE" stroke-width="3.500" paint-order="stroke" font-family="Atkinson Hyperlegible, system-ui, sans-serif">${esc(label)}</text></svg>`;
+}
+const sampleRoute = () => state.data.routes.find((r) => r.short === '3') ?? state.data.routes[0];
+
+function howToRead() {
+  const ex = sampleRoute();
+  return `<div class="howto">
+  <div class="how-row">${tileSvg(ex, 44)}<p>${esc(t('howTile'))}</p></div>
+  <div class="how-row">${lineSample(ex)}<p>${esc(t('howNumbers'))}</p></div>
+  <p class="muted">${esc(t('howSpecial'))}</p>
+</div>`;
+}
+
+function legendPanel() {
+  const ex = sampleRoute();
+  const row = (sw, key) => `<li>${sw}<span>${esc(t(key))}</span></li>`;
+  return `<div id="legend" class="legend" role="dialog" aria-label="${esc(t('legend'))}" hidden>
+  <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">×</button></div>
+  <ul class="legend-list">
+    ${row(lineSample(ex), 'legendLine')}
+    ${row('<span class="dot dot-bus"></span>', 'legendBusOn')}
+    ${row('<span class="dot dot-idle"></span>', 'legendBusOff')}
+    ${row('<span class="dot dot-stop"></span>', 'legendStop')}
+    ${row('<span class="dot dot-me"></span>', 'legendMe')}
+  </ul>
+  <p class="muted">${esc(t('howNumbers'))} ${esc(t('howSpecial'))}</p>
+</div>`;
 }
 
 function viewStop(id) {
@@ -315,6 +371,9 @@ function viewMap(rid) {
   return `<section class="map-wrap">
   <div id="map" role="application" aria-label="${esc(t('mapTitle'))}"></div>
   <div class="map-bar"><p id="bus-count" class="chip" role="status">${esc(t('busesNote'))}</p></div>
+  <button id="legend-btn" class="legend-btn" data-act="legend" aria-expanded="false" aria-controls="legend">${icon('info', 20)}<span>${esc(t('legend'))}</span></button>
+  ${legendPanel()}
+  <a class="osd" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
   <p id="map-msg" class="map-msg" hidden></p>
 </section>`;
 }
@@ -328,6 +387,186 @@ async function bindMap(rid) {
     msg.hidden = false;
     msg.textContent = navigator.onLine ? t('mapError') : t('mapOffline');
   }
+}
+
+// ---------- pianificatore da A a B ----------
+function stopGroups() {
+  if (state.groups) return state.groups;
+  const seen = new Set();
+  state.groups = [];
+  state.data.stops.forEach((s, i) => {
+    if (seen.has(i)) return;
+    const g = groupOf(state.data, i);
+    g.forEach((x) => seen.add(x));
+    const name = splitStopName(s.name).base;
+    state.groups.push({ id: s.id, name, stops: g, key: `${norm(name)} ${g.map((x) => state.data.stops[x].code).join(' ')}` });
+  });
+  return state.groups;
+}
+/** "gps" oppure l'id di una fermata -> scelta del pianificatore. */
+function resolveSide(id) {
+  if (id === 'gps') return { kind: 'gps', id: 'gps' };
+  const si = stopById(id);
+  if (si < 0) return null;
+  const g = stopGroups().find((x) => x.stops.includes(si));
+  return g ? { kind: 'group', id: g.id, name: g.name, stops: g.stops } : null;
+}
+const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
+
+function viewPlan(m) {
+  if (m[1]) { state.plan.from = resolveSide(decodeURIComponent(m[1])); state.plan.to = resolveSide(decodeURIComponent(m[2])); }
+  const now = romeNow();
+  const field = (side, key, ph) => `<div class="pf">
+  <label class="pf-label" for="pf-${side}">${esc(t(key))}</label>
+  <div class="field">${icon(side === 'from' ? 'pin' : 'route', 20)}<input id="pf-${side}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(t(ph))}" aria-controls="pl-${side}"></div>
+  <ul class="plain pf-list" id="pl-${side}"></ul>
+</div>`;
+  const atMode = state.plan.time != null;
+  return `${banners(now)}
+<section class="hero hero-line hero-plan" data-strip="${stripState(now)}">
+  <a class="back" href="#/" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
+  <h1 class="plan-h1">${esc(t('planTitle'))}</h1>
+  <p class="lead">${esc(t('planHint'))}</p>
+</section>
+<section class="block plan-form">
+  ${field('from', 'planFrom', 'planFromPh')}
+  <div class="swap-row"><button type="button" class="icon-btn icon-btn-quiet" data-act="swap" aria-label="${esc(t('planSwap'))}">${icon('swap', 22)}</button></div>
+  ${field('to', 'planTo', 'planToPh')}
+  <div class="pf-time">
+    <div class="seg seg-inline" role="radiogroup">
+      <button type="button" role="radio" aria-checked="${!atMode}" data-act="timemode" data-v="now">${esc(t('planNow'))}</button>
+      <button type="button" role="radio" aria-checked="${atMode}" data-act="timemode" data-v="at">${esc(t('planAt'))}</button>
+    </div>
+    <input id="pf-time" class="time-in" type="time" aria-label="${esc(t('planAt'))}" ${atMode ? '' : 'hidden'}>
+  </div>
+</section>
+<section id="plan-out" class="block plan-out" aria-live="polite"></section>`;
+}
+
+function getLoc() {
+  return new Promise((res) => {
+    if (state.loc) return res(true);
+    if (!navigator.geolocation) return res(false);
+    state.locStatus = 'asking';
+    navigator.geolocation.getCurrentPosition(
+      (p) => { state.loc = { lat: p.coords.latitude, lon: p.coords.longitude }; state.locStatus = 'ok'; res(true); },
+      () => { state.locStatus = 'denied'; res(false); },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  });
+}
+
+const fmtHm = (secs) => formatClock(secs);
+function optionHtml(o, i, tomorrow) {
+  const d = state.data;
+  const legs = o.legs;
+  const bus = legs.filter((l) => l.kind === 'bus');
+  const nameOf = (si) => d.stops[si].name;
+  const mins = Math.max(1, Math.round((o.end - o.start) / 60));
+  const tiles = bus.map((l) => tileSvg(routeOfTrip(l.trip), 34)).join('<span class="plus" aria-hidden="true">›</span>');
+  const steps = legs.map((l, k) => {
+    if (l.kind === 'walk') {
+      const nextBus = legs.slice(k + 1).find((x) => x.kind === 'bus');
+      const first = k === 0;
+      const where = nextBus ? ` · ${nameOf(d.trips[nextBus.trip].s[nextBus.from])}` : '';
+      const label = !first && nextBus ? `${t('stepChange')}: ${t('stepWalk', Math.max(1, Math.round(l.secs / 60))).toLowerCase()}` : t('stepWalk', Math.max(1, Math.round(l.secs / 60)));
+      return `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(label)}${esc(where)}</span></li>`;
+    }
+    const trip = d.trips[l.trip];
+    const prev = legs[k - 1];
+    const change = prev && prev.kind === 'bus' ? `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(t('stepChange'))}</span></li>` : '';
+    return `${change}<li class="step step-bus">
+  <span class="step-tile">${tileSvg(routeOfTrip(l.trip), 30)}</span>
+  <span class="step-body"><b>${esc(t('stepBoard', nameOf(trip.s[l.from]), fmtHm(l.dep)))}</b>
+    <span class="step-sub">${esc(t('stepTo', headOf(trip)))} · ${esc(t('stepStops', l.to - l.from))}</span>
+    <b>${esc(t('stepAlight', nameOf(trip.s[l.to]), fmtHm(l.arr)))}</b></span></li>`;
+  }).join('');
+  return `<li><details class="opt"${i === 0 ? ' open' : ''}>
+  <summary><span class="opt-head"><span class="opt-time">${tomorrow ? esc(t('planTomorrow')) + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}</span><span class="opt-meta">${esc(t('planDuration', mins))} · ${esc(t(o.transfers ? 'planTransfer' : 'planDirect'))}</span></span><span class="opt-tiles">${tiles}</span></summary>
+  <ol class="steps">${steps}<li class="step step-end"><span class="step-dot"></span><span class="step-body"><b>${esc(t('stepArrive', fmtHm(o.end)))}</b></span></li></ol>
+</details></li>`;
+}
+
+async function runPlan() {
+  const out = document.getElementById('plan-out');
+  if (!out) return;
+  const { from, to, time } = state.plan;
+  if (!from || !to) { out.innerHTML = ''; return; }
+  if (from.id === to.id) { out.innerHTML = `<p class="note">${esc(t('planSame'))}</p>`; return; }
+  const ends = [];
+  for (const sd of [from, to]) {
+    if (sd.kind === 'gps') {
+      if (!(await getLoc())) { out.innerHTML = `<p class="note">${esc(t('planNeedLoc'))}</p>`; return; }
+      const w = walkable(state.data, state.loc.lat, state.loc.lon);
+      if (!w.length) { out.innerHTML = `<p class="note">${esc(t('planFar'))}</p>`; return; }
+      ends.push(w);
+    } else ends.push(sd.stops.map((stop) => ({ stop, walk: 0 })));
+  }
+  const now = romeNow();
+  const secs = time ?? now.secs;
+  let opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: now.ymd, secs });
+  let tomorrow = false, msg = '';
+  if (!opts.length) {
+    opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: addDays(now.ymd, 1), secs: 0 });
+    tomorrow = opts.length > 0;
+    msg = t(tomorrow ? 'planNoneNow' : 'planNone');
+  }
+  out.innerHTML = `${msg ? `<p class="note">${esc(msg)}</p>` : ''}${opts.length ? `<ul class="plain opts">${opts.map((o, i) => optionHtml(o, i, tomorrow)).join('')}</ul><p class="muted note">${esc(t('scheduledNote'))}</p>` : ''}`;
+}
+
+function syncPlanUrl() {
+  const { from, to } = state.plan;
+  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}` : '#/percorso';
+  if (location.hash !== h) history.replaceState(null, '', h);
+}
+
+function pickSide(side, id) {
+  const sd = resolveSide(id);
+  if (!sd) return;
+  state.plan[side] = sd;
+  const $in = document.getElementById(`pf-${side}`);
+  if ($in) $in.value = sideLabel(sd);
+  document.getElementById(`pl-${side}`).innerHTML = '';
+  syncPlanUrl();
+  runPlan();
+  const other = document.getElementById(`pf-${side === 'from' ? 'to' : 'from'}`);
+  if (!state.plan[side === 'from' ? 'to' : 'from']) other?.focus();
+}
+
+function bindPlan() {
+  const groups = stopGroups();
+  for (const side of ['from', 'to']) {
+    const $in = document.getElementById(`pf-${side}`);
+    const $ul = document.getElementById(`pl-${side}`);
+    if (state.plan[side]) $in.value = sideLabel(state.plan[side]);
+    const show = () => {
+      const q = norm($in.value.trim());
+      const items = [];
+      if (!q || norm(t('planMyPos')).startsWith(q)) {
+        items.push(`<li><button type="button" class="row row-btn" data-act="pick" data-side="${side}" data-id="gps"><span class="row-main"><span class="row-title">${icon('locate', 18)} ${esc(t('planMyPos'))}</span></span></button></li>`);
+      }
+      if (q) {
+        const words = q.split(/\s+/);
+        groups.filter((g) => words.every((w) => g.key.includes(w)))
+          .sort((a, b) => (norm(a.name).startsWith(q) ? 0 : 1) - (norm(b.name).startsWith(q) ? 0 : 1))
+          .slice(0, 6)
+          .forEach((g) => items.push(`<li><button type="button" class="row row-btn" data-act="pick" data-side="${side}" data-id="${esc(g.id)}"><span class="row-main"><span class="row-title">${esc(g.name)}</span></span><span class="row-tiles">${routesOfStop(g.stops[0], 24, 4)}</span></button></li>`));
+        if (items.length === 0 || (items.length === 1 && items[0].includes('data-id="gps"'))) items.push(`<li class="note">${esc(t('noResults'))}</li>`);
+      }
+      $ul.innerHTML = items.join('');
+    };
+    $in.addEventListener('input', () => { state.plan[side] = null; document.getElementById('plan-out').innerHTML = ''; show(); });
+    $in.addEventListener('focus', () => { $in.select(); show(); });
+    $in.addEventListener('focusout', () => setTimeout(() => { if (document.activeElement !== $in) $ul.innerHTML = ''; }, 250));
+  }
+  const $time = document.getElementById('pf-time');
+  const hm = (secs) => `${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor((secs % 3600) / 60)).padStart(2, '0')}`;
+  if (state.plan.time != null) $time.value = hm(state.plan.time);
+  $time.addEventListener('change', () => {
+    const [h, mi] = $time.value.split(':').map(Number);
+    if (Number.isFinite(h)) { state.plan.time = h * 3600 + mi * 60; runPlan(); }
+  });
+  runPlan();
 }
 
 function viewInfo() {
@@ -353,9 +592,11 @@ ${m.corrections?.length ? `<h2>${esc(t('corrections'))}</h2><p>${esc(t('correcti
 
 // ---------- router ----------
 const routes = [
-  [/^\/?$/, () => viewHome(), 'near'],
-  [/^\/stop\/(.+)$/, (m) => viewStop(decodeURIComponent(m[1])), 'near'],
-  [/^\/cerca$/, () => viewSearch(), 'near', bindSearch],
+  [/^\/?$/, () => viewHome(), 'home'],
+  [/^\/vicino$/, () => viewNear(), 'home'],
+  [/^\/stop\/(.+)$/, (m) => viewStop(decodeURIComponent(m[1])), 'home'],
+  [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
+  [/^\/percorso(?:\/([^/]+)\/([^/]+))?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
   [/^\/linea\/(.+)$/, (m) => viewLine(decodeURIComponent(m[1])), 'lines'],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
@@ -375,7 +616,7 @@ function render(nav = false) {
     $app.classList.toggle('enter', nav);
     $nav.querySelectorAll('a').forEach((a) => a.toggleAttribute('aria-current', a.dataset.tab === tab));
     if (bind) bind(m);
-    document.title = `${t('appName')}${tab === 'near' ? '' : ' · ' + t('tab' + tab[0].toUpperCase() + tab.slice(1))}`;
+    document.title = `${t('appName')}${tab === 'home' ? '' : ' · ' + t('tab' + tab[0].toUpperCase() + tab.slice(1))}`;
     return;
   }
   location.hash = '#/';
@@ -392,7 +633,7 @@ window.addEventListener('hashchange', () => { state.lineDir = null; render(true)
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
 setInterval(() => {
   if (document.hidden || !current || current.tab === 'map' || document.activeElement?.id === 'q') return;
-  if (/^\/(stop|linea)?/.test(current.path) && current.path !== '/cerca' && current.path !== '/info') rerenderKeepScroll();
+  if (/^\/(vicino|stop|linea)/.test(current.path)) rerenderKeepScroll();
 }, 20000);
 
 // ---------- azioni ----------
@@ -411,6 +652,23 @@ $app.addEventListener('click', async (e) => {
   } else if (act === 'geo') locate();
   else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
   else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); }
+  else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
+  else if (act === 'swap') {
+    [state.plan.from, state.plan.to] = [state.plan.to, state.plan.from];
+    for (const sd of ['from', 'to']) { const $i = document.getElementById(`pf-${sd}`); $i.value = state.plan[sd] ? sideLabel(state.plan[sd]) : ''; }
+    syncPlanUrl(); runPlan();
+  } else if (act === 'timemode') {
+    const at = b.dataset.v === 'at';
+    document.querySelectorAll('[data-act="timemode"]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    const $t = document.getElementById('pf-time');
+    $t.hidden = !at;
+    if (at) { const n = romeNow(); const v = `${String(Math.floor(n.secs / 3600)).padStart(2, '0')}:${String(Math.floor((n.secs % 3600) / 60)).padStart(2, '0')}`; $t.value ||= v; state.plan.time = Number($t.value.slice(0, 2)) * 3600 + Number($t.value.slice(3, 5)) * 60; $t.focus(); } else state.plan.time = null;
+    runPlan();
+  } else if (act === 'legend') {
+    const p = document.getElementById('legend');
+    p.hidden = !p.hidden;
+    document.getElementById('legend-btn').setAttribute('aria-expanded', String(!p.hidden));
+  }
   else if (act === 'lang') { store.set('lang', b.dataset.v); setLang(b.dataset.v); renderChrome(); rerenderKeepScroll(); }
   else if (act === 'theme') { store.set('theme', b.dataset.v); applyTheme(); rerenderKeepScroll(); }
 });
@@ -453,7 +711,7 @@ function applyTheme() {
 
 function renderChrome() {
   $nav.setAttribute('aria-label', t('appName'));
-  const items = [['near', '#/', 'pin', 'tabNear'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['info', '#/info', 'info', 'tabInfo']];
+  const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['info', '#/info', 'info', 'tabInfo']];
   $nav.innerHTML = items.map(([tab, href, ic, key]) => `<a href="${href}" data-tab="${tab}">${icon(ic, 24)}<span>${esc(t(key))}</span></a>`).join('');
 }
 
