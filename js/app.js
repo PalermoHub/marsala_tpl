@@ -114,7 +114,7 @@ function banners(now) {
 // Testata uniforme per le schermate senza risposta immediata (Linee, Cerca, Avvisi, Guida, Info, Privacy):
 // campo cobalto compatto con titolo, sottotitolo opzionale e striscia di stato come sulle altre schermate.
 function pageHead(title, { lead = '', back = null } = {}) {
-  const backHtml = back ? `<a class="back" href="${esc(back[0])}" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(back[1])}</span></a>` : '';
+  const backHtml = back ? `<a class="back" href="${esc(back[0])}">${icon('back', 22)}<span>${esc(back[1])}</span></a>` : '';
   return `<section class="hero page-head" data-strip="${stripState(romeNow())}">${backHtml}<h1>${esc(title)}</h1>${lead ? `<p class="lead">${esc(lead)}</p>` : ''}</section>`;
 }
 
@@ -436,7 +436,7 @@ ${dayPool.length ? `<dl class="stats">${statRow('tripsPerDay', String(dayPool.le
 
   return `${banners(now)}
 <section class="hero hero-line" data-strip="${stripState(now)}">
-  <a class="back" href="#/linee" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('lines'))}</span></a>
+  <a class="back" href="#/linee">${icon('back', 22)}<span>${esc(t('lines'))}</span></a>
   <div class="line-head">${tileSvg(route, 60)}<h1>${esc(route.long)}</h1></div>
   <a class="btn btn-on-field" href="#/mappa/${esc(route.id)}">${icon('map', 20)}<span>${esc(t('showOnMap'))}</span></a>
 </section>
@@ -596,7 +596,7 @@ function viewPlan(m) {
   const atMode = state.plan.time != null;
   return `${banners(now)}
 <section class="hero hero-line hero-plan" data-strip="${stripState(now)}">
-  <a class="back" href="#/" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
+  <a class="back" href="#/">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
   <h1 class="plan-h1">${esc(t('planTitle'))}</h1>
   <p class="lead">${esc(t('planHint'))}</p>
 </section>
@@ -839,12 +839,12 @@ function viewInfo() {
 <p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a></p>
 <p>${esc(t('citeBuildings'))} <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">doi:10.5194/essd-17-6647-2025</a> · <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a></p>
 <p>${esc(t('notOfficial'))}</p>
-<h3 class="h3">${esc(t('licenses'))}</h3>
+<h2 class="h3">${esc(t('licenses'))}</h2>
 <p>${esc(t('licData'))}: <a href="https://creativecommons.org/licenses/by/4.0/deed.${en ? 'en' : 'it'}" target="_blank" rel="noopener">CC BY 4.0</a><br>${esc(t('licCode'))}: <a href="https://github.com/PalermoHub/marsala_tpl/blob/main/LICENSE" target="_blank" rel="noopener">${esc(t('licCodeText'))}</a></p>`),
     acc('valid', 'cobalt', 'calendar', t('validity'), `<p>${m.validTo ? esc(t('validUntil', fmtDate(m.validTo))) : ''}</p><p class="muted">${esc(t('version'))}: ${esc(m.feedVersion ?? '–')}</p>`),
-    acc('look', 'ocra', 'sliders', `${t('language')} · ${t('theme')}`, `<h3 class="h3">${esc(t('language'))}</h3>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}<h3 class="h3">${esc(t('theme'))}</h3>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}`),
-    acc('err', 'terra', 'flag', t('reportError'), `<p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>${m.corrections?.length ? `<h3 class="h3">${esc(t('corrections'))}</h3><p>${esc(t('correctionsText'))}</p>` : ''}`),
-    acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h3 class="h3">${esc(t('consentManage'))}</h3>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
+    acc('look', 'ocra', 'sliders', `${t('language')} · ${t('theme')}`, `<h2 class="h3">${esc(t('language'))}</h2>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}<h2 class="h3">${esc(t('theme'))}</h2>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}`),
+    acc('err', 'terra', 'flag', t('reportError'), `<p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>${m.corrections?.length ? `<h2 class="h3">${esc(t('corrections'))}</h2><p>${esc(t('correctionsText'))}</p>` : ''}`),
+    acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h2 class="h3">${esc(t('consentManage'))}</h2>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
     acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
   ];
   return `${banners(now)}${pageHead(t('info'), { back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
