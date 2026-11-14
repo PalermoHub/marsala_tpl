@@ -1,0 +1,37 @@
+- generic [active] [ref=f36e1]:
+  - link "Vai al contenuto" [ref=f36e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f36e3]:
+    - generic [ref=f36e52]:
+      - application "Map" [ref=f36e53]:
+        - region "Map" [ref=f36e54]
+        - generic:
+          - generic [ref=f36e55]:
+            - button "Zoom in" [ref=f36e56] [cursor=pointer]
+            - button "Zoom out" [ref=f36e58] [cursor=pointer]
+          - group [ref=f36e69]:
+            - generic "Toggle attribution" [ref=f36e70] [cursor=pointer]
+            - generic [ref=f36e71]:
+              - link "OpenFreeMap" [ref=f36e72] [cursor=pointer]:
+                - /url: https://openfreemap.org
+              - link "© OpenMapTiles" [ref=f36e73] [cursor=pointer]:
+                - /url: https://www.openmaptiles.org/
+              - text: Data from
+              - link "OpenStreetMap" [ref=f36e74] [cursor=pointer]:
+                - /url: https://www.openstreetmap.org/copyright
+      - status [ref=f36e61]: 6 buses running · 13 parked
+      - button "Legend" [ref=f36e62] [cursor=pointer]
+      - link [ref=f36e67] [cursor=pointer]:
+        - /url: https://opendatasicilia.it/
+        - img "Open Data Sicilia" [ref=f36e68]
+  - navigation "Marsala TPL" [ref=f36e21]:
+    - link "Home" [ref=f36e22] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f36e27] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f36e33] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f36e37] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f36e41] [cursor=pointer]:
+      - /url: "#/info"

@@ -1,0 +1,26 @@
+- generic [active] [ref=f36e1]:
+  - link "Vai al contenuto" [ref=f36e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f36e3]:
+    - generic [ref=f36e4]:
+      - application "Map" [ref=f36e5]:
+        - region "Map" [ref=f36e6]
+        - generic [ref=f36e7]:
+          - button "Zoom in" [ref=f36e8] [cursor=pointer]
+          - button "Zoom out" [ref=f36e10] [cursor=pointer]
+      - status [ref=f36e13]: Positions from the city’s feed. The line is estimated from the route; delays are not available.
+      - button "Legend" [ref=f36e14] [cursor=pointer]
+      - link [ref=f36e19] [cursor=pointer]:
+        - /url: https://opendatasicilia.it/
+        - img "Open Data Sicilia" [ref=f36e20]
+  - navigation "Marsala TPL" [ref=f36e21]:
+    - link "Home" [ref=f36e22] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f36e27] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f36e33] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f36e37] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f36e41] [cursor=pointer]:
+      - /url: "#/info"

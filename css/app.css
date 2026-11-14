@@ -362,3 +362,5 @@ button { font: inherit; color: inherit; }
 .route-stops li.bus-between { padding-block: 6px; min-height: 36px; display: flex; align-items: center; font-weight: 700; }
 .route-stops li.bus-between::after { display: none; }
 .route-stops li.bus-between span { display: inline-flex; align-items: center; gap: 6px; background: var(--ocra); color: oklch(24% 0.07 262); padding: 4px 10px; border-radius: 999px; }
+
+.bus-alt { margin: 4px 0 8px; }

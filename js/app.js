@@ -2,7 +2,7 @@
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays } from './schedule.js';
 import { tileSvg, motifField, lineStyle } from './tiles.js';
 import { fetchVehicles } from './rt.js';
-import { buildRouteLines, locateBus, stopsAlong, placeOnStops } from './match.js';
+import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops } from './match.js';
 import { planJourney, groupOf, walkable } from './planner.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
@@ -376,60 +376,68 @@ ${todays.length ? '' : `<p class="banner">${esc(t('noTripsToday'))}</p>`}
 }
 
 // ---------- mezzo sulla linea ----------
+// rid '-' = linea non nota: tra le linee compatibili con la posizione si sceglie quella il cui orario programmato combacia meglio con l'ora.
 function viewBus(rid) {
-  const ri = routeById(rid);
-  if (ri < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p></section>`;
-  const route = state.data.routes[ri];
+  const ri = rid === '-' ? -1 : routeById(rid);
+  if (rid !== '-' && ri < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p></section>`;
   return `${banners(romeNow())}
 <section class="hero hero-line" data-strip="${stripState(romeNow())}">
-  <a class="back" href="#/mappa/${esc(rid)}" aria-label="${esc(t('busBack'))}">${icon('back', 22)}<span>${esc(t('busBack'))}</span></a>
-  <div class="line-head">${tileSvg(route, 60)}<h1>${esc(route.long)}</h1></div>
+  <a class="back" href="#/mappa${rid === '-' ? '' : '/' + esc(rid)}" aria-label="${esc(t('busBack'))}">${icon('back', 22)}<span>${esc(t('busBack'))}</span></a>
+  <div class="line-head" id="bus-head">${ri >= 0 ? `${tileSvg(state.data.routes[ri], 60)}<h1>${esc(state.data.routes[ri].long)}</h1>` : `<h1>${esc(t('busNum'))}</h1>`}</div>
 </section>
 <section class="block bus-track" id="bus-track" role="status" aria-live="polite"><p>${esc(t('busSearching'))}</p></section>
 <section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops" id="bus-stops"></ol></section>`;
 }
 
 async function bindBus(rid, vid) {
-  const ri = routeById(rid);
+  const fixed = rid === '-' ? -1 : routeById(rid);
   const $info = document.getElementById('bus-track');
   const $stops = document.getElementById('bus-stops');
-  if (ri < 0 || !$info) return;
+  const $head = document.getElementById('bus-head');
+  if (!$info || (rid !== '-' && fixed < 0)) return;
   let destroyed = false, timer = null, abort = null, scrolled = false;
   state.cleanup = () => { destroyed = true; clearTimeout(timer); abort?.abort(); };
   let lines;
   try { lines = buildRouteLines(state.data, await loadShapes()); } catch { $info.innerHTML = `<p>${esc(t('mapError'))}</p>`; return; }
   if (destroyed) return;
 
-  function paint(v) {
-    const loc = v && locateBus(lines, v, ri);
-    if (!v) { $info.innerHTML = `<p>${esc(t('busGone'))}</p>`; return; }
-    if (!loc || loc.d > 80) { $info.innerHTML = `<p><strong>${esc(t('busNum'))} ${esc(v.id)}</strong></p><p>${esc(t('busLost'))}</p>`; return; }
-    // Il feed non dice quale corsa è: tra le corse che usano questo tracciato si prende quella programmata più vicina all'ora attuale.
-    const now = romeNow();
+  // Per una linea: tracciato più vicino al mezzo e, tra le sue corse di oggi, quella programmata più vicina all'ora attuale.
+  function evalRoute(ri, v, now) {
+    const loc = locateBus(lines, v, ri);
+    if (!loc || loc.d > 80) return null;
     let best = null;
-    state.data.trips.forEach((tr, i) => {
-      if (tr.r !== ri || tr.sh !== loc.sh || !isServiceActive(state.data.services[tr.v], now.ymd)) return;
-      const alongs = stopsAlong(loc.flat, tr.s.map((si) => state.data.stops[si]));
-      const pl = placeOnStops(alongs, loc.along);
-      const ref = Math.min(Math.max(pl.k, 0), tr.s.length - 1);
-      const gap = Math.abs(tr.t[ref] - now.secs);
-      if (!best || gap < best.gap) best = { tr, pl, gap };
-    });
-    if (!best) {
-      state.data.trips.forEach((tr) => {
-        if (best || tr.r !== ri || tr.sh !== loc.sh) return;
-        best = { tr, pl: placeOnStops(stopsAlong(loc.flat, tr.s.map((si) => state.data.stops[si])), loc.along), gap: 0 };
-      });
-    }
-    if (!best) { $info.innerHTML = `<p>${esc(t('busLost'))}</p>`; return; }
-    const { tr, pl } = best;
+    const consider = (tr, strict) => {
+      if (tr.r !== ri || tr.sh !== loc.sh) return;
+      if (strict && !isServiceActive(state.data.services[tr.v], now.ymd)) return;
+      const pl = placeOnStops(stopsAlong(loc.flat, tr.s.map((si) => state.data.stops[si])), loc.along);
+      const gap = Math.abs(tr.t[Math.min(Math.max(pl.k, 0), tr.s.length - 1)] - now.secs);
+      if (!best || gap < best.gap) best = { ri, tr, pl, gap: strict ? gap : gap + 86400 };
+    };
+    state.data.trips.forEach((tr) => consider(tr, true));
+    if (!best) state.data.trips.forEach((tr) => consider(tr, false));
+    return best;
+  }
+
+  function paint(v) {
+    if (!v) { $info.innerHTML = `<p>${esc(t('busGone'))}</p>`; return; }
+    const now = romeNow();
+    const cands = fixed >= 0 ? [fixed] : candidateRoutes(lines, v);
+    const evals = cands.map((ri) => evalRoute(ri, v, now)).filter(Boolean).sort((a, b) => a.gap - b.gap);
+    if (!evals.length) { $info.innerHTML = `<p><strong>${esc(t('busNum'))} ${esc(v.id)}</strong></p><p>${esc(t('busLost'))}</p>`; return; }
+    const { ri, tr, pl } = evals[0];
+    const route = state.data.routes[ri];
+    $head.innerHTML = `${tileSvg(route, 60)}<h1>${esc(route.long)}</h1>`;
     const name = (k) => stopTitle(tr.s[k]).name;
     const where = pl.at ? t('busAtStop', name(pl.k)) : pl.k < 0 ? t('busBefore') : pl.k >= tr.s.length - 1 ? t('busAfter') : t('busBetween', name(pl.k), name(pl.k + 1));
     const hh = formatClock(romeNow(new Date(v.ts * 1000)).secs);
+    const others = evals.slice(1);
+    const guess = fixed < 0 && evals.length > 1
+      ? `<p class="bus-meta">${esc(t('busGuess'))}</p><ul class="tile-row bus-alt">${others.map((o) => `<li><a href="#/bus/${esc(state.data.routes[o.ri].id)}/${esc(encodeURIComponent(v.id))}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[o.ri].short)}">${tileSvg(state.data.routes[o.ri], 40)}</a></li>`).join('')}</ul>`
+      : fixed < 0 ? `<p class="bus-meta">${esc(t('busGuessOne'))}</p>` : '';
     $info.innerHTML = `<p class="bus-where">${icon('pin', 22)}<span>${esc(where)}</span></p>
 <p>${esc(t('busToward', headOf(tr)))}</p>
 <p class="bus-meta">${esc(t('busNum'))} ${esc(v.id)}${v.plate ? ` · ${esc(t('busPlate'))} ${esc(v.plate)}` : ''} · ${esc(t('busUpdated', hh))}</p>
-<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
+${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
     $stops.innerHTML = tr.s.map((si, k) => {
       const cls = [k === 0 ? 'first' : '', k === tr.s.length - 1 ? 'last' : '', k < pl.k || (k === pl.k && !pl.at) ? 'past' : '', pl.at && k === pl.k ? 'here' : ''].filter(Boolean).join(' ');
       const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span><span class="st-time">${formatClock(tr.t[k])}</span></a></li>`;

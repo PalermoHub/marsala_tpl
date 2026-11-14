@@ -158,7 +158,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
       const m = mpp(p.lat), L = (idle ? 18 : 28) * m, W = (idle ? 6 : 9) * m;
       const color = idle || item.r == null ? (idle ? IDLE : ACTIVE) : lineStyle(data.routes[item.r]).glaze.bg;
       const label = !idle && item.r != null ? lineStyle(data.routes[item.r]).label : '';
-      const props = { id: item.v.id, num: item.v.id, rid: !idle && item.r != null ? data.routes[item.r].id : '', ink: item.r == null && isDark() ? '#14213D' : '#FFFFFF', plate: item.v.plate, state: item.state, color, label, when: formatClock(romeNow(new Date(item.v.ts * 1000)).secs) };
+      const props = { id: item.v.id, num: item.v.id, rid: idle ? '' : item.r != null ? data.routes[item.r].id : '-', ink: item.r == null && isDark() ? '#14213D' : '#FFFFFF', plate: item.v.plate, state: item.state, color, label, when: formatClock(romeNow(new Date(item.v.ts * 1000)).secs) };
       body.push({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, -L / 2, L / 2, W / 2)] } });
       nose.push({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, L / 2 - L * 0.22, L / 2, W / 2)] } });
       pts.push({ type: 'Feature', properties: props, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } });

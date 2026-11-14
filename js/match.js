@@ -93,3 +93,16 @@ export function placeOnStops(alongs, busAlong) {
   const at = k >= 0 && Math.abs(busAlong - alongs[k]) <= AT_STOP_M;
   return { k, at };
 }
+
+/** Tutte le route compatibili con posizione e direzione del mezzo (anche più d'una, sui tratti condivisi). */
+export function candidateRoutes(lines, v) {
+  const moving = v.speed != null && v.speed > 1 && v.bearing != null;
+  const out = new Set();
+  for (const ln of lines) {
+    const n = nearest(ln.flat, v.lat, v.lon);
+    if (n.d > KEEP_DIST_M) continue;
+    if (moving && angleDiff(n.bearing, v.bearing) > MAX_ANGLE) continue;
+    out.add(ln.r);
+  }
+  return [...out];
+}
