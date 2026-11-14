@@ -2,11 +2,11 @@
 // - Codice (html/js/css): prima la rete (con timeout), poi la cache: online si ha sempre una versione coerente.
 // - Dati, font, icone: dalla cache, aggiornati in background.
 // - MapLibre dalla CDN: cache al primo uso. Feed RT e tile della mappa non vengono mai messi in cache da qui.
-const VERSION = 'v13';
+const VERSION = 'v14';
 const CACHE = `marsala-tpl-${VERSION}`;
 const PRECACHE = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
-  'js/app.js', 'js/schedule.js', 'js/planner.js', 'js/tiles.js', 'js/i18n.js', 'js/store.js', 'js/rt.js', 'js/map.js', 'js/match.js',
+  'js/app.js', 'js/schedule.js', 'js/planner.js', 'js/tiles.js', 'js/i18n.js', 'js/store.js', 'js/rt.js', 'js/map.js', 'js/match.js', 'js/consent.js',
   'dati/app.json', 'dati/shapes.json',
   'fonts/atkinson-hyperlegible-400.woff2', 'fonts/atkinson-hyperlegible-700.woff2',
   'img/opendatasicilia.png', 'img/icon-192.png', 'img/icon-512.png', 'img/favicon.png',

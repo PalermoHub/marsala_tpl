@@ -67,7 +67,9 @@ Per attivarli: *Settings → Pages → Source: GitHub Actions*. I percorsi sono 
 
 ## Privacy
 
-Nessun tracciamento né analytics. La posizione viene usata solo nel browser per trovare la fermata più vicina. Le preferenze sono nel `localStorage` del dispositivo.
+La posizione viene usata solo nel browser per trovare la fermata più vicina e non viene mai inviata. Le preferenze (lingua, tema, preferiti, scelta sul consenso) sono nel `localStorage` del dispositivo.
+
+Le statistiche d'uso (Google Analytics 4, `js/consent.js`) si caricano **solo dopo consenso esplicito**, con banner che mette sullo stesso piano «Accetta» e «Rifiuta», scelta ricordata 6 mesi e revoca da Info (che cancella i cookie `_ga*`), come da Linee guida cookie del Garante (10/06/2021), art. 122 Codice privacy e GDPR. L'informativa completa è nell'app (`#/privacy`, testi in `js/i18n.js`). Se il progetto cambia titolare o servizi di terzi va aggiornata.
 
 ## Licenza e attribuzioni
 

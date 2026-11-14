@@ -6,6 +6,7 @@ import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops }
 import { planJourney, groupOf, walkable } from './planner.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
+import { getConsent, setConsent, applyConsent } from './consent.js';
 
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
@@ -723,7 +724,41 @@ function viewInfo() {
 <h2>${esc(t('reportError'))}</h2>
 <p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>
 ${m.corrections?.length ? `<h2>${esc(t('corrections'))}</h2><p>${esc(t('correctionsText'))}</p>` : ''}
-<h2>${esc(t('privacy'))}</h2><p>${esc(t('privacyText'))}</p></section>`;
+<h2>${esc(t('privacy'))}</h2><p>${esc(t('privacyText'))}</p>
+<h3 class="h3">${esc(t('consentManage'))}</h3>
+${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}
+${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}
+<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p></section>`;
+}
+
+function viewPrivacy() {
+  const link = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  return `<section class="block prose"><a class="back back-ink" href="#/info">${icon('back', 20)}<span>${esc(t('back'))}</span></a>
+<h1 class="h1">${esc(t('privacyFull'))}</h1><p class="muted">${esc(t('privacyUpdated'))}</p>
+${t('privacyDoc').map(([h, ps]) => `<h2>${esc(h)}</h2>${ps.map((p) => `<p>${link(p)}</p>`).join('')}`).join('')}
+<h2>${esc(t('consentManage'))}</h2>
+<div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn')], ['denied', t('consentOff')]].map(([v, l]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${esc(l)}</button>`).join('')}</div></section>`;
+}
+
+// Banner del consenso: non blocca l'uso dell'app, Accetta e Rifiuta hanno lo stesso peso.
+function renderConsent() {
+  document.getElementById('consent')?.remove();
+  if (getConsent()) return;
+  const el = document.createElement('section');
+  el.id = 'consent';
+  el.className = 'consent';
+  el.setAttribute('aria-labelledby', 'consent-t');
+  el.innerHTML = `<h2 id="consent-t">${esc(t('consentTitle'))}</h2><p>${esc(t('consentText'))} <a href="#/privacy">${esc(t('consentInfo'))}</a></p>
+<div class="consent-btns"><button class="btn btn-choice" data-act="consent" data-v="denied">${esc(t('consentReject'))}</button><button class="btn btn-choice" data-act="consent" data-v="granted">${esc(t('consentAccept'))}</button></div>`;
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act="consent"]');
+    if (!b) return;
+    setConsent(b.dataset.v === 'granted');
+    renderConsent();
+    rerenderKeepScroll();
+    toast(t('consentSaved'));
+  });
+  document.body.appendChild(el);
 }
 
 // ---------- router ----------
@@ -738,6 +773,7 @@ const routes = [
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/info$/, () => viewInfo(), 'info'],
+  [/^\/privacy$/, () => viewPrivacy(), 'info'],
 ];
 let current = null;
 
@@ -813,7 +849,8 @@ $app.addEventListener('click', async (e) => {
     p.hidden = !p.hidden;
     document.getElementById('legend-btn').setAttribute('aria-expanded', String(!p.hidden));
   }
-  else if (act === 'lang') { store.set('lang', b.dataset.v); setLang(b.dataset.v); renderChrome(); rerenderKeepScroll(); }
+  else if (act === 'lang') { store.set('lang', b.dataset.v); setLang(b.dataset.v); renderChrome(); renderConsent(); rerenderKeepScroll(); }
+  else if (act === 'consent') { setConsent(b.dataset.v === 'granted'); renderConsent(); rerenderKeepScroll(); toast(t('consentSaved')); }
   else if (act === 'theme') { store.set('theme', b.dataset.v); applyTheme(); rerenderKeepScroll(); }
 });
 
@@ -864,6 +901,8 @@ async function boot() {
   setLang(detectLang(store.get('lang')));
   applyTheme();
   renderChrome();
+  applyConsent();
+  renderConsent();
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
   window.addEventListener('online', rerenderKeepScroll);
   window.addEventListener('offline', rerenderKeepScroll);
