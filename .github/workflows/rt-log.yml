@@ -1,0 +1,74 @@
+name: Registra posizioni bus (GTFS-RT)
+
+# Il feed del Comune non ha storico: lo registriamo noi, in protobuf grezzo, sul ramo orfano "rt-log"
+# (mai su main, così Pages non lo pubblica). Dettagli del formato in scripts/rt-log.mjs.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Durata della registrazione in minuti (prova: 3)"
+        default: "55"
+
+permissions:
+  contents: write
+
+# Senza cancel-in-progress: un'esecuzione partita in ritardo si accoda invece di sovrapporsi o
+# interrompere quella in corso. GitHub tiene al massimo una esecuzione in attesa.
+concurrency:
+  group: rt-log
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 62
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepara il ramo rt-log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin rt-log >/dev/null; then
+            git fetch origin rt-log
+            git worktree add -B rt-log log origin/rt-log
+          else
+            git worktree add --detach log
+            git -C log checkout --orphan rt-log
+            git -C log rm -rfq .
+            cat > log/README.md <<'EOF'
+          # Registro GTFS-RT vehicle_positions, Comune di Marsala
+
+          Un file al giorno (UTC) in `data/AAAA-MM-GG.ndjson.gz`, a membri gzip concatenati (`zcat` li legge di fila).
+          Una riga JSON per tentativo:
+
+          - `{"t":<ms>,"b64":"..."}`: protobuf grezzo (base64) ricevuto all'istante `t`
+          - `{"t":<ms>,"same":1}`: identico al campione precedente
+          - `{"t":<ms>,"err":"..."}`: tentativo fallito (i buchi sono dati)
+
+          Prodotto da `scripts/rt-log.mjs` (ramo `main`). Dati del Comune di Marsala, CC BY 4.0.
+          EOF
+          fi
+      - name: Registra il feed
+        timeout-minutes: 58
+        env:
+          MINUTES: ${{ github.event.inputs.minutes || '55' }}
+        run: |
+          case "$MINUTES" in ''|*[!0-9.]*) echo "minutes non valido: $MINUTES"; exit 2;; esac
+          node scripts/rt-log.mjs --out log/data --minutes "$MINUTES" --interval 30
+      - name: Salva sul ramo rt-log
+        if: always()
+        working-directory: log
+        run: |
+          git add -A
+          if git diff --cached --quiet; then echo "Niente da salvare."; exit 0; fi
+          git commit -m "rt: $(date -u +%FT%TZ)"
+          for i in 1 2 3; do
+            git push origin rt-log && exit 0
+            git pull --rebase origin rt-log || true
+          done
+          exit 1
