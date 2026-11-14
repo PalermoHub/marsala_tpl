@@ -225,6 +225,8 @@ button { font: inherit; color: inherit; }
 .app > .seg { padding-inline: var(--gut); }
 
 .chips { list-style: none; display: flex; gap: 8px; margin: 8px calc(var(--gut) * -1) 0; padding: 4px var(--gut) 8px; overflow-x: auto; scroll-snap-type: x proximity; }
+.chips { scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
 .chips li { scroll-snap-align: start; }
 .chips button { min-width: 64px; min-height: 44px; padding: 0 12px; border: 2px solid var(--edge); border-radius: var(--r); background: var(--glaze); font-size: 17px; font-weight: 700; cursor: pointer; }
 .chips button[aria-selected="true"] { background: var(--ocra); border-color: var(--ocra); color: oklch(24% 0.07 262); }

@@ -57,7 +57,12 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     for (let i = 0; i < flat.length; i += 2) coords.push([flat[i + 1], flat[i]]);
     lineFeatures.push({ type: 'Feature', properties: { r: trip.r, color: lineStyle(data.routes[trip.r]).glaze.bg, label: lineStyle(data.routes[trip.r]).label }, geometry: { type: 'LineString', coordinates: coords } });
   });
-  const stopFeatures = data.stops.map((s, i) => ({ type: 'Feature', properties: { id: s.id, name: s.name, i }, geometry: { type: 'Point', coordinates: [s.lon, s.lat] } }));
+  // Con una linea scelta la mappa mostra solo quella e le sue fermate; senza, tutta la rete.
+  const dim = focus >= 0;
+  const focusStops = new Set();
+  if (dim) data.trips.forEach((trip) => { if (trip.r === focus) trip.s.forEach((i) => focusStops.add(i)); });
+  const stopFeatures = data.stops.map((s, i) => ({ type: 'Feature', properties: { id: s.id, name: s.name, i }, geometry: { type: 'Point', coordinates: [s.lon, s.lat] } })).filter((f) => !dim || focusStops.has(f.properties.i));
+  if (dim) lineFeatures.splice(0, lineFeatures.length, ...lineFeatures.filter((f) => f.properties.r === focus));
 
   const empty = { type: 'FeatureCollection', features: [] };
   await new Promise((r) => (map.loaded() ? r() : map.once('load', r)));
@@ -69,12 +74,11 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addSource('bus-pts', { type: 'geojson', data: empty });
   if (loc) map.addSource('me', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [loc.lon, loc.lat] } } });
 
-  const dim = focus >= 0;
   map.addLayer({ id: 'lines-casing', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#0F1B3D' : '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 10], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.15] : 0.9 } });
   map.addLayer({ id: 'lines', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 6], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.25] : 0.85 } });
   // Il numero di linea sul percorso: l'identità non dipende solo dal colore.
   map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
-  map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
+  map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Mezzi: sagome allungate orientate come la marcia (muso scuro davanti), colorate come la linea stimata.
   map.addLayer({ id: 'buses-body', type: 'fill', source: 'buses', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1], 'fill-outline-color': isDark() ? '#FBF7EE' : '#FFFFFF' } });
   map.addLayer({ id: 'buses-nose', type: 'fill', source: 'buses-nose', paint: { 'fill-color': isDark() ? '#FBF7EE' : '#14213D', 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1] } });
@@ -127,7 +131,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
 
   // Inquadra la linea scelta, oppure tutta la rete.
   const b = new maplibregl.LngLatBounds();
-  lineFeatures.filter((f) => !dim || f.properties.r === focus).forEach((f) => f.geometry.coordinates.forEach((c) => b.extend(c)));
+  lineFeatures.forEach((f) => f.geometry.coordinates.forEach((c) => b.extend(c)));
   if (!b.isEmpty()) map.fitBounds(b, { padding: { top: 72, right: 32, bottom: 40, left: 32 }, duration: 0, maxZoom: 15 });
 
   // Mezzi: aggiornamento periodico a scheda visibile. Tra due posizioni il mezzo scorre e ruota con continuità.
@@ -152,6 +156,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   function draw() {
     const body = [], nose = [], pts = [];
     for (const item of current) {
+      if (dim && item.r !== focus) continue;
       const p = shown.get(item.v.id);
       if (!p) continue;
       const idle = item.state === 'idle';
