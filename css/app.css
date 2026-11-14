@@ -312,6 +312,8 @@ button { font: inherit; color: inherit; }
   .next-when .num { font-size: 96px; }
   .stopname h1 { font-size: 30px; }
 }
+/* Schermi larghi: colonna un po' più larga (tab bar e gutter seguono `--col`); la mappa resta a tutto schermo. */
+@media (min-width: 900px) { :root { --col: 680px; } .page-head h1 { font-size: 36px; } }
 
 /* ---------- home ---------- */
 .howto { display: grid; gap: 14px; }

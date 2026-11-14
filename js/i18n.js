@@ -95,12 +95,12 @@ const IT = {
   // [id, icona, titolo, introduzione, passi, consiglio, [[foto, descrizione]...]]
   guideDoc: [
     ['start', 'home', 'Come è fatta l’app', 'In basso c’è sempre una barra con i pulsanti per spostarti. Eccoli da sinistra a destra:', [
-      '<b>Home</b>: la pagina di partenza, con le scorciatoie e le tue fermate salvate.',
+      '<b>Home</b>: la pagina di partenza. Mostra subito la tua fermata preferita; se non ne hai ancora una, ti aiuta a trovarla.',
       '<b>Percorso</b>: ti dice quale bus prendere per andare da un posto a un altro.',
       '<b>Linee</b>: l’elenco di tutte le linee, con fermate e orari.',
       '<b>Mappa</b>: la mappa con i percorsi e i bus che stanno circolando.',
       '<b>Altro</b>: gli avvisi del Comune, questa guida, le informazioni (lingua, aspetto chiaro o scuro, fonti dei dati) e la privacy.',
-    ], 'Nella Home trovi anche il pulsante «Prossimo bus» e gli «Avvisi» del Comune sul trasporto.', [['home', 'La pagina Home con i pulsanti principali e la barra in basso']]],
+    ], 'Tocca la stella su una fermata per salvarla: da quel momento la ritrovi subito aprendo l’app.', [['home', 'La pagina Home con i pulsanti principali e la barra in basso']]],
     ['stop', 'pin', 'Come cercare una fermata', 'Ci sono tre modi, scegli quello che ti viene più comodo.', [
       '<b>Per nome.</b> Tocca «Cerca una fermata» (nella Home o nella pagina «Prossimo bus») e scrivi qualche lettera, per esempio «crispi» o «piazza rep». Non servono le maiuscole né gli accenti. Tocca il risultato giusto per aprire la fermata.',
       '<b>Dove ti trovi.</b> Tocca «Usa la mia posizione» e consenti al telefono di usarla: l’app ti mostra le fermate più vicine, con la distanza. La tua posizione resta nel telefono e non viene inviata a nessuno.',
