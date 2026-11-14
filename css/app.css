@@ -372,3 +372,13 @@ button { font: inherit; color: inherit; }
 .osd-chip img { display: block; width: 32px; height: auto; }
 
 .community + .hero-first { padding-top: 16px; }
+
+/* Riepilogo linea: giorno e statistiche */
+.line-stats { padding-top: 14px; }
+.day-pick { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--ink-2); }
+.day-pick input { min-height: 44px; padding: 6px 10px; border: 2px solid var(--cobalt-hi); border-radius: var(--r); background: transparent; color: var(--ink); font: inherit; }
+.stats { margin: 12px 0 0; display: grid; }
+.stats .stat { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; }
+.stats .stat:nth-child(odd) { background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: var(--r); }
+.stats dt { color: var(--ink-2); }
+.stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }

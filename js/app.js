@@ -141,6 +141,13 @@ function stopScreen(si, { home = false } = {}) {
   const sibs = siblingStops(state.data, si);
   const sibHtml = sibs.length ? `<section class="block"><h2>${esc(t('otherDirection'))}</h2><ul class="plain">${sibs.map((x) => stopRow(x)).join('')}</ul></section>` : '';
 
+  const key = (r) => state.data.routes[r].short || '\uffff';
+  const here = [...(state.stopRoutes.get(si) ?? [])].sort((a, b) => key(a).localeCompare(key(b), 'it', { numeric: true }));
+  const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}">
+  ${tileSvg(state.data.routes[r], 44)}
+  <span class="row-main"><span class="row-title">${esc(state.data.routes[r].long)}</span></span>
+  <span class="chev">${icon('chevron', 20)}</span></a></li>`).join('')}</ul></section>` : '';
+
   return `${banners(now)}
 <section class="hero" data-strip="${stripState(now)}" aria-labelledby="stop-title">
   ${first ? motifField(routeOfTrip(first.trip)) : ''}
@@ -158,6 +165,7 @@ function stopScreen(si, { home = false } = {}) {
   ${nextBlock}
 </section>
 ${rest.length ? `<section class="block"><h2 class="sr">${esc(t('nextAfter'))}</h2><ul class="plain deps">${rest.map(departureRow).join('')}</ul></section>` : ''}
+${hereHtml}
 ${sibHtml}`;
 }
 
@@ -351,13 +359,15 @@ function viewLine(rid, tripSel) {
   if (ri < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p></section>`;
   const route = state.data.routes[ri];
   const now = romeNow();
-  const activeToday = (tr) => isServiceActive(state.data.services[tr.v], now.ymd);
+  const day = state.lineDay ?? now.ymd;
+  const isToday = day === now.ymd;
+  const activeToday = (tr) => isServiceActive(state.data.services[tr.v], day);
   const all = state.data.trips.map((tr, i) => ({ tr, i })).filter((x) => x.tr.r === ri);
   const todays = all.filter((x) => activeToday(x.tr));
   const dirs = [...new Set((todays.length ? todays : all).map((x) => x.tr.d))].sort();
   const dsel = state.lineDir != null && dirs.includes(state.lineDir) ? state.lineDir : dirs[0];
   const pool = (todays.length ? todays : all).filter((x) => x.tr.d === dsel).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
-  const upcoming = pool.find((x) => x.tr.t[0] >= now.secs) ?? pool[0];
+  const upcoming = (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
   const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
   const head = (d) => {
     const c = {};
@@ -367,9 +377,19 @@ function viewLine(rid, tripSel) {
 
   const stopsHtml = sel ? sel.tr.s.map((si, k) => {
     const { name } = stopTitle(si);
-    const past = todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
+    const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
     return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(name)}</span><span class="st-time">${formatClock(sel.tr.t[k])}</span></a></li>`;
   }).join('') : '';
+
+  const iso = (y) => `${Math.floor(y / 10000)}-${String(Math.floor((y % 10000) / 100)).padStart(2, '0')}-${String(y % 100).padStart(2, '0')}`;
+  const m = state.data.meta;
+  const dayPool = todays.filter((x) => x.tr.d === dsel).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
+  const starts = dayPool.map((x) => x.tr.t[0]);
+  const first = starts[0], last = starts[starts.length - 1];
+  const clockPlus = (secs) => `${formatClock(secs)}${secs >= 86400 ? ' (+1)' : ''}`;
+  const statRow = (label, val) => `<div class="stat"><dt>${esc(t(label))}</dt><dd>${esc(val)}</dd></div>`;
+  const statsHtml = `<section class="block line-stats"><label class="day-pick">${esc(t('day'))} <input type="date" id="line-day" value="${iso(day)}"${m.validFrom ? ` min="${iso(m.validFrom)}"` : ''}${m.validTo ? ` max="${iso(m.validTo)}"` : ''} aria-label="${esc(t('day'))}"></label>
+${dayPool.length ? `<dl class="stats">${statRow('tripsPerDay', String(dayPool.length))}${statRow('firstPass', clockPlus(first))}${statRow('lastPass', clockPlus(last))}${dayPool.length > 1 ? statRow('avgFreq', t('everyMin', Math.round((last - first) / 60 / (dayPool.length - 1)))) : ''}</dl>` : `<p class="note">${esc(t('noTripsDay'))}</p>`}</section>`;
 
   return `${banners(now)}
 <section class="hero hero-line" data-strip="${stripState(now)}">
@@ -378,8 +398,9 @@ function viewLine(rid, tripSel) {
   <a class="btn btn-on-field" href="#/mappa/${esc(route.id)}">${icon('map', 20)}<span>${esc(t('showOnMap'))}</span></a>
 </section>
 ${dirs.length > 1 ? `<div class="seg" role="tablist">${dirs.map((d) => `<button role="tab" aria-selected="${d === dsel}" data-act="dir" data-d="${d}" data-r="${esc(rid)}">${esc(t('dir'))} ${esc(head(d))}</button>`).join('')}</div>` : ''}
+${statsHtml}
 ${todays.length ? '' : `<p class="banner">${esc(t('noTripsToday'))}</p>`}
-<section class="block"><h2>${esc(t('departuresToday'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
+<section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
 <ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
 <section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops">${stopsHtml}</ol></section>`;
 }
@@ -734,7 +755,7 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
-window.addEventListener('hashchange', () => { state.lineDir = null; render(true); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; render(true); window.scrollTo(0, 0); });
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
 setInterval(() => {
@@ -743,6 +764,13 @@ setInterval(() => {
 }, 20000);
 
 // ---------- azioni ----------
+$app.addEventListener('change', (e) => {
+  if (e.target.id !== 'line-day' || !e.target.value) return;
+  const m = current?.path.match(/^\/linea\/(.+)$/);
+  if (!m) return;
+  state.lineDay = Number(e.target.value.replaceAll('-', ''));
+  $app.innerHTML = viewLine(decodeURIComponent(m[1]));
+});
 $app.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
