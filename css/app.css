@@ -135,6 +135,12 @@ button { font: inherit; color: inherit; }
 /* campo di motivo: stesso disegno della piastrella della linea, grande e tenue */
 .hero > * { position: relative; }
 .hero > .field { position: absolute; right: -50px; top: -30px; width: 380px; height: 380px; color: var(--on-cobalt); opacity: 0.2; pointer-events: none; -webkit-mask-image: radial-gradient(circle at 78% 30%, black 8%, transparent 62%); mask-image: radial-gradient(circle at 78% 30%, black 8%, transparent 62%); }
+/* barra di identità della Home: logo e nome dell'app sopra la fermata */
+.brandbar { display: flex; align-items: center; gap: 10px; margin: -4px 0 14px; color: var(--on-cobalt-2); font-size: 15px; }
+.brandbar img { border-radius: var(--r-tile); flex: none; }
+.brandbar b { color: var(--on-cobalt); font-size: 17px; }
+.dir-origin { margin: 0 0 2px; font-weight: 700; color: var(--ocra); }
+.dir-origin .ico { vertical-align: -1px; }
 .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .stopname { min-width: 0; }
 .stopname h1 { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 700; text-wrap: balance; overflow-wrap: anywhere; }

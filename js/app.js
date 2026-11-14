@@ -140,7 +140,7 @@ function stripState(now) {
 }
 
 /** Schermata di una fermata: campo cobalto con la prossima partenza, poi le successive. */
-function stopScreen(si, { home = false } = {}) {
+function stopScreen(si, { home = false, origin = null } = {}) {
   const now = romeNow();
   const s = state.data.stops[si];
   const { name, dir, code } = stopTitle(si);
@@ -170,18 +170,24 @@ function stopScreen(si, { home = false } = {}) {
 
   const key = (r) => state.data.routes[r].short || '\uffff';
   const here = [...(state.stopRoutes.get(si) ?? [])].sort((a, b) => key(a).localeCompare(key(b), 'it', { numeric: true }));
+  // per ogni linea che passa qui: il prossimo passaggio di oggi, così la lista dice anche "quando", non solo "quali"
+  const nextByRoute = new Map();
+  for (const it of nextDepartures(state.data, state.index, si, now, 80).items) { const r = state.data.trips[it.trip].r; if (!nextByRoute.has(r)) nextByRoute.set(r, it); }
+  const hereSub = (r) => { const it = nextByRoute.get(r); return it ? `${t('nextPass')} ${formatClock(it.secs)} · ${relText(it)}` : t('noMoreLine'); };
   const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}/fermata/${esc(state.data.stops[si].id)}">
   ${tileSvg(state.data.routes[r], 44)}
-  <span class="row-main"><span class="row-title">${esc(state.data.routes[r].long)}</span></span>
+  <span class="row-main"><span class="row-title">${esc(t('line'))} ${esc(state.data.routes[r].short)} · ${esc(state.data.routes[r].long)}</span><span class="row-sub">${esc(hereSub(r))}</span></span>
   <span class="chev">${icon('chevron', 20)}</span></a></li>`).join('')}</ul></section>` : '';
 
   return `${banners(now)}
 <section class="hero" data-strip="${stripState(now)}" aria-labelledby="stop-title">
   ${first ? motifField(routeOfTrip(first.trip)) : ''}
+  ${home ? `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b><span>${esc(t('brandTag'))}</span></div>` : ''}
   <div class="hero-top">
     <div class="stopname">
       <h1 id="stop-title">${esc(name)}</h1>
-      <p class="dir">${dir ? `${esc(t('toward'))} ${esc(dir)}` : `${esc(t('stop'))} ${esc(code)}`}</p>
+      ${origin ? `<p class="dir dir-origin">${icon(origin === 'fav' ? 'star' : 'clock', 14, origin === 'fav')} ${esc(t(origin === 'fav' ? 'yourStop' : 'lastStop'))}</p>` : ''}
+      <p class="dir">${dir ? `${esc(t('toward'))} ${esc(dir)}` : origin ? `${esc(t('stop'))} ${esc(code)}` : `${esc(t('stop'))} ${esc(code)}`}</p>
     </div>
     <div class="hero-actions">
       <a class="icon-btn" href="#/cerca" aria-label="${esc(t('searchStop'))}">${icon('search', 24)}</a>
@@ -224,7 +230,7 @@ function viewNear(home = false) {
   const searchLink = `<a class="btn btn-quiet" href="#/cerca">${icon('search', 20)}<span>${esc(t('searchStop'))}</span></a>`;
 
   if (current >= 0) {
-    return `${stopScreen(current, { home: true })}
+    return `${stopScreen(current, { home, origin: home ? (favs[0] === current ? 'fav' : 'last') : null })}
 <div class="actions">${geoBtn}${searchLink}</div>
 ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}${favBlock}${home ? communityNote() : ''}`;
   }

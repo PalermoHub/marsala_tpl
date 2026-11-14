@@ -3,7 +3,7 @@
 const IT = {
   appName: 'Marsala TPL',
   tabHome: 'Home', tabPlan: 'Percorso', tabNear: 'Vicino', tabLines: 'Linee', tabMap: 'Mappa', tabInfo: 'Info', tabMore: 'Altro', moreInfoSub: 'Fonti, licenze, lingua e tema', morePrivacySub: 'Dati, statistiche e consenso',
-  stop: 'Fermata', toward: 'direzione',
+  stop: 'Fermata', toward: 'direzione', line: 'Linea', nextPass: 'prossimo passaggio', noMoreLine: 'oggi non passa più', brandTag: 'Trasporto pubblico di Marsala', yourStop: 'La tua fermata', lastStop: 'Ultima fermata vista',
   now: 'ora', min: 'min', inMin: (n) => `tra ${n} min`, inHm: (h, m) => (m ? `tra ${h} h ${m} min` : `tra ${h} h`),
   atTime: (t) => `alle ${t}`,
   planShare: 'Condividi percorso', planShareText: (a, b, when, lines) => `Marsala TPL · ${a} → ${b}\n${when} · linea ${lines}`,
@@ -183,7 +183,7 @@ const IT = {
 const EN = {
   ...IT,
   tabHome: 'Home', tabPlan: 'Journey', tabNear: 'Nearby', tabLines: 'Lines', tabMap: 'Map', tabInfo: 'Info', tabMore: 'More', moreInfoSub: 'Sources, licences, language and theme', morePrivacySub: 'Data, statistics and consent',
-  stop: 'Stop', toward: 'toward',
+  stop: 'Stop', toward: 'toward', line: 'Line', nextPass: 'next at', noMoreLine: 'no more today', brandTag: 'Marsala public transport', yourStop: 'Your stop', lastStop: 'Last stop viewed',
   now: 'now', inMin: (n) => `in ${n} min`, inHm: (h, m) => (m ? `in ${h} h ${m} min` : `in ${h} h`),
   atTime: (t) => `at ${t}`,
   planShare: 'Share journey', planShareText: (a, b, when, lines) => `Marsala TPL · ${a} → ${b}\n${when} · line ${lines}`,
