@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Card passi Marsala TPL</title>
+<style>
+@font-face{font-family:Atk;src:url(../fonts/atkinson-hyperlegible-400.woff2);font-weight:400}
+@font-face{font-family:Atk;src:url(../fonts/atkinson-hyperlegible-700.woff2);font-weight:700}
+:root{--testo:#14213D;--tenue:#43507a;--blu:#1B3A94;--giallo:#E8B93A}
+*{box-sizing:border-box;margin:0}
+body{width:1920px;height:1072px;overflow:hidden;position:relative;color:var(--testo);font-family:Atk,system-ui,sans-serif;
+ background:radial-gradient(900px 500px at 85% 0%,rgba(27,58,148,.12),transparent 70%),radial-gradient(900px 600px at 10% 100%,rgba(232,185,58,.16),transparent 70%),linear-gradient(160deg,#f8f6f0,#eceff6)}
+header{position:absolute;left:80px;right:80px;top:52px;display:flex;justify-content:space-between;align-items:flex-start}
+.badge{display:inline-block;background:rgba(27,58,148,.08);border:1.5px solid var(--blu);color:var(--blu);font-weight:700;font-size:20px;letter-spacing:.1em;text-transform:uppercase;padding:6px 20px;border-radius:99px;margin-bottom:16px;box-shadow:0 6px 18px rgba(27,58,148,.18)}
+h1{font-size:62px;line-height:1.08;font-weight:700;letter-spacing:-.01em}
+h1 em{font-style:normal;color:#d9a21b}
+.live{display:inline-flex;align-items:center;gap:10px;margin-left:14px;background:#fff;border:1.5px solid #1f8f5f;color:#14663f;font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;padding:6px 20px;border-radius:99px;margin-bottom:16px;box-shadow:0 6px 18px rgba(31,143,95,.2)}
+.live i{width:12px;height:12px;border-radius:50%;background:#1f8f5f;box-shadow:0 0 0 5px rgba(31,143,95,.25)}
+.brand{display:flex;align-items:center;gap:18px;margin-top:6px}
+.brand img{height:84px;width:auto;background:#fff;border-radius:16px;padding:6px;box-shadow:0 8px 22px rgba(20,30,60,.15)}
+.brand b{display:block;font-size:44px;color:var(--blu);letter-spacing:-.01em;line-height:1}
+.brand span{font-size:20px;color:var(--tenue)}
+.passi{position:absolute;left:80px;right:80px;top:272px;display:grid;grid-template-columns:repeat(5,1fr);gap:34px}
+.passo{position:relative;height:704px;border-radius:26px;padding:30px 14px 0;display:flex;flex-direction:column;align-items:center;
+ background:linear-gradient(160deg,rgba(255,255,255,.96),rgba(255,255,255,.72));border:1.5px solid #d0d7de;box-shadow:0 18px 44px rgba(20,30,60,.14),inset 0 1px 0 #fff}
+.passo:not(:last-child)::after{content:"";position:absolute;right:-34px;top:50%;width:34px;height:3px;background:linear-gradient(90deg,var(--giallo),rgba(232,185,58,.1));box-shadow:0 0 12px var(--giallo)}
+.num{position:absolute;top:-24px;left:24px;width:58px;height:58px;border-radius:50%;background:var(--giallo);color:#1a1206;font-weight:700;font-size:32px;display:grid;place-items:center;box-shadow:0 6px 16px rgba(150,100,10,.35)}
+.tel{width:290px;height:534px;border-radius:30px;border:6px solid #05080d;overflow:hidden;box-shadow:0 14px 30px rgba(20,30,60,.3);background:#fff;margin-top:6px}
+.tel img{width:100%;height:100%;display:block;object-fit:cover;object-position:top}
+.passo h2{font-size:29px;margin-top:18px;text-align:center;font-weight:700;line-height:1.15}
+.passo p{font-size:20px;line-height:1.3;color:var(--tenue);margin-top:8px;text-align:center}
+.passo b{color:var(--testo)}
+footer{position:absolute;left:80px;right:80px;bottom:30px;display:flex;justify-content:space-between;align-items:center;font-size:21px;color:var(--tenue)}
+footer .url{font-weight:700;color:var(--blu)}
+</style></head><body>
+<header>
+ <div>
+  <span class="badge">Come funziona</span><span class="live"><i></i>Bus in tempo reale</span>
+  <h1>Come funziona Marsala TPL?<br><em>Trovi il bus in 5 passi</em></h1>
+ </div>
+ <div class="brand"><img src="../img/opendatasicilia.png" alt=""><div><b>Marsala TPL</b><span>app della community · #opendatasicilia</span></div></div>
+</header>
+<section class="passi">
+ <div class="passo"><div class="num">1</div><div class="tel"><img src="../img/guida/home.webp"></div>
+  <h2>Dove sei?</h2><p>Tocca <b>«Usa la mia posizione»</b> o cerca una fermata per nome.</p></div>
+ <div class="passo"><div class="num">2</div><div class="tel"><img src="../img/guida/fermata.webp"></div>
+  <h2>Quando passa il bus</h2><p>I <b>minuti di attesa</b> per ogni linea che passa da lì.</p></div>
+ <div class="passo"><div class="num">3</div><div class="tel"><img src="../img/guida/linee.webp"></div>
+  <h2>Segui le linee</h2><p>Tutte le linee <b>in servizio oggi</b>, con il numero di corse.</p></div>
+ <div class="passo"><div class="num">4</div><div class="tel"><img src="../img/guida/percorso-condividi.webp"></div>
+  <h2>Pianifica il percorso</h2><p>Dove salire e scendere. <b>Condividi</b> con un tocco.</p></div>
+ <div class="passo"><div class="num">5</div><div class="tel"><img src="../img/guida/mappa-3d-bus.webp"></div>
+  <h2>Bus in tempo reale</h2><p>Vedi i <b>bus muoversi</b> sulla mappa 3D, in diretta. Orari anche offline.</p></div>
+</section>
+<footer>
+ <span><b style="color:#14663f">Posizione dei bus in tempo reale</b> · orari programmati dal feed GTFS del Comune di Marsala</span>
+ <span class="url">palermohub.opendatasicilia.it/marsala_tpl.html</span>
+</footer>
+</body></html>
