@@ -1,0 +1,43 @@
+- generic [active] [ref=f48e1]:
+  - link "Vai al contenuto" [ref=f48e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f48e3]:
+    - generic [ref=f48e4]:
+      - link "Back" [ref=f48e5] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=f48e8]: Home
+      - heading "Plan your journey" [level=1] [ref=f48e9]
+      - paragraph [ref=f48e10]: "Pick where you start and where you go: I’ll tell you which bus to take and where to get off. Scheduled times, not live."
+    - generic [ref=f48e11]:
+      - generic [ref=f48e12]:
+        - generic [ref=f48e13]: From
+        - textbox "From" [ref=f48e18]:
+          - /placeholder: Departure stop
+      - button "Swap start and destination" [ref=f48e20] [cursor=pointer]
+      - generic [ref=f48e23]:
+        - generic [ref=f48e24]: To
+        - textbox "To" [ref=f48e30]:
+          - /placeholder: Arrival stop
+      - radiogroup [ref=f48e32]:
+        - radio "Now" [checked] [ref=f48e33] [cursor=pointer]
+        - radio "Leaving at" [ref=f48e34] [cursor=pointer]
+  - navigation "Marsala TPL" [ref=f48e36]:
+    - link "Home" [ref=f48e37] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f48e42] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f48e48] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f48e52] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f48e56] [cursor=pointer]:
+      - /url: "#/info"
+  - region "Your privacy" [ref=f48e61]:
+    - heading "Your privacy" [level=2] [ref=f48e62]
+    - paragraph [ref=f48e63]:
+      - text: "With your consent we use Google Analytics for anonymous statistics on how the app is used. Without consent nothing is loaded from Google: the app works the same."
+      - link "Notice" [ref=f48e64] [cursor=pointer]:
+        - /url: "#/privacy"
+    - generic [ref=f48e65]:
+      - button "Reject" [ref=f48e66] [cursor=pointer]
+      - button "Accept" [ref=f48e67] [cursor=pointer]

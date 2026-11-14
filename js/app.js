@@ -550,7 +550,11 @@ function resolveSide(id) {
 const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
 
 function viewPlan(m) {
-  if (m[1]) { state.plan.from = resolveSide(decodeURIComponent(m[1])); state.plan.to = resolveSide(decodeURIComponent(m[2])); }
+  if (m[1]) {
+    state.plan.from = resolveSide(decodeURIComponent(m[1])); state.plan.to = resolveSide(decodeURIComponent(m[2]));
+    const hh = m[3] ? Number(m[3].slice(0, 2)) : NaN, mm = m[3] ? Number(m[3].slice(2)) : NaN;
+    state.plan.time = hh < 24 && mm < 60 ? hh * 3600 + mm * 60 : null;
+  }
   const now = romeNow();
   const field = (side, key, ph) => `<div class="pf">
   <label class="pf-label" for="pf-${side}">${esc(t(key))}</label>
@@ -623,12 +627,20 @@ function optionHtml(o, i, tomorrow) {
 </details></li>`;
 }
 
+/** Testo di anteprima per la condivisione: tratta + migliore soluzione. */
+function planShareText(o, tomorrow) {
+  const { from, to } = state.plan;
+  const lines = o.legs.filter((l) => l.kind === 'bus').map((l) => routeOfTrip(l.trip).short).join(' › ');
+  return t('planShareText', sideLabel(from), sideLabel(to), `${tomorrow ? t('planTomorrow') + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}`, lines);
+}
+
 async function runPlan() {
   const out = document.getElementById('plan-out');
   if (!out) return;
   const { from, to, time } = state.plan;
   if (!from || !to) { out.innerHTML = ''; return; }
   if (from.id === to.id) { out.innerHTML = `<p class="note">${esc(t('planSame'))}</p>`; return; }
+  syncPlanUrl();
   const ends = [];
   for (const sd of [from, to]) {
     if (sd.kind === 'gps') {
@@ -647,12 +659,17 @@ async function runPlan() {
     tomorrow = opts.length > 0;
     msg = t(tomorrow ? 'planNoneNow' : 'planNone');
   }
-  out.innerHTML = `${msg ? `<p class="note">${esc(msg)}</p>` : ''}${opts.length ? `<ul class="plain opts">${opts.map((o, i) => optionHtml(o, i, tomorrow)).join('')}</ul><p class="muted note">${esc(t('scheduledNote'))}</p>` : ''}`;
+  const best = opts[0];
+  state.planShareText = best ? planShareText(best, tomorrow) : '';
+  out.innerHTML = `${msg ? `<p class="note">${esc(msg)}</p>` : ''}${opts.length ? `<ul class="plain opts">${opts.map((o, i) => optionHtml(o, i, tomorrow)).join('')}</ul><p class="muted note">${esc(t('scheduledNote'))}</p>
+<div class="actions"><button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button></div>` : ''}`;
 }
 
 function syncPlanUrl() {
   const { from, to } = state.plan;
-  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}` : '#/percorso';
+  const tm = state.plan.time;
+  const hhmm = tm == null ? '' : `/${String(Math.floor(tm / 3600) % 24).padStart(2, '0')}${String(Math.floor((tm % 3600) / 60)).padStart(2, '0')}`;
+  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}` : '#/percorso';
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 
@@ -767,7 +784,7 @@ const routes = [
   [/^\/vicino$/, () => viewNear(), 'home'],
   [/^\/stop\/(.+)$/, (m) => viewStop(decodeURIComponent(m[1])), 'home'],
   [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
-  [/^\/percorso(?:\/([^/]+)\/([^/]+))?$/, (m) => viewPlan(m), 'plan', bindPlan],
+  [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
   [/^\/linea\/(.+)$/, (m) => viewLine(decodeURIComponent(m[1])), 'lines'],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
@@ -828,6 +845,13 @@ $app.addEventListener('click', async (e) => {
     try {
       if (navigator.share) await navigator.share({ title, url });
       else { await navigator.clipboard.writeText(url); toast(t('linkCopied')); }
+    } catch { /* annullato */ }
+  } else if (act === 'shareplan') {
+    const url = `${base()}${location.hash}`;
+    const text = state.planShareText || '';
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, text, url });
+      else { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t('linkCopied')); }
     } catch { /* annullato */ }
   } else if (act === 'geo') locate();
   else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
