@@ -782,9 +782,9 @@ function avvisoItem(i) {
 
 // "Altro": avvisi, guida, informazioni e privacy, fuori dalla barra per tenerla a 5 voci.
 function viewMore() {
-  const row = (href, ic, title, sub) => `<li><a class="row" href="${href}">${icon(ic, 24)}<span class="row-main"><span class="row-title">${esc(t(title))}</span><span class="row-sub">${esc(t(sub))}</span></span><span class="chev">${icon('chevron', 20)}</span></a></li>`;
+  const row = (href, ic, title, sub, tag = '') => `<li><a class="row" href="${href}">${icon(ic, 24)}<span class="row-main"><span class="row-title">${esc(t(title))}${tag ? ` <span class="news-tag">${esc(tag)}</span>` : ''}</span><span class="row-sub">${esc(t(sub))}</span></span><span class="chev">${icon('chevron', 20)}</span></a></li>`;
   return `${banners(romeNow())}${pageHead(t('tabMore'))}<section class="block"><ul class="plain">
-${row('#/avvisi', 'bell', 'homeNews', 'homeNewsSub')}
+${row('#/avvisi', 'bell', 'homeNews', 'homeNewsSub', state.newsUnread ? t('newsNew', state.newsUnread) : '')}
 ${row('#/guida', 'help', 'guideTitle', 'homeGuideSub')}
 ${row('#/info', 'info', 'info', 'moreInfoSub')}
 ${row('#/privacy', 'shield', 'privacyFull', 'morePrivacySub')}
@@ -805,6 +805,7 @@ function bindAvvisi() {
     const el = document.getElementById('news-list');
     if (!el) return; // si è già cambiata pagina
     if (!d?.items?.length) { el.innerHTML = `<p class="note">${esc(t('newsErr'))}</p>`; return; }
+    refreshNews(true);
     const tr = d.items.filter((i) => i.transport);
     const rest = d.items.filter((i) => !i.transport);
     el.innerHTML = `${tr.length ? `<h2>${esc(t('newsTransportH'))}</h2><ul class="plain news">${tr.map(avvisoItem).join('')}</ul>` : `<p class="note">${esc(t('newsNoTransport'))}</p>`}
@@ -1046,6 +1047,27 @@ function renderChrome() {
   $nav.setAttribute('aria-label', t('appName'));
   const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['more', '#/altro', 'more', 'tabMore']];
   $nav.innerHTML = items.map(([tab, href, ic, key]) => `<a href="${href}" data-tab="${tab}">${icon(ic, 24)}<span>${esc(t(key))}</span></a>`).join('');
+  paintNewsBadge();
+}
+
+// Avvisi nuovi sul trasporto: contano quelli più recenti dell'ultima volta che hai aperto «Avvisi».
+// Chi apre l'app per la prima volta parte da zero: nessun arretrato da smaltire.
+function paintNewsBadge() {
+  const a = $nav.querySelector('[data-tab="more"]');
+  a?.querySelectorAll('.tab-badge, .tab-badge-sr').forEach((e) => e.remove());
+  const n = state.newsUnread ?? 0;
+  if (a && n > 0) a.insertAdjacentHTML('beforeend', `<span class="tab-badge" aria-hidden="true">${n > 9 ? '9+' : n}</span><span class="sr tab-badge-sr">${esc(t('newsNew', n))}</span>`);
+}
+async function refreshNews(markSeen = false) {
+  const d = await loadAvvisi();
+  if (!d?.items) return;
+  const dates = d.items.filter((i) => i.transport && i.date).map((i) => i.date).sort();
+  const latest = dates.at(-1);
+  if (!latest) return;
+  const seen = store.get('newsSeen');
+  if (markSeen || !seen) store.set('newsSeen', latest);
+  state.newsUnread = markSeen || !seen ? 0 : dates.filter((x) => x > seen).length;
+  paintNewsBadge();
 }
 
 // ---------- avvio ----------
@@ -1061,6 +1083,7 @@ async function boot() {
   try {
     await loadData();
     render(true);
+    refreshNews(); // in coda: non rallenta la prima schermata
   } catch {
     $app.innerHTML = `<section class="block"><p class="empty-title">${esc(t('loadError'))}</p><p>${esc(t('loadHelp'))}</p><button class="btn" data-act="reload">${esc(t('retry'))}</button></section>`;
   }

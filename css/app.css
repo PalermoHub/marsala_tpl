@@ -114,7 +114,9 @@ button { font: inherit; color: inherit; }
 }
 .tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 48px; padding: 6px 0 4px; text-decoration: none; color: var(--ink-2); font-size: 13px; font-weight: 700; }
 .tabs a .ico { padding: 3px 14px; box-sizing: content-box; border-radius: var(--r); transition: background-color 0.2s var(--ease); }
+.tabs a { position: relative; }
 .tabs a[aria-current] { color: var(--ink); }
+.tab-badge { position: absolute; top: 3px; left: calc(50% + 6px); display: grid; place-items: center; min-width: 18px; height: 18px; padding-inline: 5px; border-radius: var(--r-pill); background: var(--terra); color: var(--glaze); font: 700 11px/1 var(--font); }
 .tabs a[aria-current] .ico { background: var(--ocra); color: var(--on-ocra); }
 
 /* ---------- campo cobalto ---------- */
@@ -480,3 +482,4 @@ button { font: inherit; color: inherit; }
 .info-link { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r); color: var(--ink); font-weight: 700; text-decoration: none; }
 .info-link span { flex: 1; }
 .info-link:hover { background: var(--glaze-2); }
+.row .news-tag { margin-left: 6px; vertical-align: 2px; background: var(--terra); color: var(--glaze); }

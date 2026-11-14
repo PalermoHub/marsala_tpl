@@ -309,6 +309,9 @@ Filo verticale da 2px in cobalto vivo (opacita' 0.55), nodo cerchio 12px con bor
 ### Tab bar
 Quattro voci uguali, 13px/700, icona SVG; la voce attiva ha una pillola ocra (raggio 10px) dietro l'icona e testo `{colors.ink}`; le altre `{colors.ink-2}`. Sfondo smalto con filetto superiore.
 
+### Badge avvisi (tab Altro)
+Cerchietto `{colors.terra}` con numero 11px/700 in `{colors.glaze}` (9+ oltre nove), angolo in alto a destra dell'icona; compare solo se ci sono avvisi sul trasporto piu' recenti dell'ultima apertura di «Avvisi». Chi apre l'app la prima volta parte da zero. Nella pagina Altro la riga Avvisi porta la stessa etichetta in forma estesa («1 nuovo avviso»). Terracotta = avviso, in linea con la One Job Rule.
+
 ### Chip mappa
 Blocco a raggio 10px su smalto, 15px/700, ombra morbida; variante "live" con pallino rame da 12px e doppio anello (smalto, rame). I bus sono cerchi rame da 9px con bordo bianco 3px; fermate cerchi smalto con bordo cobalto 2px; tracciati nello smalto della linea con bordo bianco.
 
