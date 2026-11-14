@@ -145,6 +145,7 @@ button { font: inherit; color: inherit; }
 html.embed { scrollbar-width: none; }
 html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: none; }
 .embed .brandbar { padding-left: 48px; }
+.embed .map-bar { left: 60px; }
 .dir-origin { margin: 0 0 2px; font-weight: 700; color: var(--ocra); }
 .dir-origin .ico { vertical-align: -1px; }
 .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
