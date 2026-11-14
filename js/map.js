@@ -14,6 +14,40 @@ const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron';
 const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
 const CENTER = [12.4437, 37.7985];
 const POLL_MS = 10000;
+// Provincia di Trapani con Egadi e Pantelleria (O, S, E, N): la mappa non esce da qui.
+const BBOX = [[11.8, 36.55], [13.2, 38.3]];
+
+
+// Vista della mappa nell'URL (?map=zoom/lat/lng/direzione): link condivisibile senza toccare il #/ delle rotte dell'app.
+const HASH_KEY = 'map';
+function readHash() {
+  const v = new URLSearchParams(location.search).get(HASH_KEY)?.split('/').map(Number);
+  if (!v || v.length < 3 || v.slice(0, 3).some((n) => !Number.isFinite(n)) || Math.abs(v[1]) > 85 || Math.abs(v[2]) > 180) return null;
+  return { zoom: Math.min(22, Math.max(0, v[0])), center: [v[2], v[1]], bearing: Number.isFinite(v[3]) ? v[3] : 0 };
+}
+function writeHash(map) {
+  const c = map.getCenter();
+  const q = new URLSearchParams(location.search);
+  q.set(HASH_KEY, `${map.getZoom().toFixed(2)}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}/${map.getBearing().toFixed(0)}`);
+  history.replaceState(history.state, '', `${location.pathname}?${q.toString().replace(/%2F/g, '/')}${location.hash}`);
+}
+function clearHash() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has(HASH_KEY)) return;
+  q.delete(HASH_KEY);
+  history.replaceState(history.state, '', `${location.pathname}${q.size ? `?${q}` : ''}${location.hash}`);
+}
+
+const SVG = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = {
+  home: SVG('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>'),
+  plus: SVG('<path d="M12 5v14M5 12h14"/>'),
+  minus: SVG('<path d="M5 12h14"/>'),
+  locate: SVG('<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.500v3M12 19.500v3M1.500 12h3M19.500 12h3"/>'),
+  compass: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.500l4 9.500h-8z" fill="#C8412B"/><path d="M12 21.500l-4-9.500h8z" fill="currentColor" opacity="0.55"/></svg>',
+  full: SVG('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  exit: SVG('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'),
+};
 
 let loading = null;
 function loadMapLibre() {
@@ -43,8 +77,8 @@ const isDark = () => {
 
 export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   const maplibregl = await loadMapLibre();
-  const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, maxBounds: BBOX, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
+  map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-left');
 
   // Un percorso per ogni shape usata, colorato come la piastrella della linea.
   const seen = new Set();
@@ -107,9 +141,74 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     if (!map.getSource('edifici3d')) map.addSource('edifici3d', { type: 'geojson', data: buildings });
     map.addLayer({ id: 'buildings-3d', type: 'fill-extrusion', source: 'edifici3d', minzoom: 13, paint: { 'fill-extrusion-color': isDark() ? '#3A4256' : '#E4E0D8', 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.92 } }, 'buses-body');
   }
+  // Colonna di comandi (home, zoom, posizione, schermo intero, 3D) e cursore di zoom.
+  const mkBtn = (cls, html, label, fn) => {
+    const bt = document.createElement('button');
+    bt.type = 'button';
+    bt.className = `map-btn ${cls}`;
+    bt.innerHTML = html;
+    bt.setAttribute('aria-label', label);
+    bt.title = label;
+    bt.addEventListener('click', fn);
+    return bt;
+  };
+  const ctrls = document.createElement('div');
+  ctrls.className = 'map-ctrls';
+  const zoomBox = document.createElement('div');
+  zoomBox.className = 'map-zoom';
+  const zoomVal = document.createElement('output');
+  zoomVal.className = 'map-zoom-val';
+  const zoomRange = document.createElement('input');
+  zoomRange.type = 'range';
+  zoomRange.className = 'map-zoom-range';
+  zoomRange.min = '8'; zoomRange.max = '19'; zoomRange.step = '0.1';
+  zoomRange.setAttribute('aria-label', t('mapZoomSlider'));
+  zoomRange.setAttribute('aria-orientation', 'vertical');
+  zoomBox.append(zoomVal, zoomRange);
+  const showZoom = () => { const z = map.getZoom(); zoomVal.textContent = z.toFixed(1); zoomRange.value = String(Math.min(19, Math.max(8, z))); };
+  zoomRange.addEventListener('input', () => map.setZoom(Number(zoomRange.value)));
+  map.on('zoom', showZoom);
+
+  let meBusy = false;
+  function placeMe(lon, lat) {
+    const data = { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] } };
+    if (map.getSource('me')) { map.getSource('me').setData(data); return; }
+    map.addSource('me', { type: 'geojson', data });
+    map.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 18, 'circle-color': '#1B3A94', 'circle-opacity': 0.2 } });
+    map.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 8, 'circle-color': '#1B3A94', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
+  }
+  const locBtn = mkBtn('map-loc', ICON.locate, t('mapLocate'), () => {
+    if (meBusy || !navigator.geolocation) return;
+    meBusy = true;
+    locBtn.setAttribute('aria-busy', 'true');
+    navigator.geolocation.getCurrentPosition(
+      (p) => { meBusy = false; locBtn.removeAttribute('aria-busy'); if (destroyed) return; placeMe(p.coords.longitude, p.coords.latitude); map.flyTo({ center: [p.coords.longitude, p.coords.latitude], zoom: Math.max(map.getZoom(), 15.5), duration: reduced ? 0 : 900 }); },
+      () => { meBusy = false; locBtn.removeAttribute('aria-busy'); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  });
+  const fsTarget = el.parentElement;
+  const fsBtn = mkBtn('map-fs', ICON.full, t('mapFullscreen'), () => { if (document.fullscreenElement) document.exitFullscreen?.(); else fsTarget.requestFullscreen?.().catch(() => {}); });
+  const onFs = () => { const on = document.fullscreenElement === fsTarget; fsBtn.innerHTML = on ? ICON.exit : ICON.full; fsBtn.setAttribute('aria-label', t(on ? 'mapFullscreenExit' : 'mapFullscreen')); fsBtn.title = fsBtn.getAttribute('aria-label'); setTimeout(() => map.resize(), 50); };
+  document.addEventListener('fullscreenchange', onFs);
+  function initControls() {
+    const homeBtn = mkBtn('map-home', ICON.home, t('mapHome'), () => goHome(reduced ? 0 : 700));
+    ctrls.append(homeBtn, mkBtn('map-in', ICON.plus, t('mapZoomIn'), () => map.zoomIn()), mkBtn('map-out', ICON.minus, t('mapZoomOut'), () => map.zoomOut()));
+    const compassBtn = mkBtn('map-compass', ICON.compass, t('mapCompass'), () => map.resetNorth({ duration: reduced ? 0 : 400 }));
+    const paintCompass = () => { compassBtn.firstElementChild.style.transform = `rotate(${-map.getBearing()}deg)`; };
+    map.on('rotate', paintCompass);
+    paintCompass();
+    ctrls.append(compassBtn);
+    if (navigator.geolocation) ctrls.append(locBtn);
+    if (fsTarget?.requestFullscreen) ctrls.append(fsBtn);
+    ctrls.append(btn3d, zoomBox);
+    el.parentElement.append(ctrls);
+    showZoom();
+  }
+
   const btn3d = document.createElement('button');
   btn3d.type = 'button';
-  btn3d.className = 'map-3d';
+  btn3d.className = 'map-btn map-3d';
   const paintBtn = () => { btn3d.textContent = is3d ? '2D' : '3D'; btn3d.setAttribute('aria-pressed', String(is3d)); btn3d.setAttribute('aria-label', t(is3d ? 'map2d' : 'map3d')); };
   btn3d.addEventListener('click', async () => {
     is3d = !is3d;
@@ -125,7 +224,6 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     draw();
   });
   paintBtn();
-  el.append(btn3d);
 
   map.on('click', 'stops', (e) => {
     const f = e.features?.[0];
@@ -171,7 +269,14 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   // Inquadra la linea scelta, oppure tutta la rete.
   const b = new maplibregl.LngLatBounds();
   lineFeatures.forEach((f) => f.geometry.coordinates.forEach((c) => b.extend(c)));
-  if (!b.isEmpty()) map.fitBounds(b, { padding: { top: 72, right: 32, bottom: 40, left: 32 }, duration: 0, maxZoom: 15 });
+  const homeFit = { padding: { top: 72, right: 32, bottom: 40, left: 32 }, maxZoom: 15 };
+  const goHome = (duration) => { if (!b.isEmpty()) map.fitBounds(b, { ...homeFit, duration, pitch: is3d ? 60 : 0, bearing: 0 }); };
+  const shared = readHash();
+  if (shared) map.jumpTo(shared); else goHome(0);
+  initControls();
+  const syncHash = () => writeHash(map);
+  map.on('moveend', syncHash);
+  if (shared) syncHash();
 
   // Mezzi: aggiornamento periodico a scheda visibile. Tra due posizioni il mezzo scorre e ruota con continuità.
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -256,5 +361,5 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   }
   poll();
 
-  return { destroy() { destroyed = true; btn3d.remove(); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
+  return { destroy() { destroyed = true; ctrls.remove(); zoomBox.remove(); clearHash(); document.removeEventListener('fullscreenchange', onFs); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
 }
