@@ -313,7 +313,7 @@ button { font: inherit; color: inherit; }
   .stopname h1 { font-size: 30px; }
 }
 /* Schermi larghi: colonna un po' più larga (tab bar e gutter seguono `--col`); la mappa resta a tutto schermo. */
-@media (min-width: 900px) { :root { --col: 680px; } .page-head h1 { font-size: 36px; } }
+@media (min-width: 900px) { :root { --col: 680px; } .page-head h1 { font-size: 40px; } }
 
 /* ---------- home ---------- */
 .howto { display: grid; gap: 14px; }
