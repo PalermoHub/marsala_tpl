@@ -416,3 +416,22 @@ button { font: inherit; color: inherit; }
 .news-more summary svg { transform: rotate(90deg); transition: transform 0.15s var(--ease); }
 .news-more[open] summary svg { transform: rotate(-90deg); }
 .news-more[open] summary { margin-bottom: 12px; }
+
+/* Info: schede a fisarmonica */
+.acc-list { display: grid; gap: 10px; margin-top: 16px; }
+.acc { border: 2px solid var(--line); border-radius: 14px; background: var(--glaze); }
+.acc summary { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 16px; cursor: pointer; list-style: none; }
+.acc summary::-webkit-details-marker { display: none; }
+.acc-ico { display: grid; place-items: center; flex: none; width: 28px; height: 28px; color: var(--ink-2); }
+.acc-t { flex: 1; font-size: 18px; font-weight: 700; line-height: 1.2; }
+.acc-pm { position: relative; flex: none; width: 20px; height: 20px; color: var(--ink-2); }
+.acc-pm::before, .acc-pm::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 2.5px; margin: -1.25px 0 0 -7px; background: currentColor; border-radius: 2px; transition: transform 0.15s var(--ease); }
+.acc-pm::after { transform: rotate(90deg); }
+.acc[open] .acc-pm::after { transform: rotate(0); }
+.acc-body { padding: 0 16px 16px; }
+.acc-body > :first-child { margin-top: 0; }
+.acc-body .h3 { margin-top: 16px; }
+.info-links { display: grid; gap: 8px; }
+.info-link { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r); color: var(--ink); font-weight: 700; text-decoration: none; }
+.info-link span { flex: 1; }
+.info-link:hover { background: var(--glaze-2); }

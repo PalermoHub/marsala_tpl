@@ -1,0 +1,6 @@
+- generic [active] [ref=f54e1]:
+  - link "Vai al contenuto" [ref=f54e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f54e3]:
+    - status [ref=f54e4]: Marsala TPL…
+  - navigation "Marsala TPL" [ref=f54e5]

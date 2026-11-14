@@ -34,6 +34,15 @@ const ICON = {
   back: '<path d="M15 6l-6 6 6 6"/>',
   home: '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>',
   route: '<circle cx="6" cy="18" r="2.500"/><circle cx="18" cy="6" r="2.500"/><path d="M8.500 18H15a3 3 0 000-6H9a3 3 0 010-6h6.500"/>',
+  linkedin: '<path d="M5 9.500h3V19H5zM6.500 5a1.700 1.700 0 110 3.400 1.700 1.700 0 010-3.400zM10.500 9.500h2.900v1.300c.5-.9 1.600-1.500 3-1.500 2.800 0 3.600 1.800 3.600 4.400V19h-3v-4.700c0-1.100-.2-2.200-1.600-2.200s-1.900 1-1.900 2.200V19h-3z"/>',
+  spark: '<path d="M12 3v18M3 12h18M5.600 5.600l12.800 12.800M18.400 5.600L5.600 18.400"/>',
+  scale: '<path d="M12 4v16M7 20h10M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0z"/>',
+  heart: '<path d="M12 20s-7.500-4.600-7.500-10A4.200 4.200 0 0112 7.500 4.200 4.200 0 0119.500 10c0 5.400-7.500 10-7.500 10z"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.500-3 8-7 10-4-2-7-5.500-7-10V6z"/>',
+  flag: '<path d="M5 21V4M5 5h12l-2 4 2 4H5"/>',
+  calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
+  external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"/>',
   swap: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/>',
 };
 const icon = (name, size = 22, filled = false) =>
@@ -773,30 +782,29 @@ ${rest.length ? `<details class="news-more"><summary><span>${esc(t('newsOther'))
   });
 }
 
+const infoOpen = new Set(['look']);
 function viewInfo() {
   const m = state.data.meta;
   const now = romeNow();
   const fs = feedStatus(m, now.ymd);
   const theme = store.get('theme', 'auto');
   const seg = (name, opts, cur) => `<div class="seg seg-inline" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${v === cur}" data-act="${name}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`;
-  return `${banners(now)}<section class="block"><h1 class="h1">${esc(t('info'))}</h1>
-<h2>${esc(t('validity'))}</h2>
-<p>${m.validTo ? esc(t('validUntil', fmtDate(m.validTo))) : ''}${fs.state === 'ok' ? '' : ''}</p>
-<p class="muted">${esc(t('version'))}: ${esc(m.feedVersion ?? '–')}</p>
-<h2>${esc(t('language'))}</h2>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}
-<h2>${esc(t('theme'))}</h2>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}
-<h2>${esc(t('source'))}</h2>
-<p>${esc(t('sourceText'))}</p>
-<p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a><br><small class="muted">${esc(m.source)}</small></p>
+  const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
+  const acc = (id, tone, ic, title, body) => `<details class="acc" data-acc="${id}"${infoOpen.has(id) ? ' open' : ''}><summary><span class="acc-ico acc-${tone}">${icon(ic, 26)}</span><span class="acc-t">${esc(title)}</span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body">${body}</div></details>`;
+  const en = getLang() === 'en';
+  const sections = [
+    acc('src', 'rame', 'scale', t('sourcesLicenses'), `<p>${esc(t('sourceText'))}</p>
+<p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a></p>
 <p>${esc(t('notOfficial'))}</p>
-<h2>${esc(t('reportError'))}</h2>
-<p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>
-${m.corrections?.length ? `<h2>${esc(t('corrections'))}</h2><p>${esc(t('correctionsText'))}</p>` : ''}
-<h2>${esc(t('privacy'))}</h2><p>${esc(t('privacyText'))}</p>
-<h3 class="h3">${esc(t('consentManage'))}</h3>
-${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}
-${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}
-<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p></section>`;
+<h3 class="h3">${esc(t('licenses'))}</h3>
+<p>${esc(t('licData'))}: <a href="https://creativecommons.org/licenses/by/4.0/deed.${en ? 'en' : 'it'}" target="_blank" rel="noopener">CC BY 4.0</a><br>${esc(t('licCode'))}: <a href="https://github.com/PalermoHub/marsala_tpl/blob/main/LICENSE" target="_blank" rel="noopener">${esc(t('licCodeText'))}</a></p>`),
+    acc('valid', 'cobalt', 'calendar', t('validity'), `<p>${m.validTo ? esc(t('validUntil', fmtDate(m.validTo))) : ''}</p><p class="muted">${esc(t('version'))}: ${esc(m.feedVersion ?? '–')}</p>`),
+    acc('look', 'ocra', 'sliders', `${t('language')} · ${t('theme')}`, `<h3 class="h3">${esc(t('language'))}</h3>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}<h3 class="h3">${esc(t('theme'))}</h3>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}`),
+    acc('err', 'terra', 'flag', t('reportError'), `<p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>${m.corrections?.length ? `<h3 class="h3">${esc(t('corrections'))}</h3><p>${esc(t('correctionsText'))}</p>` : ''}`),
+    acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h3 class="h3">${esc(t('consentManage'))}</h3>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
+    acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
+  ];
+  return `${banners(now)}<section class="block"><h1 class="h1">${esc(t('info'))}</h1><div class="acc-list">${sections.join('')}</div></section>`;
 }
 
 function viewPrivacy() {
@@ -870,6 +878,7 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
+document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); }, true);
 window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; state.lineFocus = -1; render(true); window.scrollTo(0, 0); });
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).

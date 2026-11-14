@@ -74,4 +74,4 @@ Le statistiche d'uso (Google Analytics 4, `js/consent.js`) si caricano **solo do
 ## Licenza e attribuzioni
 
 Dati: Comune di Marsala, licenza [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.it). Font: Atkinson Hyperlegible (Braille Institute, SIL OFL). Mappa: © OpenStreetMap contributors, tile OpenFreeMap, libreria MapLibre GL JS.
-La licenza del codice va decisa dal proprietario del repository.
+Codice: [MIT](LICENSE), © 2026 Open Data Sicilia. I dati restano sotto la loro licenza CC BY 4.0.
