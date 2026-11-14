@@ -43,7 +43,7 @@ const isDark = () => {
 
 export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   const maplibregl = await loadMapLibre();
-  const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, attributionControl: { compact: true } });
+  const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
   // Un percorso per ogni shape usata, colorato come la piastrella della linea.
@@ -80,13 +80,52 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Mezzi: sagome allungate orientate come la marcia (muso scuro davanti), colorate come la linea stimata.
-  map.addLayer({ id: 'buses-body', type: 'fill', source: 'buses', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1], 'fill-outline-color': isDark() ? '#FBF7EE' : '#FFFFFF' } });
-  map.addLayer({ id: 'buses-nose', type: 'fill', source: 'buses-nose', paint: { 'fill-color': isDark() ? '#FBF7EE' : '#14213D', 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1] } });
+  // Mezzi: poligoni piatti in 2D, parallelepipedi (fill-extrusion) in 3D. Stessi id: i gestori di click/tooltip restano validi.
+  let is3d = false;
+  function addBusLayers() {
+    for (const id of ['buses-body', 'buses-nose']) if (map.getLayer(id)) map.removeLayer(id);
+    const nose = isDark() ? '#FBF7EE' : '#14213D';
+    if (is3d) {
+      map.addLayer({ id: 'buses-body', type: 'fill-extrusion', source: 'buses', paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 1 } }, 'bus-labels');
+      map.addLayer({ id: 'buses-nose', type: 'fill-extrusion', source: 'buses-nose', paint: { 'fill-extrusion-color': nose, 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 1 } }, 'bus-labels');
+    } else {
+      map.addLayer({ id: 'buses-body', type: 'fill', source: 'buses', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1], 'fill-outline-color': isDark() ? '#FBF7EE' : '#FFFFFF' } }, 'bus-labels');
+      map.addLayer({ id: 'buses-nose', type: 'fill', source: 'buses-nose', paint: { 'fill-color': nose, 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1] } }, 'bus-labels');
+    }
+  }
   map.addLayer({ id: 'bus-labels', type: 'symbol', source: 'bus-pts', filter: ['==', ['get', 'state'], 'active'], layout: { 'text-field': ['get', 'num'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': ['get', 'ink'], 'text-halo-color': ['get', 'color'], 'text-halo-width': 3 } });
+  addBusLayers();
   if (loc) {
     map.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 18, 'circle-color': '#1B3A94', 'circle-opacity': 0.2 } });
     map.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 8, 'circle-color': '#1B3A94', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
   }
+
+  // Edifici 3D (GlobalBuildingAtlas ritagliato sui percorsi): scaricati solo al primo uso del 3D, errori ignorati.
+  let buildings = null;
+  function addBuildings() {
+    if (!buildings || map.getLayer('buildings-3d')) return;
+    if (!map.getSource('edifici3d')) map.addSource('edifici3d', { type: 'geojson', data: buildings });
+    map.addLayer({ id: 'buildings-3d', type: 'fill-extrusion', source: 'edifici3d', minzoom: 13, paint: { 'fill-extrusion-color': isDark() ? '#3A4256' : '#E4E0D8', 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.92 } }, 'buses-body');
+  }
+  const btn3d = document.createElement('button');
+  btn3d.type = 'button';
+  btn3d.className = 'map-3d';
+  const paintBtn = () => { btn3d.textContent = is3d ? '2D' : '3D'; btn3d.setAttribute('aria-pressed', String(is3d)); btn3d.setAttribute('aria-label', t(is3d ? 'map2d' : 'map3d')); };
+  btn3d.addEventListener('click', async () => {
+    is3d = !is3d;
+    paintBtn();
+    addBusLayers();
+    if (is3d) {
+      if (!buildings) buildings = await fetch('dati/edifici3d.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (destroyed || !is3d) return;
+      addBuildings();
+    }
+    if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d', 'visibility', is3d ? 'visible' : 'none');
+    map.easeTo({ pitch: is3d ? 60 : 0, duration: reduced ? 0 : 600 });
+    draw();
+  });
+  paintBtn();
+  el.append(btn3d);
 
   map.on('click', 'stops', (e) => {
     const f = e.features?.[0];
@@ -164,8 +203,8 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
       const color = idle || item.r == null ? (idle ? IDLE : ACTIVE) : lineStyle(data.routes[item.r]).glaze.bg;
       const label = !idle && item.r != null ? lineStyle(data.routes[item.r]).label : '';
       const props = { id: item.v.id, num: item.v.id, rid: idle ? '' : item.r != null ? data.routes[item.r].id : '-', ink: item.r == null && isDark() ? '#14213D' : '#FFFFFF', plate: item.v.plate, state: item.state, color, label, when: formatClock(romeNow(new Date(item.v.ts * 1000)).secs) };
-      body.push({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, -L / 2, L / 2, W / 2)] } });
-      nose.push({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, L / 2 - L * 0.22, L / 2, W / 2)] } });
+      body.push({ type: 'Feature', properties: { ...props, h: L * 0.25 }, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, -L / 2, L / 2, W / 2)] } });
+      nose.push({ type: 'Feature', properties: { ...props, h: L * 0.28 }, geometry: { type: 'Polygon', coordinates: [quad(p.lon, p.lat, p.brg, L / 2 - L * 0.22, L / 2, W / 2)] } });
       pts.push({ type: 'Feature', properties: props, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } });
     }
     map.getSource('buses')?.setData({ type: 'FeatureCollection', features: body });
@@ -217,5 +256,5 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   }
   poll();
 
-  return { destroy() { destroyed = true; clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
+  return { destroy() { destroyed = true; btn3d.remove(); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
 }
