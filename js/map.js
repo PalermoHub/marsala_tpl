@@ -109,6 +109,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addSource('buses', { type: 'geojson', data: empty });
   map.addSource('buses-nose', { type: 'geojson', data: empty });
   map.addSource('bus-pts', { type: 'geojson', data: empty });
+  map.addSource('bus-clusters', { type: 'geojson', data: empty });
   if (loc) map.addSource('me', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [loc.lon, loc.lat] } } });
 
   map.addLayer({ id: 'lines-casing', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#0F1B3D' : '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 10], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.15] : 0.9 } });
@@ -118,6 +119,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Mezzi: sagome allungate orientate come la marcia (muso scuro davanti), colorate come la linea stimata.
   // Mezzi: poligoni piatti in 2D, parallelepipedi (fill-extrusion) in 3D. Stessi id: i gestori di click/tooltip restano validi.
+  const IDLE_COLOR = '#8A93A6';
   let is3d = false;
   function addBusLayers() {
     for (const id of ['buses-body', 'buses-nose']) if (map.getLayer(id)) map.removeLayer(id);
@@ -131,6 +133,9 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     }
   }
   map.addLayer({ id: 'bus-labels', type: 'symbol', source: 'bus-pts', minzoom: 13, filter: ['==', ['get', 'state'], 'active'], layout: { 'text-field': ['get', 'num'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': ['get', 'ink'], 'text-halo-color': ['get', 'color'], 'text-halo-width': 3 } });
+  // Mezzi fermi vicini (tipicamente in deposito): a zoom largo un solo cerchio col numero, non 19 sagome sovrapposte.
+  map.addLayer({ id: 'bus-clusters', type: 'circle', source: 'bus-clusters', paint: { 'circle-radius': 16, 'circle-color': IDLE_COLOR, 'circle-stroke-color': isDark() ? '#FBF7EE' : '#FFFFFF', 'circle-stroke-width': 3 } });
+  map.addLayer({ id: 'bus-clusters-n', type: 'symbol', source: 'bus-clusters', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': '#14213D' } });
   addBusLayers();
   if (loc) {
     map.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 18, 'circle-color': '#1B3A94', 'circle-opacity': 0.2 } });
@@ -266,6 +271,9 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     });
     map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; dropTip(); });
   }
+  map.on('click', 'bus-clusters', (e) => { const f = e.features?.[0]; if (f) map.flyTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom() + 3, 16), duration: reduced ? 0 : 700 }); });
+  map.on('mouseenter', 'bus-clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'bus-clusters', () => { map.getCanvas().style.cursor = ''; });
   map.on('mouseenter', 'stops', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'stops', () => { map.getCanvas().style.cursor = ''; });
 
@@ -289,7 +297,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   let current = [];            // [{ v, state, r, brg }]
   let raf = 0;
   // Senza linea nota: inchiostro su mappa chiara, ocra su mappa scura (l'inchiostro sparirebbe).
-  const IDLE = '#8A93A6', ACTIVE = isDark() ? '#F2C14E' : '#14213D';
+  const IDLE = IDLE_COLOR, ACTIVE = isDark() ? '#F2C14E' : '#14213D';
   const lerpAngle = (a, b, k) => { const d = ((b - a + 540) % 360) - 180; return (a + d * k + 360) % 360; };
   // Metri per pixel allo zoom corrente: la sagoma ha dimensione costante a schermo, quindi leggibile a ogni zoom.
   const mpp = (lat) => 78271.517 * Math.cos(lat * Math.PI / 180) / 2 ** map.getZoom();
@@ -300,10 +308,29 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     const pt = (s, w) => [lon + (s * fx + w * rx) / kx, lat + (s * fy + w * ry) / ky];
     return [pt(s0, -halfW), pt(s1, -halfW), pt(s1, halfW), pt(s0, halfW), pt(s0, -halfW)];
   }
+  const CLUSTER_PX = 26, CLUSTER_MAXZ = 17;
   function draw() {
-    const body = [], nose = [], pts = [];
+    const body = [], nose = [], pts = [], clusters = [];
+    // Raggruppa i fermi entro CLUSTER_PX pixel (greedy); sotto CLUSTER_MAXZ i gruppi di 2+ diventano un cerchio col numero.
+    const grouped = new Set();
+    if (map.getZoom() < CLUSTER_MAXZ) {
+      const idles = current.filter((it) => it.state === 'idle' && shown.has(it.v.id) && !(dim && it.r !== focus));
+      const used = new Set();
+      for (const a of idles) {
+        if (used.has(a)) continue;
+        const pa = map.project([shown.get(a.v.id).lon, shown.get(a.v.id).lat]);
+        const grp = idles.filter((b) => { if (used.has(b)) return false; const pb = map.project([shown.get(b.v.id).lon, shown.get(b.v.id).lat]); return Math.hypot(pa.x - pb.x, pa.y - pb.y) <= CLUSTER_PX; });
+        grp.forEach((g) => used.add(g));
+        if (grp.length < 2) continue;
+        grp.forEach((g) => grouped.add(g));
+        const lon = grp.reduce((x, g) => x + shown.get(g.v.id).lon, 0) / grp.length;
+        const lat = grp.reduce((x, g) => x + shown.get(g.v.id).lat, 0) / grp.length;
+        clusters.push({ type: 'Feature', properties: { n: String(grp.length) }, geometry: { type: 'Point', coordinates: [lon, lat] } });
+      }
+    }
     for (const item of current) {
       if (dim && item.r !== focus) continue;
+      if (grouped.has(item)) continue;
       const p = shown.get(item.v.id);
       if (!p) continue;
       const idle = item.state === 'idle';
@@ -318,6 +345,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     map.getSource('buses')?.setData({ type: 'FeatureCollection', features: body });
     map.getSource('buses-nose')?.setData({ type: 'FeatureCollection', features: nose });
     map.getSource('bus-pts')?.setData({ type: 'FeatureCollection', features: pts });
+    map.getSource('bus-clusters')?.setData({ type: 'FeatureCollection', features: clusters });
   }
   function showBuses(list) {
     const from = new Map(shown);
