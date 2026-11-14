@@ -24,10 +24,11 @@ export function buildGraph(j) {
   const off = new Int32Array(n + 1);
   for (let i = 0; i < m; i++) { off[ea[i] + 1]++; off[eb[i] + 1]++; }
   for (let i = 0; i < n; i++) off[i + 1] += off[i];
-  const fill = off.slice(0, n), adj = new Int32Array(2 * m), w = new Float32Array(2 * m);
+  const fill = off.slice(0, n), adj = new Int32Array(2 * m), w = new Float32Array(2 * m), elen = new Float64Array(m);
   for (let i = 0; i < m; i++) {
     const p = ea[i], q = eb[i];
     const len = Math.hypot((lon[q] - lon[p]) * kxAt((lat[p] + lat[q]) / 2), (lat[q] - lat[p]) * KY);
+    elen[i] = len;
     adj[fill[p]] = q; w[fill[p]++] = len;
     adj[fill[q]] = p; w[fill[q]++] = len;
   }
@@ -36,7 +37,17 @@ export function buildGraph(j) {
     const k = Math.floor(lat[i] / CELL) * 100000 + Math.floor(lon[i] / CELL);
     const c = grid.get(k); if (c) c.push(i); else grid.set(k, [i]);
   }
-  return { n, lat, lon, off, adj, w, grid, stopsRef: null, stopNode: null, stopSnap: null };
+  // Griglia degli archi: ogni arco è registrato in tutte le celle che il suo riquadro copre (in campagna gli archi sono lunghi).
+  const egrid = new Map();
+  for (let i = 0; i < m; i++) {
+    const p = ea[i], q = eb[i];
+    const i0 = Math.floor(Math.min(lat[p], lat[q]) / CELL), i1 = Math.floor(Math.max(lat[p], lat[q]) / CELL);
+    const j0 = Math.floor(Math.min(lon[p], lon[q]) / CELL), j1 = Math.floor(Math.max(lon[p], lon[q]) / CELL);
+    for (let a2 = i0; a2 <= i1; a2++) for (let b2 = j0; b2 <= j1; b2++) {
+      const k = a2 * 100000 + b2, c = egrid.get(k); if (c) c.push(i); else egrid.set(k, [i]);
+    }
+  }
+  return { n, lat, lon, off, adj, w, grid, ea, eb, elen, egrid, stopsRef: null, stopEdge: null, stopT: null, stopSnap: null };
 }
 
 /** Nodo della rete più vicino a un punto: { node, m } oppure null se è oltre maxM. */
@@ -52,14 +63,39 @@ export function nearestNode(g, lat, lon, maxM = SNAP_MAX) {
   return best >= 0 && bm <= maxM ? { node: best, m: bm } : null;
 }
 
+/**
+ * Punto più vicino della rete (su un arco, non solo ai nodi): { e, t, m } con t in [0,1] lungo l'arco ea->eb
+ * e m la distanza dal punto, oppure null se è oltre maxM. In campagna i nodi distano centinaia di metri:
+ * agganciare al nodo allungava il percorso di un tratto che a piedi non si fa.
+ */
+export function nearestEdge(g, lat, lon, maxM = SNAP_MAX) {
+  const ci = Math.floor(lat / CELL), cj = Math.floor(lon / CELL), kx = kxAt(lat);
+  let best = null, bm = Infinity;
+  const seen = new Set();
+  for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) {
+    for (const e of g.egrid.get((ci + di) * 100000 + cj + dj) ?? []) {
+      if (seen.has(e)) continue;
+      seen.add(e);
+      const p = g.ea[e], q = g.eb[e];
+      const ax = (g.lon[p] - lon) * kx, ay = (g.lat[p] - lat) * KY, bx = (g.lon[q] - lon) * kx, by = (g.lat[q] - lat) * KY;
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      const t = l2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2)) : 0;
+      const d = Math.hypot(ax + t * dx, ay + t * dy);
+      if (d < bm) { bm = d; best = { e, t, m: d }; }
+    }
+  }
+  return best && bm <= maxM ? best : null;
+}
+
 function attachStops(g, stops) {
   if (g.stopsRef === stops) return;
   g.stopsRef = stops;
-  g.stopNode = new Int32Array(stops.length).fill(-1);
+  g.stopEdge = new Int32Array(stops.length).fill(-1);
+  g.stopT = new Float64Array(stops.length);
   g.stopSnap = new Float32Array(stops.length);
   stops.forEach((s, i) => {
-    const r = nearestNode(g, s.lat, s.lon, STOP_SNAP_MAX);
-    if (r) { g.stopNode[i] = r.node; g.stopSnap[i] = r.m; }
+    const r = nearestEdge(g, s.lat, s.lon, STOP_SNAP_MAX);
+    if (r) { g.stopEdge[i] = r.e; g.stopT[i] = r.t; g.stopSnap[i] = r.m; }
   });
 }
 
@@ -72,7 +108,7 @@ function attachStops(g, stops) {
  */
 export function walkFrom(g, stops, lat, lon, maxM = 1500) {
   attachStops(g, stops);
-  const o = nearestNode(g, lat, lon, SNAP_MAX);
+  const o = nearestEdge(g, lat, lon, SNAP_MAX);
   if (!o) return null;
   const limit = maxM - o.m;
   const dist = new Float64Array(g.n).fill(Infinity); // Float64: con Float32 l'arrotondamento fa scartare nodi validi
@@ -97,7 +133,10 @@ export function walkFrom(g, stops, lat, lon, maxM = 1500) {
     }
     return [d0, v0];
   };
-  dist[o.node] = 0; push(0, o.node);
+  // Si parte da entrambi i capi dell'arco su cui cade il punto.
+  const oa = g.ea[o.e], ob = g.eb[o.e], ol = g.elen[o.e];
+  dist[oa] = o.t * ol; push(dist[oa], oa);
+  dist[ob] = Math.min(dist[ob], (1 - o.t) * ol); push(dist[ob], ob);
   while (hd.length) {
     const [d, v] = pop();
     if (d > dist[v]) continue;
@@ -110,10 +149,13 @@ export function walkFrom(g, stops, lat, lon, maxM = 1500) {
   const out = new Map();
   out.offNet = new Set();
   for (let i = 0; i < stops.length; i++) {
-    const s = g.stopNode[i];
-    if (s < 0) { out.offNet.add(i); continue; }
-    if (dist[s] === Infinity) continue;
-    const m = o.m + dist[s] + g.stopSnap[i];
+    const e = g.stopEdge[i];
+    if (e < 0) { out.offNet.add(i); continue; }
+    const el = g.elen[e], ts = g.stopT[i];
+    let d = Math.min(dist[g.ea[e]] + ts * el, dist[g.eb[e]] + (1 - ts) * el);
+    if (e === o.e) d = Math.min(d, Math.abs(ts - o.t) * el); // punto e fermata sullo stesso arco
+    if (d === Infinity) continue;
+    const m = o.m + d + g.stopSnap[i];
     if (m <= maxM) out.set(i, m);
   }
   return out;

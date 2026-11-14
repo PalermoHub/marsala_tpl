@@ -209,6 +209,15 @@ test('walkFrom: la rete obbliga al giro, la linea d\'aria no', () => {
   assert.ok(m.get(1) < 1, 'la fermata sul punto di partenza è a 0 m');
 });
 
+test('walkFrom: aggancio al segmento, non al nodo (arco lungo in campagna)', () => {
+  // Un solo arco di ~1,1 km (0,01° di latitudine); punto e fermata a metà strada, a 20 m dall'arco.
+  const L = buildGraph({ v: 1, la: [3780000, 1000], lo: [1244000, 0], e: [0, 1] });
+  const mid = 37.805, off = 20 / 111320;
+  const m = walkFrom(L, [{ lat: mid, lon: 12.44 + off }, { lat: 37.8, lon: 12.44 }], mid + 0.0001, 12.44 - off, 1500);
+  assert.ok(m.get(0) < 60, `a metà arco: ${m.get(0)} m (con l'aggancio al nodo sarebbe ~1100 m)`);
+  assert.ok(m.get(1) > 540 && m.get(1) < 600, `capo dell'arco: ${m.get(1)} m`);
+});
+
 test('walkFrom: oltre maxM la fermata non compare; lontano dalla rete ritorna null', () => {
   const far = walkFrom(U, [...uStops, { lat: 37.9, lon: 12.5 }], 37.8, 12.44, 500);
   assert.equal(far.has(0), false);
@@ -245,9 +254,9 @@ test('nearestStops e walkable usano la distanza a piedi quando viene data', () =
   assert.equal(w[0].walk, Math.round(700 / 1.2));
 });
 
-// Riferimento indipendente: stesse distanze calcolate in Python (UTM, Dijkstra di scipy) sul grafo OSM completo.
+// Riferimento indipendente: stesse distanze calcolate in Python (UTM, aggancio al segmento con shapely, Dijkstra di scipy): docs/fase1/diff/walk-ref-segmento.py.
 // Differenze attese solo dalla quantizzazione a 1e-5 gradi e dalla formula equirettangolare.
-const PY = [{"lat": 37.804909, "lon": 12.460815, "stops": [{"id": "21349", "m": 136.3}, {"id": "21350", "m": 144.5}, {"id": "21581", "m": 340.9}, {"id": "21352", "m": 378.7}, {"id": "21351", "m": 378.9}]}, {"lat": 37.709205, "lon": 12.476265, "stops": [{"id": "21095", "m": 361.2}, {"id": "21032", "m": 570.2}, {"id": "21093", "m": 662.7}, {"id": "21097", "m": 667.4}, {"id": "21096", "m": 890.3}]}, {"lat": 37.729782, "lon": 12.530687, "stops": [{"id": "21315", "m": 507.3}, {"id": "21313", "m": 598.3}, {"id": "21314", "m": 624.7}, {"id": "21316", "m": 879.4}, {"id": "21312", "m": 1012.2}]}, {"lat": 37.811862, "lon": 12.481299, "stops": [{"id": "21363", "m": 571.0}, {"id": "21365", "m": 574.0}, {"id": "21587", "m": 590.1}, {"id": "21369", "m": 615.2}, {"id": "21561", "m": 812.1}]}, {"lat": 37.798599, "lon": 12.428991, "stops": [{"id": "21645", "m": 50.2}, {"id": "21448", "m": 56.6}, {"id": "21644", "m": 360.8}, {"id": "21447", "m": 363.2}, {"id": "21449", "m": 365.4}]}];
+const PY = [{"lat": 37.804909, "lon": 12.460815, "stops": [{"id": "21349", "m": 139.6}, {"id": "21350", "m": 147.1}, {"id": "21581", "m": 343.9}, {"id": "21352", "m": 381.1}, {"id": "21351", "m": 381.6}]}, {"lat": 37.709205, "lon": 12.476265, "stops": [{"id": "21095", "m": 364.3}, {"id": "21032", "m": 573.2}, {"id": "21093", "m": 661.9}, {"id": "21097", "m": 670.3}, {"id": "21096", "m": 894.4}]}, {"lat": 37.729782, "lon": 12.530687, "stops": [{"id": "21315", "m": 507.4}, {"id": "21313", "m": 601.3}, {"id": "21314", "m": 626.6}, {"id": "21316", "m": 804.7}, {"id": "21312", "m": 1015.4}]}, {"lat": 37.811862, "lon": 12.481299, "stops": [{"id": "21363", "m": 512.8}, {"id": "21365", "m": 508.3}, {"id": "21587", "m": 592.6}, {"id": "21369", "m": 616.1}, {"id": "21561", "m": 793.5}]}, {"lat": 37.798599, "lon": 12.428991, "stops": [{"id": "21645", "m": 41.2}, {"id": "21448", "m": 46.1}, {"id": "21644", "m": 350.6}, {"id": "21447", "m": 364.0}, {"id": "21449", "m": 359.7}]}];
 // Le fermate di riferimento sono copiate qui (id, lat, lon): il test non dipende dal feed vivo, che il workflow notturno rigenera.
 const PY_STOPS = [{"id": "21032", "lat": 37.704957, "lon": 12.476147}, {"id": "21093", "lat": 37.708891, "lon": 12.482425}, {"id": "21095", "lat": 37.707279, "lon": 12.476052}, {"id": "21096", "lat": 37.702512, "lon": 12.475754}, {"id": "21097", "lat": 37.709141, "lon": 12.482647}, {"id": "21312", "lat": 37.731863, "lon": 12.521099}, {"id": "21313", "lat": 37.730195, "lon": 12.525294}, {"id": "21314", "lat": 37.727241, "lon": 12.525976}, {"id": "21315", "lat": 37.726309, "lon": 12.527416}, {"id": "21316", "lat": 37.723938, "lon": 12.525921}, {"id": "21349", "lat": 37.805933, "lon": 12.460634}, {"id": "21350", "lat": 37.80589, "lon": 12.460545}, {"id": "21351", "lat": 37.805671, "lon": 12.46348}, {"id": "21352", "lat": 37.805648, "lon": 12.463463}, {"id": "21363", "lat": 37.808773, "lon": 12.481955}, {"id": "21365", "lat": 37.808749, "lon": 12.482013}, {"id": "21369", "lat": 37.810202, "lon": 12.486351}, {"id": "21447", "lat": 37.801044, "lon": 12.426441}, {"id": "21448", "lat": 37.798243, "lon": 12.429208}, {"id": "21449", "lat": 37.796218, "lon": 12.431546}, {"id": "21561", "lat": 37.816608, "lon": 12.47876}, {"id": "21581", "lat": 37.806443, "lon": 12.463232}, {"id": "21587", "lat": 37.815016, "lon": 12.477259}, {"id": "21644", "lat": 37.796287, "lon": 12.431482}, {"id": "21645", "lat": 37.7983, "lon": 12.429214}];
 test('walkFrom coincide con il calcolo in Python sullo stesso estratto OSM (±4% o 15 m)', () => {
