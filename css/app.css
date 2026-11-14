@@ -238,6 +238,8 @@ button { font: inherit; color: inherit; }
 .route-stops a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding-block: 8px; text-decoration: none; }
 .route-stops .st-time { font-weight: 700; }
 .route-stops li.past a { color: var(--ink-2); }
+.route-stops li.here a { font-weight: 700; background: color-mix(in srgb, var(--cobalt-hi) 14%, transparent); border-radius: 8px; padding-inline: 8px; }
+.route-stops li.here::after { background: var(--ocra, var(--cobalt)); }
 
 /* ---------- mappa ---------- */
 .map-wrap { position: relative; height: calc(100dvh - var(--tabs-h) - env(safe-area-inset-bottom)); margin-bottom: calc(-1 * (var(--tabs-h) + env(safe-area-inset-bottom) + 28px)); }

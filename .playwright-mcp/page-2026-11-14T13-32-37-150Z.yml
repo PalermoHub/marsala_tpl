@@ -1,0 +1,17 @@
+- generic [active] [ref=f49e1]:
+  - link "Vai al contenuto" [ref=f49e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f49e3]:
+    - paragraph [ref=f49e5]: No stops found
+  - navigation "Marsala TPL" [ref=f49e6]:
+    - link "Home" [ref=f49e7] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f49e12] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f49e18] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f49e22] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f49e26] [cursor=pointer]:
+      - /url: "#/info"
+  - status: Preference saved

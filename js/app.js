@@ -144,7 +144,7 @@ function stopScreen(si, { home = false } = {}) {
 
   const key = (r) => state.data.routes[r].short || '\uffff';
   const here = [...(state.stopRoutes.get(si) ?? [])].sort((a, b) => key(a).localeCompare(key(b), 'it', { numeric: true }));
-  const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}">
+  const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}/fermata/${esc(state.data.stops[si].id)}">
   ${tileSvg(state.data.routes[r], 44)}
   <span class="row-main"><span class="row-title">${esc(state.data.routes[r].long)}</span></span>
   <span class="chev">${icon('chevron', 20)}</span></a></li>`).join('')}</ul></section>` : '';
@@ -376,9 +376,14 @@ function viewLine(rid, tripSel) {
   const all = state.data.trips.map((tr, i) => ({ tr, i })).filter((x) => x.tr.r === ri);
   const todays = all.filter((x) => activeToday(x.tr));
   const dirs = [...new Set((todays.length ? todays : all).map((x) => x.tr.d))].sort();
-  const dsel = state.lineDir != null && dirs.includes(state.lineDir) ? state.lineDir : dirs[0];
+  const focus = state.lineFocus ?? -1; // fermata da cui si arriva: la linea si apre su quella
+  const dirWithFocus = focus >= 0 ? dirs.find((d) => (todays.length ? todays : all).some((x) => x.tr.d === d && x.tr.s.includes(focus))) : undefined;
+  const dsel = state.lineDir != null && dirs.includes(state.lineDir) ? state.lineDir : (dirWithFocus ?? dirs[0]);
   const pool = (todays.length ? todays : all).filter((x) => x.tr.d === dsel).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
-  const upcoming = (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
+  // Con una fermata di partenza, "prossima corsa" = la prima che ci passa da ora in poi.
+  const at = (x) => x.tr.t[x.tr.s.indexOf(focus)];
+  const upcoming = (focus >= 0 && isToday ? pool.find((x) => x.tr.s.includes(focus) && at(x) >= now.secs) : null)
+    ?? (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
   const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
   const head = (d) => {
     const c = {};
@@ -389,7 +394,8 @@ function viewLine(rid, tripSel) {
   const stopsHtml = sel ? sel.tr.s.map((si, k) => {
     const { name } = stopTitle(si);
     const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
-    return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(name)}</span><span class="st-time">${formatClock(sel.tr.t[k])}</span></a></li>`;
+    const here = si === focus;
+    return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${formatClock(sel.tr.t[k])}</span></a></li>`;
   }).join('') : '';
 
   const iso = (y) => `${Math.floor(y / 10000)}-${String(Math.floor((y % 10000) / 100)).padStart(2, '0')}-${String(y % 100).padStart(2, '0')}`;
@@ -786,7 +792,7 @@ const routes = [
   [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
   [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
-  [/^\/linea\/(.+)$/, (m) => viewLine(decodeURIComponent(m[1])), 'lines'],
+  [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => { state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1; return viewLine(decodeURIComponent(m[1])); }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/info$/, () => viewInfo(), 'info'],
@@ -818,7 +824,7 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
-window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; render(true); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { state.lineDir = null; state.lineDay = null; state.lineFocus = -1; render(true); window.scrollTo(0, 0); });
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
 setInterval(() => {
@@ -829,7 +835,7 @@ setInterval(() => {
 // ---------- azioni ----------
 $app.addEventListener('change', (e) => {
   if (e.target.id !== 'line-day' || !e.target.value) return;
-  const m = current?.path.match(/^\/linea\/(.+)$/);
+  const m = current?.path.match(/^\/linea\/([^/]+)/);
   if (!m) return;
   state.lineDay = Number(e.target.value.replaceAll('-', ''));
   $app.innerHTML = viewLine(decodeURIComponent(m[1]));
