@@ -484,7 +484,7 @@ async function bindMap(rid) {
   }
 }
 
-// ---------- pianificatore da A a B ----------
+// ---------- pianificatore di percorso ----------
 function stopGroups() {
   if (state.groups) return state.groups;
   const seen = new Set();

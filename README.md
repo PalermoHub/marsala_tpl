@@ -49,7 +49,7 @@ index.html, manifest.webmanifest, sw.js   guscio PWA e service worker
 css/app.css                               design system (maiolica siciliana)
 js/app.js                                 router e viste
 js/schedule.js                            logica orari, pura e testata
-js/planner.js                             pianificatore da A a B (diretto o un cambio), puro e testato
+js/planner.js                             pianificatore di percorso (diretto o un cambio), puro e testato
 js/tiles.js                               piastrelle-linea (colore + motivo)
 js/rt.js, js/map.js                       feed realtime e mappa (caricata solo quando serve)
 dati/                                     generato da scripts/build-gtfs.mjs

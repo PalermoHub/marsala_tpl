@@ -1,4 +1,4 @@
-// Pianificatore "da A a B": corse dirette o con un solo cambio, sugli orari programmati.
+// Pianificatore di percorso: corse dirette o con un solo cambio, sugli orari programmati.
 // Logica pura, senza DOM, usata dall'app e dai test.
 import { activeSet, addDays, distanceM, siblingStops } from './schedule.js';
 
