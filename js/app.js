@@ -1004,6 +1004,17 @@ function applyTheme() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0F1B3D' : '#1B3A94');
 }
 
+// Barra inferiore: toggle on/off. Tab attiva + clic: da una sotto-pagina torna
+// alla radice del tab (es. dettaglio linea -> lista linee), dalla radice spegne e va alla home.
+const TAB_ROOT = { plan: '#/percorso', lines: '#/linee', map: '#/mappa', guide: '#/guida', info: '#/info' };
+$nav.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-tab]');
+  const root = a && TAB_ROOT[a.dataset.tab];
+  if (!root || !a.hasAttribute('aria-current')) return;
+  e.preventDefault();
+  location.hash = location.hash === root ? '#/' : root;
+});
+
 function renderChrome() {
   $nav.setAttribute('aria-label', t('appName'));
   const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['guide', '#/guida', 'help', 'tabGuide'], ['info', '#/info', 'info', 'tabInfo']];

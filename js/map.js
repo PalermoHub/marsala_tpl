@@ -78,6 +78,11 @@ const isDark = () => {
 export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   const maplibregl = await loadMapLibre();
   const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, maxBounds: BBOX, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">Zhu et al. 2025</a>, <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
+  // Attribuzione chiusa all'avvio: si apre solo toccando la «i».
+  const closeAttrib = () => { const a = el.querySelector('.maplibregl-ctrl-attrib'); a?.classList.remove('maplibregl-compact-show'); a?.removeAttribute('open'); };
+  closeAttrib();
+  map.once('load', closeAttrib);
+  map.once('idle', closeAttrib);
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-left');
 
   // Un percorso per ogni shape usata, colorato come la piastrella della linea.

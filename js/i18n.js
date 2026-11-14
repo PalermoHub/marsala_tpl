@@ -155,7 +155,16 @@ const IT = {
       'Ingrandendo compaiono le fermate: tocca un puntino per aprirla.',
       'I piccoli bus sono i mezzi in servizio. Toccane uno per seguirlo lungo il percorso.',
       'Il pulsante «Legenda» in basso spiega i simboli.',
+      'Sul bordo destro ci sono i comandi: casetta (mostra tutta la rete), «+» e «−» (zoom), bussola (rimette il nord in alto), mirino (la tua posizione), riquadro (schermo intero). Accanto c’è il cursore dello zoom.',
+      'Le fonti dei dati della mappa si aprono toccando la piccola «i» in basso a destra.',
     ], 'La linea di un bus è stimata dal suo percorso: può non essere esatta.', [['mappa', 'La mappa con i percorsi delle linee e i bus in servizio']]],
+    ['map3d', 'map', 'Come vedere la mappa in 3D', 'Il pulsante «3D» inclina la mappa e mostra gli edifici in rilievo e i bus come piccoli mezzi in tre dimensioni.', [
+      'Apri «Mappa» e tocca il pulsante «3D» nella colonna di comandi a destra: la mappa si inclina.',
+      'Gli edifici compaiono lungo i percorsi delle linee, con l’altezza stimata. Ingrandisci per vederli meglio.',
+      'Per girare la mappa trascina con due dita in senso circolare; per cambiare l’inclinazione trascina in su o in giù con due dita.',
+      'Tocca la bussola per rimettere il nord in alto.',
+      'Per tornare alla vista normale tocca «2D» (lo stesso pulsante).',
+    ], 'Il 3D scarica i dati degli edifici solo la prima volta che lo usi: con una connessione lenta può servire qualche secondo. Le altezze degli edifici sono stime (dati GlobalBuildingAtlas).', [['mappa-3d', 'La mappa in 3D con gli edifici in rilievo e il pulsante «2D» per tornare indietro']]],
     ['extra', 'sliders', 'Altre cose utili', '', [
       '<b>Senza internet.</b> Gli orari restano salvati nel telefono: l’app funziona anche offline (la mappa e le posizioni dei bus no).',
       '<b>Installarla.</b> Dal menu del browser scegli «Aggiungi a schermata Home»: l’app si apre come tutte le altre.',
