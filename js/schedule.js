@@ -95,12 +95,23 @@ export function distanceM(lat1, lon1, lat2, lon2) {
   return Math.hypot((lon2 - lon1) * kx, (lat2 - lat1) * 110540);
 }
 
-export function nearestStops(data, lat, lon, n = 6) {
+/**
+ * Le n fermate più vicine. `dist(i, lineaAria)` (opzionale) converte la linea d'aria in metri a piedi
+ * (vedi walk.js): senza, si ordina per linea d'aria.
+ */
+export function nearestStops(data, lat, lon, n = 6, dist = null) {
   return data.stops
-    .map((s, i) => ({ i, m: distanceM(lat, lon, s.lat, s.lon) }))
+    .map((s, i) => { const c = distanceM(lat, lon, s.lat, s.lon); return { i, m: dist ? dist(i, c) : c }; })
+    .filter((x) => Number.isFinite(x.m))
     .sort((a, b) => a.m - b.m)
     .slice(0, n);
 }
+
+/**
+ * true se l'orario a quella fermata è solo indicativo: non è il capolinea di partenza e il feed ufficiale
+ * dà lo stesso minuto della fermata precedente (orari arrotondati al minuto, non interpolati).
+ */
+export const isApprox = (trip, pos) => pos > 0 && trip.t[pos] === trip.t[pos - 1];
 
 /** "Corso Calatafimi dir. Autostazione" -> { base: "Corso Calatafimi", dir: "Autostazione" } */
 export function splitStopName(name) {

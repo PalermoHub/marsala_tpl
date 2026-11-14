@@ -1,5 +1,6 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
-import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays } from './schedule.js';
+import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox } from './schedule.js';
+import { loadWalk, walkFrom, walkDist, isExactWalk } from './walk.js';
 import { tileSvg, motifField, lineStyle } from './tiles.js';
 import { fetchVehicles } from './rt.js';
 import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops } from './match.js';
@@ -11,7 +12,7 @@ import { getConsent, setConsent, applyConsent } from './consent.js';
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { plan: { from: null, to: null, time: null }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', cleanup: null };
+const state = { plan: { from: null, to: null, time: null }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null };
 
 // ---------- utilità ----------
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -126,7 +127,8 @@ function pageHead(title, { lead = '', back = null } = {}) {
 
 function departureRow(item) {
   const trip = state.data.trips[item.trip];
-  const clock = formatClock(item.secs);
+  const approx = isApprox(trip, item.pos);
+  const clock = (approx ? '≈ ' : '') + formatClock(item.secs);
   const soon = item.mins < 60;
   const first = soon ? (item.mins < 1 ? t('now') : `${item.mins} ${t('min')}`) : clock;
   const second = soon ? clock : relText(item);
@@ -134,7 +136,7 @@ function departureRow(item) {
   <a class="dep-link" href="#/linea/${esc(routeOfTrip(item.trip).id)}">
     ${tileSvg(routeOfTrip(item.trip), 40)}
     <span class="dep-main"><span class="dep-head">${esc(headOf(trip))}</span></span>
-    <span class="dep-when"><span class="dep-first">${esc(first)}</span><span class="dep-second">${esc(second)}</span></span>
+    <span class="dep-when"${approx ? ` title="${esc(t('approxTitle'))}"` : ''}><span class="dep-first">${esc(first)}</span><span class="dep-second">${esc(second)}</span></span>
   </a>
 </li>`;
 }
@@ -161,7 +163,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
     nextBlock = `<div class="next">
   <div class="next-line">${tileSvg(routeOfTrip(first.trip), 72)}<p class="next-head">${esc(headOf(trip))}</p></div>
   <p class="next-when${first.mins <= 2 ? ' soon' : ''}" aria-live="polite"><span class="num">${esc(w.num)}</span>${w.unit ? `<span class="unit">${esc(w.unit)}</span>` : ''}</p>
-  <p class="next-sub">${icon('clock', 16)}<span>${esc(t('scheduled'))} · ${esc(w.sub || formatClock(first.secs))}</span></p>
+  <p class="next-sub">${icon('clock', 16)}<span>${esc(t('scheduled'))} · ${esc(w.sub || formatClock(first.secs))}${isApprox(trip, first.pos) ? ` · ${esc(t('approxShort'))}` : ''}</span></p>
 </div>`;
   } else {
     nextBlock = `<div class="next next-empty">
@@ -203,16 +205,16 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   </div>
   ${nextBlock}
 </section>
-${rest.length ? `<section class="block"><h2 class="sr">${esc(t('nextAfter'))}</h2><ul class="plain deps">${rest.map(departureRow).join('')}</ul></section>` : ''}
+${rest.length ? `<section class="block"><h2 class="sr">${esc(t('nextAfter'))}</h2><ul class="plain deps">${rest.map(departureRow).join('')}</ul>${rest.some((it) => isApprox(state.data.trips[it.trip], it.pos)) ? `<p class="muted note">${esc(t('approxNote'))}</p>` : ''}</section>` : ''}
 ${hereHtml}
 ${sibHtml}`;
 }
 
-function stopRow(si, meters) {
+function stopRow(si, meters, exact = true) {
   const { name, dir } = stopTitle(si);
   const s = state.data.stops[si];
   return `<li><a class="row" href="#/stop/${esc(s.id)}">
-  <span class="row-main"><span class="row-title">${esc(name)}</span><span class="row-sub">${dir ? `${esc(t('toward'))} ${esc(dir)}` : esc(`${t('stop')} ${s.code}`)}${meters != null ? ` · ${esc(t('meters', meters))}` : ''}</span></span>
+  <span class="row-main"><span class="row-title">${esc(name)}</span><span class="row-sub">${dir ? `${esc(t('toward'))} ${esc(dir)}` : esc(`${t('stop')} ${s.code}`)}${meters != null ? ` · ${esc((exact ? '' : '≈ ') + t('meters', meters) + ' ' + t('onFoot'))}` : ''}</span></span>
   <span class="row-tiles">${routesOfStop(si, 26)}</span>
 </a></li>`;
 }
@@ -226,12 +228,12 @@ function viewNear(home = false) {
   const last = stopById(store.get('last', ''));
   // la fermata preferita ha la precedenza sull'ultima vista: chi ha salvato una fermata la ritrova subito
   const current = favs[0] ?? last;
-  const near = state.loc ? nearestStops(state.data, state.loc.lat, state.loc.lon, 6) : [];
+  const near = state.loc ? nearestStops(state.data, state.loc.lat, state.loc.lon, 6, walkDist(state.walkMap)) : [];
   const geoMsg = state.locStatus === 'asking' ? t('locating') : state.locStatus === 'denied' ? t('locDenied') : '';
 
   const geoBtn = `<button class="btn" data-act="geo">${icon('locate', 20)}<span>${esc(t('useLocation'))}</span></button>`;
   const nearBlock = near.length
-    ? `<section class="block"><h2>${esc(t('nearYou'))}</h2><ul class="plain">${near.map((n) => stopRow(n.i, n.m)).join('')}</ul></section>`
+    ? `<section class="block"><h2>${esc(t('nearYou'))}</h2><ul class="plain">${near.map((n) => stopRow(n.i, n.m, isExactWalk(state.walkMap, n.i))).join('')}</ul></section>`
     : '';
   const favBlock = favs.length
     ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>`
@@ -445,7 +447,7 @@ function viewLine(rid, tripSel) {
     const { name } = stopTitle(si);
     const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
     const here = si === focus;
-    return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${formatClock(sel.tr.t[k])}</span></a></li>`;
+    return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
   }).join('') : '';
 
   const iso = (y) => `${Math.floor(y / 10000)}-${String(Math.floor((y % 10000) / 100)).padStart(2, '0')}-${String(y % 100).padStart(2, '0')}`;
@@ -537,7 +539,7 @@ async function bindBus(rid, vid) {
 ${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
     $stops.innerHTML = tr.s.map((si, k) => {
       const cls = [k === 0 ? 'first' : '', k === tr.s.length - 1 ? 'last' : '', k < pl.k || (k === pl.k && !pl.at) ? 'past' : '', pl.at && k === pl.k ? 'here' : ''].filter(Boolean).join(' ');
-      const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span><span class="st-time">${formatClock(tr.t[k])}</span></a></li>`;
+      const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span><span class="st-time">${isApprox(tr, k) ? '≈ ' : ''}${formatClock(tr.t[k])}</span></a></li>`;
       return !pl.at && k === pl.k && k < tr.s.length - 1 ? `${row}<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>` : row;
     }).join('');
     if (pl.k < 0) $stops.insertAdjacentHTML('afterbegin', `<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>`);
@@ -645,7 +647,7 @@ function getLoc() {
     if (!navigator.geolocation) return res(false);
     state.locStatus = 'asking';
     navigator.geolocation.getCurrentPosition(
-      (p) => { state.loc = { lat: p.coords.latitude, lon: p.coords.longitude }; state.locStatus = 'ok'; res(true); },
+      (p) => { state.loc = { lat: p.coords.latitude, lon: p.coords.longitude }; state.locStatus = 'ok'; refreshWalk(state.loc); res(true); },
       () => { state.locStatus = 'denied'; res(false); },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
@@ -701,7 +703,9 @@ async function runPlan() {
   for (const sd of [from, to]) {
     if (sd.kind === 'gps') {
       if (!(await getLoc())) { out.innerHTML = `<p class="note">${esc(t('planNeedLoc'))}</p>`; return; }
-      const w = walkable(state.data, state.loc.lat, state.loc.lon);
+      const g = await loadWalk();
+      const wm = g ? walkFrom(g, state.data.stops, state.loc.lat, state.loc.lon) : null;
+      const w = walkable(state.data, state.loc.lat, state.loc.lon, 800, 4, walkDist(wm));
       if (!w.length) { out.innerHTML = `<p class="note">${esc(t('planFar'))}</p>`; return; }
       ends.push(w);
     } else ends.push(sd.stops.map((stop) => ({ stop, walk: 0 })));
@@ -863,6 +867,8 @@ function viewInfo() {
     acc('src', 'rame', 'scale', t('sourcesLicenses'), `<p>${esc(t('sourceText'))}</p>
 <p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a></p>
 <p>${esc(t('citeBuildings'))} <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">doi:10.5194/essd-17-6647-2025</a> · <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a></p>
+<p>${esc(t('osmWalk'))} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, ODbL.</p>
+<p>${esc(t('approxInfo'))}</p>
 <p>${esc(t('notOfficial'))}</p>
 <h2 class="h3">${esc(t('licenses'))}</h2>
 <p>${esc(t('licData'))}: <a href="https://creativecommons.org/licenses/by/4.0/deed.${en ? 'en' : 'it'}" target="_blank" rel="noopener">CC BY 4.0</a><br>${esc(t('licCode'))}: <a href="https://github.com/PalermoHub/marsala_tpl/blob/main/LICENSE" target="_blank" rel="noopener">${esc(t('licCodeText'))}</a></p>`),
@@ -1023,6 +1029,14 @@ $app.addEventListener('click', async (e) => {
   else if (act === 'theme') { store.set('theme', b.dataset.v); applyTheme(); rerenderKeepScroll(); }
 });
 
+/** Scarica la rete pedonale (una volta) e sostituisce le distanze approssimate con quelle sulle strade. */
+async function refreshWalk(loc) {
+  const g = await loadWalk();
+  if (!g || state.loc !== loc) return; // offline senza cache, oppure nel frattempo la posizione è cambiata
+  state.walkMap = walkFrom(g, state.data.stops, loc.lat, loc.lon);
+  rerenderKeepScroll();
+}
+
 function locate() {
   if (!navigator.geolocation) { state.locStatus = 'denied'; rerenderKeepScroll(); return; }
   state.locStatus = 'asking';
@@ -1034,7 +1048,9 @@ function locate() {
       const [n] = nearestStops(state.data, state.loc.lat, state.loc.lon, 1);
       // Se la posizione è lontana da Marsala (turista che prova l'app da casa) non forza nessuna fermata.
       if (n && n.m < 5000 && !store.get('last')) store.set('last', state.data.stops[n.i].id);
+      state.walkMap = null;
       rerenderKeepScroll();
+      refreshWalk(state.loc);
     },
     () => { state.locStatus = 'denied'; rerenderKeepScroll(); },
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },

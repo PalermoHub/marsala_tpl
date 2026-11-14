@@ -10,10 +10,16 @@ const BUFFER_WALK = 60;        // s di margine in più quando si cammina
 /** Tutte le fermate "dello stesso posto": la fermata e quelle sull'altro senso di marcia. */
 export const groupOf = (data, si) => [si, ...siblingStops(data, si)];
 
-/** Fermate raggiungibili a piedi da un punto, con il tempo di cammino in secondi. */
-export function walkable(data, lat, lon, maxM = 800, n = 4) {
+/**
+ * Fermate raggiungibili a piedi da un punto, con il tempo di cammino in secondi.
+ * `dist(i, lineaAria)` (opzionale, vedi walk.js) dà i metri a piedi; senza, si usa la linea d'aria.
+ * A piedi non si è mai più vicini che in linea d'aria: il filtro sulla linea d'aria scarta solo fermate già troppo lontane.
+ */
+export function walkable(data, lat, lon, maxM = 800, n = 4, dist = null) {
   return data.stops
-    .map((s, i) => ({ stop: i, m: distanceM(lat, lon, s.lat, s.lon) }))
+    .map((s, i) => ({ stop: i, crow: distanceM(lat, lon, s.lat, s.lon) }))
+    .filter((x) => x.crow <= maxM)
+    .map((x) => ({ stop: x.stop, m: dist ? dist(x.stop, x.crow) : x.crow }))
     .filter((x) => x.m <= maxM)
     .sort((a, b) => a.m - b.m)
     .slice(0, n)

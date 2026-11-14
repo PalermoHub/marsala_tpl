@@ -3,7 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { planJourney, groupOf, walkable } from '../js/planner.js';
-import { romeNow, dowOf, addDays, isServiceActive, buildIndex, nextDepartures, splitStopName, siblingStops, feedStatus, formatClock } from '../js/schedule.js';
+import { romeNow, dowOf, addDays, isServiceActive, buildIndex, nextDepartures, splitStopName, siblingStops, feedStatus, formatClock, nearestStops, distanceM, isApprox } from '../js/schedule.js';
+import { buildGraph, walkFrom, walkDist, isExactWalk, DETOUR } from '../js/walk.js';
 
 const data = JSON.parse(readFileSync(new URL('../dati/app.json', import.meta.url), 'utf8'));
 const index = buildIndex(data);
@@ -188,4 +189,89 @@ test('avvisi: parsing RSS, filtro trasporti, unione senza duplicati', async () =
   assert.equal(merged.length, 3);
   assert.equal(merged.find((i) => i.link === 'https://x.it/b').title, 'Sagra');
   assert.deepEqual(merged.map((i) => i.date), [...merged.map((i) => i.date)].sort().reverse());
+});
+
+// ---------- distanza a piedi sulla rete ----------
+// Grafo a U: due punti a 88 m in linea d'aria, ma il solo passaggio è 300 m a nord e poi 300 m a sud.
+const U = buildGraph({
+  v: 1,
+  la: [3780000, 270, 0, -270],
+  lo: [1244000, 0, 100, 0],
+  e: [0, 1, 1, 2, 1, 3],
+});
+const uStops = [{ lat: 37.8, lon: 12.441 }, { lat: 37.8, lon: 12.44 }];
+
+test('walkFrom: la rete obbliga al giro, la linea d\'aria no', () => {
+  const crow = distanceM(37.8, 12.44, 37.8, 12.441);
+  const m = walkFrom(U, uStops, 37.8, 12.44, 1500);
+  assert.ok(m.get(0) > 650 && m.get(0) < 720, `a piedi ${m.get(0)}`); // 300 + 88 + 300
+  assert.ok(crow < 100, `linea d'aria ${crow}`);
+  assert.ok(m.get(1) < 1, 'la fermata sul punto di partenza è a 0 m');
+});
+
+test('walkFrom: oltre maxM la fermata non compare; lontano dalla rete ritorna null', () => {
+  const far = walkFrom(U, [...uStops, { lat: 37.9, lon: 12.5 }], 37.8, 12.44, 500);
+  assert.equal(far.has(0), false);
+  assert.equal(far.offNet.has(2), true);   // la fermata lontana dalla rete: la rete non sa
+  assert.equal(far.offNet.has(0), false);  // la fermata sulla rete ma oltre 500 m: è lontana, non "sconosciuta"
+  assert.equal(walkDist(far)(0, 88), Infinity);
+  assert.equal(walkDist(far)(2, 1000), 1000 * DETOUR);
+  assert.equal(walkFrom(U, uStops, 37.8, 12.44, 500).has(0), false);
+  assert.equal(walkFrom(U, uStops, 37.9, 12.5, 1500), null);
+});
+
+test('walkDist: rete se c\'è; fermata sulla rete ma non raggiunta = lontana; rapporto solo dove la rete non copre', () => {
+  const m = new Map([[3, 410]]); m.offNet = new Set([5]);
+  assert.equal(walkDist(m)(3, 100), 410);
+  assert.equal(walkDist(m)(4, 500), Infinity);          // sulla rete, oltre il raggio: non va mostrata come "695 m"
+  assert.equal(walkDist(m)(5, 100), 100 * DETOUR);      // fuori dalla rete: la rete non sa, si stima
+  assert.equal(walkDist(null)(4, 100), 100 * DETOUR);
+  assert.deepEqual(nearestStops({ stops: [{ lat: 37.8, lon: 12.44 }] }, 37.8, 12.44, 1, () => Infinity), []); // mai in elenco con distanza infinita
+  assert.equal(isExactWalk(m, 3), true);
+  assert.equal(isExactWalk(m, 4), false);
+  assert.equal(isExactWalk(null, 4), false);
+});
+
+test('nearestStops e walkable usano la distanza a piedi quando viene data', () => {
+  const d = { stops: uStops };
+  const crowFirst = nearestStops(d, 37.8, 12.4409, 2);                   // senza rete: la fermata a 10 m
+  assert.equal(crowFirst[0].i, 0);
+  const net = walkDist(new Map([[0, 700], [1, 50]]));
+  const byWalk = nearestStops(d, 37.8, 12.4409, 2, net);                  // con rete: l'altra è molto più vicina
+  assert.equal(byWalk[0].i, 1);
+  assert.equal(byWalk[0].m, 50);
+  const w = walkable(d, 37.8, 12.4409, 800, 4, walkDist(new Map([[0, 900], [1, 700]])));
+  assert.deepEqual(w.map((x) => x.stop), [1]);                           // 900 m a piedi: fuori dal raggio di 800 m
+  assert.equal(w[0].walk, Math.round(700 / 1.2));
+});
+
+// Riferimento indipendente: stesse distanze calcolate in Python (UTM, Dijkstra di scipy) sul grafo OSM completo.
+// Differenze attese solo dalla quantizzazione a 1e-5 gradi e dalla formula equirettangolare.
+const PY = [{"lat": 37.804909, "lon": 12.460815, "stops": [{"id": "21349", "m": 136.3}, {"id": "21350", "m": 144.5}, {"id": "21581", "m": 340.9}, {"id": "21352", "m": 378.7}, {"id": "21351", "m": 378.9}]}, {"lat": 37.709205, "lon": 12.476265, "stops": [{"id": "21095", "m": 361.2}, {"id": "21032", "m": 570.2}, {"id": "21093", "m": 662.7}, {"id": "21097", "m": 667.4}, {"id": "21096", "m": 890.3}]}, {"lat": 37.729782, "lon": 12.530687, "stops": [{"id": "21315", "m": 507.3}, {"id": "21313", "m": 598.3}, {"id": "21314", "m": 624.7}, {"id": "21316", "m": 879.4}, {"id": "21312", "m": 1012.2}]}, {"lat": 37.811862, "lon": 12.481299, "stops": [{"id": "21363", "m": 571.0}, {"id": "21365", "m": 574.0}, {"id": "21587", "m": 590.1}, {"id": "21369", "m": 615.2}, {"id": "21561", "m": 812.1}]}, {"lat": 37.798599, "lon": 12.428991, "stops": [{"id": "21645", "m": 50.2}, {"id": "21448", "m": 56.6}, {"id": "21644", "m": 360.8}, {"id": "21447", "m": 363.2}, {"id": "21449", "m": 365.4}]}];
+// Le fermate di riferimento sono copiate qui (id, lat, lon): il test non dipende dal feed vivo, che il workflow notturno rigenera.
+const PY_STOPS = [{"id": "21032", "lat": 37.704957, "lon": 12.476147}, {"id": "21093", "lat": 37.708891, "lon": 12.482425}, {"id": "21095", "lat": 37.707279, "lon": 12.476052}, {"id": "21096", "lat": 37.702512, "lon": 12.475754}, {"id": "21097", "lat": 37.709141, "lon": 12.482647}, {"id": "21312", "lat": 37.731863, "lon": 12.521099}, {"id": "21313", "lat": 37.730195, "lon": 12.525294}, {"id": "21314", "lat": 37.727241, "lon": 12.525976}, {"id": "21315", "lat": 37.726309, "lon": 12.527416}, {"id": "21316", "lat": 37.723938, "lon": 12.525921}, {"id": "21349", "lat": 37.805933, "lon": 12.460634}, {"id": "21350", "lat": 37.80589, "lon": 12.460545}, {"id": "21351", "lat": 37.805671, "lon": 12.46348}, {"id": "21352", "lat": 37.805648, "lon": 12.463463}, {"id": "21363", "lat": 37.808773, "lon": 12.481955}, {"id": "21365", "lat": 37.808749, "lon": 12.482013}, {"id": "21369", "lat": 37.810202, "lon": 12.486351}, {"id": "21447", "lat": 37.801044, "lon": 12.426441}, {"id": "21448", "lat": 37.798243, "lon": 12.429208}, {"id": "21449", "lat": 37.796218, "lon": 12.431546}, {"id": "21561", "lat": 37.816608, "lon": 12.47876}, {"id": "21581", "lat": 37.806443, "lon": 12.463232}, {"id": "21587", "lat": 37.815016, "lon": 12.477259}, {"id": "21644", "lat": 37.796287, "lon": 12.431482}, {"id": "21645", "lat": 37.7983, "lon": 12.429214}];
+test('walkFrom coincide con il calcolo in Python sullo stesso estratto OSM (±4% o 15 m)', () => {
+  const g = buildGraph(JSON.parse(readFileSync(new URL('../dati/walk.json', import.meta.url), 'utf8')));
+  let checked = 0;
+  for (const o of PY) {
+    const m = walkFrom(g, PY_STOPS, o.lat, o.lon, 1500);
+    assert.ok(m, 'punto sulla rete');
+    for (const s of o.stops) {
+      const i = PY_STOPS.findIndex((x) => x.id === s.id);
+      const js = m.get(i);
+      assert.ok(js !== undefined, `fermata ${s.id} non raggiunta (Python ${s.m} m)`);
+      assert.ok(Math.abs(js - s.m) <= Math.max(15, s.m * 0.04), `fermata ${s.id}: JS ${js.toFixed(0)} m, Python ${s.m} m`);
+      checked++;
+    }
+  }
+  assert.equal(checked, 25);
+});
+
+test('isApprox: solo le fermate intermedie con lo stesso minuto della precedente', () => {
+  const trip = { t: [28800, 28800, 28860, 28860, 28920] };
+  assert.equal(isApprox(trip, 0), false);  // capolinea di partenza
+  assert.equal(isApprox(trip, 1), true);   // stesso minuto della precedente
+  assert.equal(isApprox(trip, 2), false);
+  assert.equal(isApprox(trip, 3), true);
+  assert.equal(isApprox(trip, 4), false);
 });
