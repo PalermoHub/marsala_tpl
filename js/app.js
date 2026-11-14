@@ -867,6 +867,7 @@ function viewInfo() {
     acc('src', 'rame', 'scale', t('sourcesLicenses'), `<p>${esc(t('sourceText'))}</p>
 <p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a></p>
 <p>${esc(t('citeBuildings'))} <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">doi:10.5194/essd-17-6647-2025</a> · <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a></p>
+<p>${esc(t('citeOrtho'))} <a href="https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer" target="_blank" rel="noopener">SITR Regione Siciliana</a></p>
 <p>${esc(t('osmWalk'))} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, ODbL.</p>
 <p>${esc(t('approxInfo'))}</p>
 <p>${esc(t('notOfficial'))}</p>

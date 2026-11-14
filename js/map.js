@@ -12,6 +12,15 @@ const ML_JS_SRI = 'sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0
 const ML_CSS_SRI = 'sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V';
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron';
 const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
+// Sfondi alternativi (raster) sotto percorsi, fermate e bus, a rotazione dal pulsante: stradale → ortofoto Regione → satellite Google.
+const ORTHO_TILES = ['https://map.sitr.regione.sicilia.it/gis/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer/WMSServer?service=WMS&version=1.1.1&request=GetMap&layers=0&styles=&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&format=image/jpeg'];
+const SAT_TILES = ['mt0', 'mt1', 'mt2', 'mt3'].map((h) => `https://${h}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}`);
+const BASES = [
+  null,
+  { id: 'ortho', tiles: ORTHO_TILES, label: 'ORTO', attribution: 'Ortofoto 2022 © <a href="https://www.sitr.regione.sicilia.it" target="_blank" rel="noopener">Regione Siciliana</a>' },
+  { id: 'sat', tiles: SAT_TILES, label: 'SAT', attribution: 'Immagini © Google' },
+];
+const SAT_KEY = 'marsala-tpl-base';
 const CENTER = [12.4437, 37.7985];
 const POLL_MS = 10000;
 // Provincia di Trapani con Egadi e Pantelleria (O, S, E, N): la mappa non esce da qui.
@@ -112,6 +121,14 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addSource('bus-clusters', { type: 'geojson', data: empty });
   if (loc) map.addSource('me', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [loc.lon, loc.lat] } } });
 
+  // Sfondi alternativi: le tessere si scaricano solo per quello attivo (gli strati nascosti non richiedono nulla).
+  let baseIdx = 0;
+  try { baseIdx = Math.min(BASES.length - 1, Math.max(0, Number(localStorage.getItem(SAT_KEY)) || 0)); } catch { /* storage non disponibile */ }
+  BASES.forEach((bs) => {
+    if (!bs) return;
+    map.addSource(bs.id, { type: 'raster', tiles: bs.tiles, tileSize: 256, maxzoom: 19, attribution: bs.attribution });
+    map.addLayer({ id: bs.id, type: 'raster', source: bs.id, layout: { visibility: BASES[baseIdx] === bs ? 'visible' : 'none' } });
+  });
   map.addLayer({ id: 'lines-casing', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#0F1B3D' : '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 10], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.15] : 0.9 } });
   map.addLayer({ id: 'lines', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 6], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.25] : 0.85 } });
   // Il numero di linea sul percorso: l'identità non dipende solo dal colore.
@@ -201,7 +218,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   document.addEventListener('fullscreenchange', onFs);
   function initControls() {
     const homeBtn = mkBtn('map-home', ICON.home, t('mapHome'), () => goHome(reduced ? 0 : 700));
-    ctrls.append(homeBtn); // lo zoom si fa col cursore (tastiera compresa), con pizzico o rotella: niente +/−
+    ctrls.append(homeBtn, btnSat); // lo zoom si fa col cursore (tastiera compresa), con pizzico o rotella: niente +/−
     const compassBtn = mkBtn('map-compass', ICON.compass, t('mapCompass'), () => map.resetNorth({ duration: reduced ? 0 : 400 }));
     const paintCompass = () => { compassBtn.firstElementChild.style.transform = `rotate(${-map.getBearing()}deg)`; };
     map.on('rotate', paintCompass);
@@ -232,6 +249,23 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
     draw();
   });
   paintBtn();
+  const btnSat = document.createElement('button');
+  btnSat.type = 'button';
+  btnSat.className = 'map-btn map-sat';
+  const paintSat = () => {
+    const next = BASES[(baseIdx + 1) % BASES.length];
+    btnSat.textContent = (next ?? { label: 'MAP' }).label;
+    btnSat.setAttribute('aria-pressed', String(baseIdx > 0));
+    btnSat.setAttribute('aria-label', t(next ? (next.id === 'ortho' ? 'mapOrtho' : 'mapSat') : 'mapSatOff'));
+    btnSat.title = btnSat.getAttribute('aria-label');
+  };
+  btnSat.addEventListener('click', () => {
+    baseIdx = (baseIdx + 1) % BASES.length;
+    BASES.forEach((bs) => { if (bs) map.setLayoutProperty(bs.id, 'visibility', BASES[baseIdx] === bs ? 'visible' : 'none'); });
+    try { localStorage.setItem(SAT_KEY, String(baseIdx)); } catch { /* ignora */ }
+    paintSat();
+  });
+  paintSat();
 
   map.on('click', 'stops', (e) => {
     const f = e.features?.[0];

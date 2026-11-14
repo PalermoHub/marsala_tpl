@@ -1,0 +1,13 @@
+grafo: 29210 nodi, 31044 archi, componenti 77, nodi nella più grande 28080 (96%)
+fermate: distanza dal grafo p50/p95/max m: 15/72/169 | oltre 100 m: 12
+punti campione: 600 su 22414 candidati
+
+walkable() (≤800 m in linea d'aria, 4 più vicine): 2257 coppie
+  distanza a piedi / linea d'aria: p50 1.39  p90 2.57  max 49.06
+  coppie che a piedi superano gli 800 m: 25.8%  | non raggiungibili sulla rete: 0.5%
+  tempo di cammino sottostimato (min) p50 1.8  p90 8.0  max 27.8
+
+nearestStops() (6 più vicine): 600 punti
+  la fermata più vicina in linea d'aria è anche la più vicina a piedi: 65.5%
+  sovrapposizione media delle 6 fermate: 79%
+  punti con la più vicina in linea d'aria ≥1.5× più lontana a piedi: 39.8%
