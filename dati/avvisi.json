@@ -1,0 +1,45 @@
+{
+ "updated": "2026-11-14T13:43:35.892Z",
+ "items": [
+  {
+   "title": "A Palazzo Municipale Matt Alfieri",
+   "link": "https://www.comune.marsala.tp.it/it/news/a-palazzo-municipale-matt-alfieri",
+   "date": "2026-11-12T14:33:31Z",
+   "summary": "Il giovane americano ha donato alla sindaca Patti il volume in cui ha raccolto le sue radici siciliane “Un la...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/alfieri-patti.jpeg",
+   "transport": false
+  },
+  {
+   "title": "Autobus urbani in tempo reale",
+   "link": "https://www.comune.marsala.tp.it/it/news/autobus-urbani-in-tempo-reale",
+   "date": "2026-11-12T11:03:34Z",
+   "summary": "Il Comune di Marsala avvia l'utile servizio digitale per cittadini e visitatori A Marsala, gli autobus urbani si seguon...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/autostazione-bus-marsala.jpg",
+   "transport": true
+  },
+  {
+   "title": "Concorso creativo \"Il rispetto che cambia la vita\"",
+   "link": "https://www.comune.marsala.tp.it/it/news/concorso-creativo-il-rispetto-che-cambia-la-vita",
+   "date": "2026-11-12T08:19:39Z",
+   "summary": "",
+   "img": "",
+   "transport": false
+  },
+  {
+   "title": "Concorso “Il Rispetto che Cambia la Vita”",
+   "link": "https://www.comune.marsala.tp.it/it/news/concorso-il-rispetto-che-cambia-la-vita",
+   "date": "2026-11-12T07:10:54Z",
+   "summary": "“Giornata internazionale per l'eliminazione della violenza contro le donne”. Il Comune di Marsala promuove il concorso creativo “Il ...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/donne.jpg",
+   "transport": false
+  },
+  {
+   "title": "MAB Unesco: si illustra la candidatura",
+   "link": "https://www.comune.marsala.tp.it/it/news/mab-unesco-si-illustra-la-candidatura",
+   "date": "2026-11-10T15:20:48Z",
+   "summary": "Sarà illustrata a Marsala il prossimo 4 dicembre - nel Complesso San Pietro (ore 18) - la candidatura al MAB Un...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/laguna-stagnone-natura-paesaggio-6.jpg",
+   "transport": false
+  }
+ ]
+}

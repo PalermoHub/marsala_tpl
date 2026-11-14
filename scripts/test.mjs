@@ -170,3 +170,22 @@ test('mezzo sulla linea: posizione lungo il tracciato e tra le fermate', async (
   if (alongs[k + 1] - alongs[k] > 120) assert.deepEqual(q, { k, at: false });
   assert.deepEqual(placeOnStops(alongs, -500), { k: -1, at: false });
 });
+
+test('avvisi: parsing RSS, filtro trasporti, unione senza duplicati', async () => {
+  const { parseRss, merge } = await import('./build-avvisi.mjs');
+  const xml = `<rss><channel><item><title>Deviazione linea 3 &amp; 4</title><link>https://x.it/a</link>
+<description><![CDATA[Corse <b>deviate</b> per lavori.<img src="https://x.it/i.jpg" />]]></description>
+<enclosure url="https://x.it/i.jpg" length="1" type="image/jpeg"/><dc:date>2026-11-12T10:00:00Z</dc:date></item>
+<item><title>Concorso</title><link>javascript:alert(1)</link><description>x</description><dc:date>2026-11-11T10:00:00Z</dc:date></item>
+<item><title>Sagra</title><link>https://x.it/b</link><description>Festa in piazza</description><dc:date>2026-11-10T10:00:00Z</dc:date></item></channel></rss>`;
+  const items = parseRss(xml);
+  assert.equal(items.length, 2, 'scarta i link non https');
+  assert.equal(items[0].title, 'Deviazione linea 3 & 4');
+  assert.ok(!/[<>]/.test(items[0].summary), 'niente HTML nel riassunto');
+  assert.equal(items[0].transport, true);
+  assert.equal(items[1].transport, false);
+  const merged = merge([{ ...items[1], title: 'vecchio' }, { title: 'Prima', link: 'https://x.it/c', date: '2026-11-01T00:00:00Z' }], items);
+  assert.equal(merged.length, 3);
+  assert.equal(merged.find((i) => i.link === 'https://x.it/b').title, 'Sagra');
+  assert.deepEqual(merged.map((i) => i.date), [...merged.map((i) => i.date)].sort().reverse());
+});

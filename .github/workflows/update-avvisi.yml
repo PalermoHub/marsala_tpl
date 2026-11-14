@@ -1,0 +1,39 @@
+name: Aggiorna avvisi dal Comune
+
+on:
+  schedule:
+    - cron: "15 */3 * * *"   # ogni 3 ore
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+# Stesso gruppo del workflow degli orari: evita push simultanei.
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scarica il feed RSS delle news del Comune
+        run: node scripts/build-avvisi.mjs
+      - name: Commit e ripubblicazione se ci sono novità
+        run: |
+          if [ -z "$(git status --porcelain dati/avvisi.json)" ]; then echo "Nessuna novità."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dati/avvisi.json
+          git commit -m "chore(dati): aggiorna avvisi dal Comune"
+          git pull --rebase
+          git push
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+        env:
+          GH_TOKEN: ${{ github.token }}

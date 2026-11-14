@@ -394,3 +394,16 @@ button { font: inherit; color: inherit; }
 .h3 { margin: 18px 0 8px; font-size: 16px; font-weight: 700; }
 .prose p { line-height: 1.5; overflow-wrap: anywhere; }
 .back-ink { color: var(--cobalt-hi); }
+
+/* ---------- avvisi ---------- */
+.news-lead { margin: -8px 0 18px; }
+.news { display: grid; gap: 10px; }
+.news-item a {
+  display: grid; gap: 4px; padding: 14px 16px; min-height: 64px; border-radius: var(--r);
+  background: var(--glaze-2); color: var(--ink); text-decoration: none;
+}
+.news-item a:hover { filter: brightness(0.97); }
+.news-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; color: var(--ink-2); }
+.news-tag { padding: 1px 8px; border-radius: 99px; background: var(--ocra); color: oklch(24% 0.07 262); font-size: 14px; font-weight: 700; }
+.news-title { font-size: 18px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.news-sum { font-size: 16px; line-height: 1.4; color: var(--ink-2); }

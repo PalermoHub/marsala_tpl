@@ -25,6 +25,7 @@ const ICON = {
   pin: '<path d="M12 21s6-5.6 6-10.5a6 6 0 10-12 0C6 15.400 12 21 12 21z"/><circle cx="12" cy="10.500" r="2.200"/>',
   list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   map: '<path d="M9 4L3.500 6v14L9 18l6 2 5.500-2V4L15 6z M9 4v14M15 6v14"/>',
+  bell: '<path d="M6 17V11a6 6 0 0112 0v6l1.500 2h-15zM10 21h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.500h.01"/>',
   search: '<circle cx="11" cy="11" r="6.500"/><path d="M16 16l4.500 4.500"/>',
   clock: '<circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/>',
@@ -50,6 +51,10 @@ const headOf = (trip) => trip.h || state.data.routes[trip.r].long;
 const fmtDate = (ymd) => new Date(Date.UTC(Math.floor(ymd / 10000), Math.floor((ymd % 10000) / 100) - 1, ymd % 100)).toLocaleDateString(getLang(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 // ---------- dati ----------
+// Avvisi: snapshot del feed RSS del Comune (dati/avvisi.json), assente o rotto = pagina senza elenco.
+let avvisiPromise = null;
+const loadAvvisi = () => (avvisiPromise ??= fetch('dati/avvisi.json').then((r) => { if (!r.ok) throw new Error('avvisi'); return r.json(); }).catch(() => { avvisiPromise = null; return null; }));
+
 async function loadData() {
   const res = await fetch('dati/app.json');
   if (!res.ok) throw new Error(`dati ${res.status}`);
@@ -229,6 +234,7 @@ function viewHome() {
     ${card('#/percorso', 'route', 'homePlan', 'homePlanSub', true)}
     ${card('#/vicino', 'pin', 'homeNext', 'homeNextSub')}
     ${card('#/mappa', 'map', 'homeMap', 'homeMapSub')}
+    ${card('#/avvisi', 'bell', 'homeNews', 'homeNewsSub')}
   </nav>
 </section>
 ${banners(now)}
@@ -728,6 +734,45 @@ function bindPlan() {
   runPlan();
 }
 
+const AVVISI_SOURCES = [
+  ['https://www.comune.marsala.tp.it/it/news', 'newsComune'],
+  ['https://www.comune.marsala.tp.it/it/page/mobilita-e-trasporti', 'newsMobility'],
+  ['https://www.astsicilia.it/', 'newsAst'],
+  ['https://www.comune.marsala.tp.it/it/news/feed', 'newsRss'],
+];
+
+function avvisoItem(i) {
+  const d = new Date(i.date);
+  const date = Number.isNaN(+d) ? '' : d.toLocaleDateString(getLang() === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Rome' });
+  return `<li class="news-item"><a href="${esc(safeUrl(i.link))}" target="_blank" rel="noopener">
+  <span class="news-meta">${date ? `<time datetime="${esc(i.date)}">${esc(date)}</time>` : ''}${i.transport ? `<span class="news-tag">${esc(t('newsTransport'))}</span>` : ''}</span>
+  <span class="news-title">${esc(i.title)}</span>
+  ${i.summary ? `<span class="news-sum">${esc(i.summary)}</span>` : ''}
+</a></li>`;
+}
+
+function viewAvvisi() {
+  const src = AVVISI_SOURCES.map(([u, k]) => `<li><a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(new URL(u).host)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
+  return `${banners(romeNow())}<section class="block"><a class="back back-ink" href="#/" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
+<h1 class="h1">${esc(t('news'))}</h1>
+<p class="note news-lead">${esc(t('newsLead'))}</p>
+<div id="news-list" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
+<section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>`;
+}
+
+function bindAvvisi() {
+  loadAvvisi().then((d) => {
+    const el = document.getElementById('news-list');
+    if (!el) return; // si è già cambiata pagina
+    if (!d?.items?.length) { el.innerHTML = `<p class="note">${esc(t('newsErr'))}</p>`; return; }
+    const tr = d.items.filter((i) => i.transport);
+    const rest = d.items.filter((i) => !i.transport);
+    el.innerHTML = `${tr.length ? `<h2>${esc(t('newsTransportH'))}</h2><ul class="plain news">${tr.map(avvisoItem).join('')}</ul>` : `<p class="note">${esc(t('newsNoTransport'))}</p>`}
+${rest.length ? `<h2>${esc(t('newsOther'))}</h2><ul class="plain news">${rest.map(avvisoItem).join('')}</ul>` : ''}
+<p class="note">${esc(t('newsUpdated', new Date(d.updated).toLocaleString(getLang() === 'en' ? 'en-GB' : 'it-IT', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Rome' })))}</p>`;
+  });
+}
+
 function viewInfo() {
   const m = state.data.meta;
   const now = romeNow();
@@ -795,6 +840,7 @@ const routes = [
   [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => { state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1; return viewLine(decodeURIComponent(m[1])); }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
+  [/^\/avvisi$/, () => viewAvvisi(), 'news', bindAvvisi],
   [/^\/info$/, () => viewInfo(), 'info'],
   [/^\/privacy$/, () => viewPrivacy(), 'info'],
 ];
