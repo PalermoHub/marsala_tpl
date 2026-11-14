@@ -18,6 +18,10 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const base = () => new URL('.', document.baseURI).href;
+// Dentro l'iframe di PalermoHub i link da condividere puntano alla pagina che incorpora l'app.
+const EMBED_URL = 'https://palermohub.opendatasicilia.it/marsala_tpl.html';
+const embedded = (() => { try { return window.self !== window.top; } catch { return true; } })();
+const shareUrl = (hash = location.hash) => (embedded ? `${EMBED_URL}${hash}` : `${base()}${hash}`);
 
 const ICON = {
   star: '<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
@@ -944,6 +948,9 @@ document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; i
 // Cambio schermata: dissolvenza breve con View Transitions dove esistono; senza, resta il solo `rise` della cifra.
 // Si salta con "riduci movimento" e da/verso la mappa (WebGL: l'istantanea costa più di quanto serve).
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// Nell'embed la pagina esterna riflette l'hash corrente nella barra degli indirizzi (condivisione e ricarica).
+const syncParent = () => { if (embedded) parent.postMessage({ type: 'marsala-tpl-hash', hash: location.hash }, 'https://palermohub.opendatasicilia.it'); };
+window.addEventListener('hashchange', syncParent);
 window.addEventListener('hashchange', () => {
   state.lineDir = null; state.lineDay = null; state.lineFocus = -1;
   const swap = () => { render(true); window.scrollTo(0, 0); };
@@ -972,14 +979,14 @@ $app.addEventListener('click', async (e) => {
   const act = b.dataset.act;
   if (act === 'fav') { store.toggleFav(b.dataset.id); rerenderKeepScroll(); if (isFav(b.dataset.id)) document.querySelector('[data-act="fav"]')?.classList.add('pop'); }
   else if (act === 'share') {
-    const url = `${base()}#/stop/${b.dataset.id}`;
+    const url = shareUrl(`#/stop/${b.dataset.id}`);
     const title = document.title;
     try {
       if (navigator.share) await navigator.share({ title, url });
       else { await navigator.clipboard.writeText(url); toast(t('linkCopied')); }
     } catch { /* annullato */ }
   } else if (act === 'shareplan') {
-    const url = `${base()}${location.hash}`;
+    const url = shareUrl();
     const text = state.planShareText || '';
     try {
       if (navigator.share) await navigator.share({ title: document.title, text, url });
