@@ -212,7 +212,7 @@ function viewHome() {
   const now = romeNow();
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const card = (href, ic, title, sub, main) => `<a class="card${main ? ' card-main' : ''}" href="${href}">${icon(ic, 28)}<span class="card-text"><b>${esc(t(title))}</b><small>${esc(t(sub))}</small></span>${icon('chevron', 20)}</a>`;
-  return `${banners(now)}
+  return `${communityNote()}
 <section class="hero hero-first" data-strip="${stripState(now)}">
   <h1>${esc(t('appName'))}</h1>
   <p class="lead">${esc(t('homeLead'))}</p>
@@ -222,10 +222,19 @@ function viewHome() {
     ${card('#/mappa', 'map', 'homeMap', 'homeMapSub')}
   </nav>
 </section>
+${banners(now)}
 ${favs.length ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>` : ''}
 <section class="block"><h2>${esc(t('lines'))}</h2>
 <ul class="tile-row">${activeRoutes().map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>
 <section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>`;
+}
+
+/** Logo Open Data Sicilia con avviso: app della community, non un servizio ufficiale. */
+function communityNote() {
+  return `<aside class="community">
+  <a class="osd-chip" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
+  <p>${esc(t('communityNote'))}</p>
+</aside>`;
 }
 
 /** Il tracciato di una linea com'è sulla mappa: striscia colorata con il numero scritto sopra. */
@@ -677,7 +686,8 @@ function viewInfo() {
 <h2>${esc(t('language'))}</h2>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}
 <h2>${esc(t('theme'))}</h2>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}
 <h2>${esc(t('source'))}</h2>
-<p>${esc(t('sourceText'))} <a href="${esc(safeUrl(m.source))}" rel="noopener">comune.marsala.tp.it</a></p>
+<p>${esc(t('sourceText'))}</p>
+<p><a href="${esc(safeUrl(m.source))}" target="_blank" rel="noopener" title="${esc(m.source)}">${esc(t('sourcePage'))}</a><br><small class="muted">${esc(m.source)}</small></p>
 <p>${esc(t('notOfficial'))}</p>
 <h2>${esc(t('reportError'))}</h2>
 <p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>

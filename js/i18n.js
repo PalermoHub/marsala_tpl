@@ -59,6 +59,8 @@ const IT = {
   stepTo: (head) => `direzione ${head}`, stepStops: (n) => (n === 1 ? '1 fermata' : `${n} fermate`), stepChange: 'Cambio',
   stepArrive: (time) => `Arrivi alle ${time}`, planLine: 'Linea',
   osdTitle: 'Open Data Sicilia',
+  sourcePage: 'Comune di Marsala · Orari del trasporto pubblico locale',
+  communityNote: 'App non ufficiale, realizzata dalla community di Open Data Sicilia con i dati aperti del Comune di Marsala. Non è un servizio del Comune.',
   planFar: 'Nessuna fermata a meno di 800 m dalla tua posizione.',
 };
 
@@ -119,6 +121,8 @@ const EN = {
   stepTo: (head) => `toward ${head}`, stepStops: (n) => (n === 1 ? '1 stop' : `${n} stops`), stepChange: 'Change',
   stepArrive: (time) => `You arrive at ${time}`, planLine: 'Line',
   osdTitle: 'Open Data Sicilia',
+  sourcePage: 'Comune di Marsala · Local public transport timetables',
+  communityNote: 'Unofficial app, built by the Open Data Sicilia community from the Comune di Marsala open data. It is not a Comune service.',
   planFar: 'No stop within 800 m of your location.',
 };
 
