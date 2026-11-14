@@ -232,8 +232,8 @@ function viewHome() {
 </section>
 ${banners(now)}
 ${favs.length ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>` : ''}
-<section class="block"><h2>${esc(t('lines'))}</h2>
-<ul class="tile-row">${activeRoutes().map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>
+<section class="block"><h2>${esc(t('linesNow'))}</h2>
+${(() => { const run = runningRoutes(); return run.length ? `<ul class="tile-row">${run.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul>` : `<p class="note">${esc(t('noLinesNow'))}</p>`; })()}</section>
 <section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>`;
 }
 
@@ -329,6 +329,16 @@ function activeRoutes() {
   const counts = new Map();
   state.data.trips.forEach((tr) => { if (today.has(tr.v)) counts.set(tr.r, (counts.get(tr.r) ?? 0) + 1); });
   return [...counts.keys()].sort((a, b) => state.data.routes[a].short.localeCompare(state.data.routes[b].short, 'it', { numeric: true }));
+}
+
+/** Linee con una corsa in corso adesso: oggi è attiva la corsa e l'ora cade tra prima e ultima fermata. */
+function runningRoutes() {
+  const now = romeNow();
+  const today = new Set();
+  state.data.services.forEach((sv, i) => { if (isServiceActive(sv, now.ymd)) today.add(i); });
+  const run = new Set();
+  state.data.trips.forEach((tr) => { if (today.has(tr.v) && tr.t[0] <= now.secs && now.secs <= tr.t[tr.t.length - 1]) run.add(tr.r); });
+  return [...run].sort((a, b) => state.data.routes[a].short.localeCompare(state.data.routes[b].short, 'it', { numeric: true }));
 }
 
 function viewLines() {
