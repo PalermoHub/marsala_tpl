@@ -1,0 +1,98 @@
+- generic [active] [ref=f4e1]:
+  - link "Vai al contenuto" [ref=f4e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f4e3]:
+    - region "Via Crispi" [ref=f4e567]:
+      - generic [ref=f4e568]:
+        - generic [ref=f4e569]:
+          - heading "Via Crispi" [level=1] [ref=f4e570]
+          - paragraph [ref=f4e571]: direzione Autostazione
+        - generic [ref=f4e572]:
+          - button "Salva fermata" [ref=f4e573] [cursor=pointer]
+          - button "Condividi" [ref=f4e576] [cursor=pointer]
+      - generic [ref=f4e579]:
+        - generic [ref=f4e580]:
+          - img "Linea 2" [ref=f4e581]:
+            - generic [ref=f4e594]: "2"
+          - paragraph [ref=f4e595]: Piazza del Popolo
+        - paragraph [ref=f4e596]:
+          - generic [ref=f4e597]: 13:35
+        - paragraph [ref=f4e598]:
+          - generic [ref=f4e602]: da orario · 13:35 · tra 1 h 19 min
+    - generic [ref=f4e603]:
+      - heading "Poi" [level=2] [ref=f4e604]
+      - list [ref=f4e605]:
+        - listitem [ref=f4e606]:
+          - link "Linea 5 Piazza del Popolo tra 1 h 42 min 13:58" [ref=f4e607] [cursor=pointer]:
+            - /url: "#/linea/INV_1947"
+            - img "Linea 5" [ref=f4e608]:
+              - generic [ref=f4e618]: "5"
+            - generic [ref=f4e619]:
+              - generic [ref=f4e620]: Piazza del Popolo
+              - generic [ref=f4e621]: tra 1 h 42 min
+            - generic [ref=f4e622]: 13:58
+        - listitem [ref=f4e623]:
+          - link "Linea 6 Piazza del Popolo tra 1 h 49 min 14:04" [ref=f4e624] [cursor=pointer]:
+            - /url: "#/linea/1905"
+            - img "Linea 6" [ref=f4e625]:
+              - generic [ref=f4e647]: "6"
+            - generic [ref=f4e648]:
+              - generic [ref=f4e649]: Piazza del Popolo
+              - generic [ref=f4e650]: tra 1 h 49 min
+            - generic [ref=f4e651]: 14:04
+        - listitem [ref=f4e652]:
+          - link "Linea 1 Piazza del Popolo tra 1 h 52 min 14:08" [ref=f4e653] [cursor=pointer]:
+            - /url: "#/linea/1925"
+            - img "Linea 1" [ref=f4e654]:
+              - generic [ref=f4e694]: "1"
+            - generic [ref=f4e695]:
+              - generic [ref=f4e696]: Piazza del Popolo
+              - generic [ref=f4e697]: tra 1 h 52 min
+            - generic [ref=f4e698]: 14:08
+        - listitem [ref=f4e699]:
+          - link "Linea 2 Piazza del Popolo tra 3 h 6 min 15:21" [ref=f4e700] [cursor=pointer]:
+            - /url: "#/linea/1930"
+            - img "Linea 2" [ref=f4e701]:
+              - generic [ref=f4e714]: "2"
+            - generic [ref=f4e715]:
+              - generic [ref=f4e716]: Piazza del Popolo
+              - generic [ref=f4e717]: tra 3 h 6 min
+            - generic [ref=f4e718]: 15:21
+        - listitem [ref=f4e719]:
+          - link "Linea 5 Piazza del Popolo tra 3 h 32 min 15:48" [ref=f4e720] [cursor=pointer]:
+            - /url: "#/linea/INV_1947"
+            - img "Linea 5" [ref=f4e721]:
+              - generic [ref=f4e731]: "5"
+            - generic [ref=f4e732]:
+              - generic [ref=f4e733]: Piazza del Popolo
+              - generic [ref=f4e734]: tra 3 h 32 min
+            - generic [ref=f4e735]: 15:48
+        - listitem [ref=f4e736]:
+          - link "Linea 6 Piazza del Popolo tra 3 h 34 min 15:49" [ref=f4e737] [cursor=pointer]:
+            - /url: "#/linea/1905"
+            - img "Linea 6" [ref=f4e738]:
+              - generic [ref=f4e760]: "6"
+            - generic [ref=f4e761]:
+              - generic [ref=f4e762]: Piazza del Popolo
+              - generic [ref=f4e763]: tra 3 h 34 min
+            - generic [ref=f4e764]: 15:49
+    - generic [ref=f4e765]:
+      - heading "Altro senso di marcia" [level=2] [ref=f4e766]
+      - list [ref=f4e767]:
+        - listitem [ref=f4e768]:
+          - link "Via Crispi direzione lungomare Linea 15" [ref=f4e769] [cursor=pointer]:
+            - /url: "#/stop/21732"
+            - generic [ref=f4e770]:
+              - generic [ref=f4e771]: Via Crispi
+              - generic [ref=f4e772]: direzione lungomare
+            - img "Linea 15" [ref=f4e774]:
+              - generic [ref=f4e814]: "15"
+  - navigation "Marsala TPL" [ref=f4e14]:
+    - link "Vicino" [ref=f4e15] [cursor=pointer]:
+      - /url: "#/"
+    - link "Linee" [ref=f4e20] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Mappa" [ref=f4e24] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f4e28] [cursor=pointer]:
+      - /url: "#/info"

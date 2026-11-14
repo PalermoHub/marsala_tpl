@@ -1,0 +1,9 @@
+.impeccable/
+.remember/
+.claude/
+graphify-out/
+*:Zone.Identifier
+*.Identifier
+node_modules/
+_site/
+.DS_Store

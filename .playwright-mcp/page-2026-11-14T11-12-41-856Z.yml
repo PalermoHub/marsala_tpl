@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - link "Vai al contenuto" [ref=e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Where are you?" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Pick a stop to see when the next bus comes.
+      - generic [ref=e7]:
+        - button "Use my location" [ref=e8] [cursor=pointer]
+        - link "Search for a stop" [ref=e14] [cursor=pointer]:
+          - /url: "#/cerca"
+    - generic [ref=e19]:
+      - heading "Lines" [level=2] [ref=e20]
+      - list [ref=e21]:
+        - listitem [ref=e22]:
+          - link "Lines 1" [ref=e23] [cursor=pointer]:
+            - /url: "#/linea/1925"
+            - img "Linea 1" [ref=e24]:
+              - generic [ref=e64]: "1"
+        - listitem [ref=e65]:
+          - link "Lines 2" [ref=e66] [cursor=pointer]:
+            - /url: "#/linea/1930"
+            - img "Linea 2" [ref=e67]:
+              - generic [ref=e80]: "2"
+        - listitem [ref=e81]:
+          - link "Lines 3" [ref=e82] [cursor=pointer]:
+            - /url: "#/linea/1906"
+            - img "Linea 3" [ref=e83]:
+              - generic [ref=e93]: "3"
+        - listitem [ref=e94]:
+          - link "Lines 4" [ref=e95] [cursor=pointer]:
+            - /url: "#/linea/1909"
+            - img "Linea 4" [ref=e96]:
+              - generic [ref=e136]: "4"
+        - listitem [ref=e137]:
+          - link "Lines 5" [ref=e138] [cursor=pointer]:
+            - /url: "#/linea/INV_1947"
+            - img "Linea 5" [ref=e139]:
+              - generic [ref=e149]: "5"
+        - listitem [ref=e150]:
+          - link "Lines 6" [ref=e151] [cursor=pointer]:
+            - /url: "#/linea/1905"
+            - img "Linea 6" [ref=e152]:
+              - generic [ref=e174]: "6"
+        - listitem [ref=e175]:
+          - link "Lines 7/10" [ref=e176] [cursor=pointer]:
+            - /url: "#/linea/1912"
+            - img "Linea 7/10" [ref=e177]:
+              - generic [ref=e199]: 7/10
+        - listitem [ref=e200]:
+          - link "Lines 8/13" [ref=e201] [cursor=pointer]:
+            - /url: "#/linea/1944"
+            - img "Linea 8/13" [ref=e202]:
+              - generic [ref=e224]: 8/13
+  - navigation "Marsala TPL" [ref=e225]:
+    - link "Nearby" [ref=e226] [cursor=pointer]:
+      - /url: "#/"
+    - link "Lines" [ref=e231] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=e235] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=e239] [cursor=pointer]:
+      - /url: "#/info"

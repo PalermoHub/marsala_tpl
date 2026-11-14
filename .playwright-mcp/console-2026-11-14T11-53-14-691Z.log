@@ -1,0 +1,6 @@
+[     555ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/e10c3a36-1518-437d-8d40-c102c6c6b66c:1
+[     558ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/e10c3a36-1518-437d-8d40-c102c6c6b66c:1
+[     558ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/e10c3a36-1518-437d-8d40-c102c6c6b66c:1
+[   16732ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/c168eabd-3071-4296-99c8-d702d14ebe16:1
+[   16733ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/c168eabd-3071-4296-99c8-d702d14ebe16:1
+[   16733ms] [WARNING] Expected value to be of type number, but found null instead. @ blob:http://localhost:8080/c168eabd-3071-4296-99c8-d702d14ebe16:1

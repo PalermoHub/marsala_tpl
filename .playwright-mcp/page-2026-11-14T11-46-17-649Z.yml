@@ -1,0 +1,89 @@
+- generic [active] [ref=f25e1]:
+  - link "Vai al contenuto" [ref=f25e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f25e3]:
+    - generic [ref=f25e4]:
+      - heading "Marsala TPL" [level=1] [ref=f25e5]
+      - paragraph [ref=f25e6]: Marsala bus timetables, even offline.
+      - navigation "Marsala TPL" [ref=f25e7]:
+        - link "From A to B Which bus to take, and where to change" [ref=f25e8] [cursor=pointer]:
+          - /url: "#/percorso"
+          - generic [ref=f25e13]:
+            - generic [ref=f25e14]: From A to B
+            - generic [ref=f25e15]: Which bus to take, and where to change
+        - link "Next bus When it comes at your stop" [ref=f25e18] [cursor=pointer]:
+          - /url: "#/vicino"
+          - generic [ref=f25e22]:
+            - generic [ref=f25e23]: Next bus
+            - generic [ref=f25e24]: When it comes at your stop
+        - link "Map Routes and running buses" [ref=f25e27] [cursor=pointer]:
+          - /url: "#/mappa"
+          - generic [ref=f25e30]:
+            - generic [ref=f25e31]: Map
+            - generic [ref=f25e32]: Routes and running buses
+    - generic [ref=f25e35]:
+      - heading "Lines" [level=2] [ref=f25e36]
+      - list [ref=f25e37]:
+        - listitem [ref=f25e38]:
+          - link "Lines 1" [ref=f25e39] [cursor=pointer]:
+            - /url: "#/linea/1925"
+            - img "Linea 1" [ref=f25e40]:
+              - generic [ref=f25e80]: "1"
+        - listitem [ref=f25e81]:
+          - link "Lines 2" [ref=f25e82] [cursor=pointer]:
+            - /url: "#/linea/1930"
+            - img "Linea 2" [ref=f25e83]:
+              - generic [ref=f25e96]: "2"
+        - listitem [ref=f25e97]:
+          - link "Lines 3" [ref=f25e98] [cursor=pointer]:
+            - /url: "#/linea/1906"
+            - img "Linea 3" [ref=f25e99]:
+              - generic [ref=f25e109]: "3"
+        - listitem [ref=f25e110]:
+          - link "Lines 4" [ref=f25e111] [cursor=pointer]:
+            - /url: "#/linea/1909"
+            - img "Linea 4" [ref=f25e112]:
+              - generic [ref=f25e152]: "4"
+        - listitem [ref=f25e153]:
+          - link "Lines 5" [ref=f25e154] [cursor=pointer]:
+            - /url: "#/linea/INV_1947"
+            - img "Linea 5" [ref=f25e155]:
+              - generic [ref=f25e165]: "5"
+        - listitem [ref=f25e166]:
+          - link "Lines 6" [ref=f25e167] [cursor=pointer]:
+            - /url: "#/linea/1905"
+            - img "Linea 6" [ref=f25e168]:
+              - generic [ref=f25e190]: "6"
+        - listitem [ref=f25e191]:
+          - link "Lines 7/10" [ref=f25e192] [cursor=pointer]:
+            - /url: "#/linea/1912"
+            - img "Linea 7/10" [ref=f25e193]:
+              - generic [ref=f25e215]: 7/10
+        - listitem [ref=f25e216]:
+          - link "Lines 8/13" [ref=f25e217] [cursor=pointer]:
+            - /url: "#/linea/1944"
+            - img "Linea 8/13" [ref=f25e218]:
+              - generic [ref=f25e240]: 8/13
+    - generic [ref=f25e241]:
+      - heading "How to read it" [level=2] [ref=f25e242]
+      - generic [ref=f25e243]:
+        - generic [ref=f25e244]:
+          - img "Linea 3" [ref=f25e245]:
+            - generic [ref=f25e255]: "3"
+          - paragraph [ref=f25e256]: The badge with a number is the line. Its colour and pattern help you spot it at a glance.
+        - generic [ref=f25e257]:
+          - img [aria-hidden] [ref=f25e258]:
+            - generic [ref=f25e259]: "3"
+          - paragraph [ref=f25e260]: On the map the same number is written along the line’s route, every so often.
+        - paragraph [ref=f25e261]: DOM is the Sunday line, N a shuttle without a number. Two numbers with a slash (7/10) are one line carrying both.
+  - navigation "Marsala TPL" [ref=f25e262]:
+    - link "Home" [ref=f25e263] [cursor=pointer]:
+      - /url: "#/"
+    - link "Trip" [ref=f25e268] [cursor=pointer]:
+      - /url: "#/percorso"
+    - link "Lines" [ref=f25e274] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Map" [ref=f25e278] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f25e282] [cursor=pointer]:
+      - /url: "#/info"

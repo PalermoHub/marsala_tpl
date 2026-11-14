@@ -339,10 +339,26 @@ button { font: inherit; color: inherit; }
 .legend-list li { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 12px; font-size: 16px; }
 .legend .muted { margin: 0; font-size: 14px; }
 .dot { display: block; justify-self: center; border-radius: 50%; }
-.dot-bus { width: 14px; height: 14px; background: #14213D; box-shadow: 0 0 0 4px #F2C14E; }
-.dot-idle { width: 12px; height: 12px; background: #8A93A6; box-shadow: 0 0 0 2px #fff; }
+/* Sagome bus della legenda: stessi colori della mappa (senza linea: inchiostro; in scuro ocra con muso chiaro). */
+.bus-unk { fill: #14213D; }
+.bus-idle { fill: #8A93A6; fill-opacity: 0.6; }
+.bus-nose { fill: #14213D; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bus-unk { fill: #F2C14E; } :root:not([data-theme="light"]) .bus-nose { fill: #FBF7EE; } }
+:root[data-theme="dark"] .bus-unk { fill: #F2C14E; }
+:root[data-theme="dark"] .bus-nose { fill: #FBF7EE; }
 .dot-stop { width: 10px; height: 10px; background: #FBF7EE; box-shadow: 0 0 0 2px #1B3A94; }
 .dot-me { width: 14px; height: 14px; background: #1B3A94; box-shadow: 0 0 0 3px #fff, 0 0 0 10px rgb(27 58 148 / 0.22); }
 .osd { position: absolute; right: 10px; bottom: 36px; display: block; padding: 5px; border-radius: var(--r); background: oklch(100% 0 0 / 0.92); box-shadow: 0 2px 10px oklch(20% 0.05 262 / 0.28); line-height: 0; }
 .osd img { display: block; width: 36px; height: auto; }
 .pf-time .seg button { white-space: nowrap; padding-inline: 18px; }
+
+/* Mezzo sulla linea */
+.bus-track p { margin: 0 0 6px; }
+.bus-track { position: sticky; top: 0; z-index: 5; background: var(--glaze); border-bottom: 2px solid var(--line); }
+.bus-where { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700; color: var(--ink); }
+.bus-meta { color: var(--ink-2); font-size: 0.875rem; }
+.route-stops li.here a { font-weight: 700; }
+.route-stops li.here::after { background: var(--ocra); border-color: var(--cobalt); box-shadow: 0 0 0 4px rgba(242, 193, 78, 0.45); }
+.route-stops li.bus-between { padding-block: 6px; min-height: 36px; display: flex; align-items: center; font-weight: 700; }
+.route-stops li.bus-between::after { display: none; }
+.route-stops li.bus-between span { display: inline-flex; align-items: center; gap: 6px; background: var(--ocra); color: oklch(24% 0.07 262); padding: 4px 10px; border-radius: 999px; }

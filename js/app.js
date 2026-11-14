@@ -1,6 +1,8 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays } from './schedule.js';
 import { tileSvg, motifField, lineStyle } from './tiles.js';
+import { fetchVehicles } from './rt.js';
+import { buildRouteLines, locateBus, stopsAlong, placeOnStops } from './match.js';
 import { planJourney, groupOf, walkable } from './planner.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
@@ -231,6 +233,11 @@ function lineSample(route) {
   const { label, glaze } = lineStyle(route);
   return `<svg class="sample" viewBox="0 0 64 28" width="64" height="28" aria-hidden="true" focusable="false"><path d="M2 14h60" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M2 14h60" stroke="${glaze.bg}" stroke-width="5" stroke-linecap="round"/><text x="32" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="#14213D" stroke="#FBF7EE" stroke-width="3.500" paint-order="stroke" font-family="Atkinson Hyperlegible, system-ui, sans-serif">${esc(label)}</text></svg>`;
 }
+// Sagoma di bus come sulla mappa: corpo, muso scuro davanti, numero del mezzo sopra. `cls` sceglie il colore del corpo.
+function busSample(cls, fill, num) {
+  const tag = num ? `<text x="32" y="11" text-anchor="middle" font-size="12" font-weight="700" fill="#14213D" stroke="#FBF7EE" stroke-width="3" paint-order="stroke" font-family="Atkinson Hyperlegible, system-ui, sans-serif">${esc(num)}</text>` : '';
+  return `<svg class="sample" viewBox="0 0 64 32" width="64" height="32" aria-hidden="true" focusable="false">${tag}<rect x="8" y="16" width="48" height="13" rx="2" class="${cls}"${fill ? ` fill="${fill}"` : ''} stroke="#fff" stroke-width="1.5"/><rect x="46" y="16" width="10" height="13" rx="2" class="bus-nose"/></svg>`;
+}
 const sampleRoute = () => state.data.routes.find((r) => r.short === '3') ?? state.data.routes[0];
 
 function howToRead() {
@@ -249,8 +256,9 @@ function legendPanel() {
   <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">×</button></div>
   <ul class="legend-list">
     ${row(lineSample(ex), 'legendLine')}
-    ${row('<span class="dot dot-bus"></span>', 'legendBusOn')}
-    ${row('<span class="dot dot-idle"></span>', 'legendBusOff')}
+    ${row(busSample('bus-line', lineStyle(ex).glaze.bg, '90020'), 'legendBusLine')}
+    ${row(busSample('bus-unk', '', '90018'), 'legendBusUnk')}
+    ${row(busSample('bus-idle', '', ''), 'legendBusOff')}
     ${row('<span class="dot dot-stop"></span>', 'legendStop')}
     ${row('<span class="dot dot-me"></span>', 'legendMe')}
   </ul>
@@ -365,6 +373,85 @@ ${todays.length ? '' : `<p class="banner">${esc(t('noTripsToday'))}</p>`}
 <section class="block"><h2>${esc(t('departuresToday'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
 <ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
 <section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops">${stopsHtml}</ol></section>`;
+}
+
+// ---------- mezzo sulla linea ----------
+function viewBus(rid) {
+  const ri = routeById(rid);
+  if (ri < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p></section>`;
+  const route = state.data.routes[ri];
+  return `${banners(romeNow())}
+<section class="hero hero-line" data-strip="${stripState(romeNow())}">
+  <a class="back" href="#/mappa/${esc(rid)}" aria-label="${esc(t('busBack'))}">${icon('back', 22)}<span>${esc(t('busBack'))}</span></a>
+  <div class="line-head">${tileSvg(route, 60)}<h1>${esc(route.long)}</h1></div>
+</section>
+<section class="block bus-track" id="bus-track" role="status" aria-live="polite"><p>${esc(t('busSearching'))}</p></section>
+<section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops" id="bus-stops"></ol></section>`;
+}
+
+async function bindBus(rid, vid) {
+  const ri = routeById(rid);
+  const $info = document.getElementById('bus-track');
+  const $stops = document.getElementById('bus-stops');
+  if (ri < 0 || !$info) return;
+  let destroyed = false, timer = null, abort = null, scrolled = false;
+  state.cleanup = () => { destroyed = true; clearTimeout(timer); abort?.abort(); };
+  let lines;
+  try { lines = buildRouteLines(state.data, await loadShapes()); } catch { $info.innerHTML = `<p>${esc(t('mapError'))}</p>`; return; }
+  if (destroyed) return;
+
+  function paint(v) {
+    const loc = v && locateBus(lines, v, ri);
+    if (!v) { $info.innerHTML = `<p>${esc(t('busGone'))}</p>`; return; }
+    if (!loc || loc.d > 80) { $info.innerHTML = `<p><strong>${esc(t('busNum'))} ${esc(v.id)}</strong></p><p>${esc(t('busLost'))}</p>`; return; }
+    // Il feed non dice quale corsa è: tra le corse che usano questo tracciato si prende quella programmata più vicina all'ora attuale.
+    const now = romeNow();
+    let best = null;
+    state.data.trips.forEach((tr, i) => {
+      if (tr.r !== ri || tr.sh !== loc.sh || !isServiceActive(state.data.services[tr.v], now.ymd)) return;
+      const alongs = stopsAlong(loc.flat, tr.s.map((si) => state.data.stops[si]));
+      const pl = placeOnStops(alongs, loc.along);
+      const ref = Math.min(Math.max(pl.k, 0), tr.s.length - 1);
+      const gap = Math.abs(tr.t[ref] - now.secs);
+      if (!best || gap < best.gap) best = { tr, pl, gap };
+    });
+    if (!best) {
+      state.data.trips.forEach((tr) => {
+        if (best || tr.r !== ri || tr.sh !== loc.sh) return;
+        best = { tr, pl: placeOnStops(stopsAlong(loc.flat, tr.s.map((si) => state.data.stops[si])), loc.along), gap: 0 };
+      });
+    }
+    if (!best) { $info.innerHTML = `<p>${esc(t('busLost'))}</p>`; return; }
+    const { tr, pl } = best;
+    const name = (k) => stopTitle(tr.s[k]).name;
+    const where = pl.at ? t('busAtStop', name(pl.k)) : pl.k < 0 ? t('busBefore') : pl.k >= tr.s.length - 1 ? t('busAfter') : t('busBetween', name(pl.k), name(pl.k + 1));
+    const hh = formatClock(romeNow(new Date(v.ts * 1000)).secs);
+    $info.innerHTML = `<p class="bus-where">${icon('pin', 22)}<span>${esc(where)}</span></p>
+<p>${esc(t('busToward', headOf(tr)))}</p>
+<p class="bus-meta">${esc(t('busNum'))} ${esc(v.id)}${v.plate ? ` · ${esc(t('busPlate'))} ${esc(v.plate)}` : ''} · ${esc(t('busUpdated', hh))}</p>
+<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
+    $stops.innerHTML = tr.s.map((si, k) => {
+      const cls = [k === 0 ? 'first' : '', k === tr.s.length - 1 ? 'last' : '', k < pl.k || (k === pl.k && !pl.at) ? 'past' : '', pl.at && k === pl.k ? 'here' : ''].filter(Boolean).join(' ');
+      const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span><span class="st-time">${formatClock(tr.t[k])}</span></a></li>`;
+      return !pl.at && k === pl.k && k < tr.s.length - 1 ? `${row}<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>` : row;
+    }).join('');
+    if (pl.k < 0) $stops.insertAdjacentHTML('afterbegin', `<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>`);
+    if (!scrolled) { scrolled = true; $stops.querySelector('.here, .bus-between')?.scrollIntoView({ block: 'center' }); }
+  }
+
+  async function tick() {
+    if (destroyed) return;
+    if (!document.hidden) {
+      abort = new AbortController();
+      try {
+        const { active } = await fetchVehicles(abort.signal);
+        if (destroyed) return;
+        paint(active.find((x) => x.id === vid));
+      } catch { if (!destroyed && !$stops.children.length) $info.innerHTML = `<p>${esc(t('busFeedErr'))}</p>`; }
+    }
+    timer = setTimeout(tick, 10000);
+  }
+  tick();
 }
 
 function viewMap(rid) {
@@ -599,6 +686,7 @@ const routes = [
   [/^\/percorso(?:\/([^/]+)\/([^/]+))?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
   [/^\/linea\/(.+)$/, (m) => viewLine(decodeURIComponent(m[1])), 'lines'],
+  [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/info$/, () => viewInfo(), 'info'],
 ];

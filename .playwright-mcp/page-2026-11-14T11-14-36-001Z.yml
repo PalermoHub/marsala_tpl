@@ -1,0 +1,20 @@
+- generic [active] [ref=f4e1]:
+  - link "Vai al contenuto" [ref=f4e2] [cursor=pointer]:
+    - /url: "#app"
+  - main [ref=f4e3]:
+    - generic [ref=f4e4]:
+      - application "Mappa" [ref=f4e5]:
+        - region "Map" [ref=f4e6]
+        - generic [ref=f4e7]:
+          - button "Zoom in" [ref=f4e8] [cursor=pointer]
+          - button "Zoom out" [ref=f4e10] [cursor=pointer]
+      - status [ref=f4e13]: Posizioni dal feed del Comune. Non indicano la linea né il ritardo.
+  - navigation "Marsala TPL" [ref=f4e14]:
+    - link "Vicino" [ref=f4e15] [cursor=pointer]:
+      - /url: "#/"
+    - link "Linee" [ref=f4e20] [cursor=pointer]:
+      - /url: "#/linee"
+    - link "Mappa" [ref=f4e24] [cursor=pointer]:
+      - /url: "#/mappa"
+    - link "Info" [ref=f4e28] [cursor=pointer]:
+      - /url: "#/info"

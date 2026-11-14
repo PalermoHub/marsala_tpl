@@ -148,3 +148,25 @@ test('planner: stessa fermata, nessun risultato assurdo; gruppi e posizione', ()
   const o = planJourney(data, index, { from: [{ stop: 0, walk: 0 }], to: [{ stop: 0, walk: 0 }], ymd, secs: 8 * 3600 });
   assert.equal(o.length, 0);
 });
+
+test('mezzo sulla linea: posizione lungo il tracciato e tra le fermate', async () => {
+  const { buildRouteLines, locateBus, stopsAlong, placeOnStops } = await import('../js/match.js');
+  const shapes = JSON.parse(readFileSync(new URL('../dati/shapes.json', import.meta.url), 'utf8'));
+  const lines = buildRouteLines(data, shapes);
+  const ln = lines[0];
+  const tr = data.trips.find((x) => x.sh === ln.sh);
+  const stops = tr.s.map((si) => data.stops[si]);
+  const alongs = stopsAlong(ln.flat, stops);
+  assert.ok(alongs.every((a, i) => i === 0 || a >= alongs[i - 1]), 'fermate in ordine lungo il tracciato');
+  // Mezzo esattamente su una fermata intermedia
+  const k = Math.floor(stops.length / 2);
+  const onStop = locateBus(lines, { lat: stops[k].lat, lon: stops[k].lon, speed: 0, bearing: null }, ln.r);
+  assert.ok(onStop && onStop.d < 60);
+  const p = placeOnStops(alongs, onStop.along);
+  assert.equal(p.at, true);
+  // Mezzo a metà tra due fermate
+  const mid = (alongs[k] + alongs[k + 1]) / 2;
+  const q = placeOnStops(alongs, mid);
+  if (alongs[k + 1] - alongs[k] > 120) assert.deepEqual(q, { k, at: false });
+  assert.deepEqual(placeOnStops(alongs, -500), { k: -1, at: false });
+});
