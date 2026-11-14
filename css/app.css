@@ -275,6 +275,7 @@ button { font: inherit; color: inherit; }
 .route-stops li.here a { font-weight: 700; background: color-mix(in srgb, var(--cobalt-hi) 14%, transparent); border-radius: 8px; padding-inline: 8px; }
 
 /* ---------- mappa ---------- */
+.map-side { display: none; }
 .map-wrap { position: relative; height: calc(100dvh - var(--tabs-h) - env(safe-area-inset-bottom)); margin-bottom: calc(-1 * (var(--tabs-h) + env(safe-area-inset-bottom) + 28px + var(--consent-h, 0px))); }
 #map { position: absolute; inset: 0; }
 .map-bar { position: absolute; left: 12px; right: 64px; top: calc(env(safe-area-inset-top) + 12px); }
@@ -334,6 +335,14 @@ button { font: inherit; color: inherit; }
   .app:has(> .page-head) > :not(.page-head):not(.banner) { max-width: 688px; margin-inline: auto; }
   .app:has(> .page-head) > .page-head, .app:has(> .page-head) > .banner { padding-inline: max(24px, calc((100% - 640px) / 2)); }
   .app:has(> .page-head) > .page-head { position: static; min-height: 0; }
+  /* mappa: colonna laterale a sinistra (440px), mappa a destra a tutta altezza; legenda sempre aperta, quindi niente pulsante */
+  .app:has(> .map-wrap) { display: grid; grid-template-columns: 440px minmax(0, 1fr); align-items: start; }
+  .app > .map-wrap { grid-column: 2; grid-row: 1; }
+  .app > .map-side { display: block; grid-column: 1; grid-row: 1; padding-inline: 0; height: calc(100dvh - var(--tabs-h) - env(safe-area-inset-bottom)); overflow-y: auto; background: var(--glaze); }
+  .map-side > * { padding-inline: var(--gut); }
+  .map-side > .hero { padding-bottom: 26px; }
+  .map-side .legend-list { margin-top: 4px; }
+  .map-wrap .legend-btn, .map-wrap .legend { display: none; }
   .consent { max-width: 640px; }
 }
 

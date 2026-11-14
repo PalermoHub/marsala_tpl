@@ -294,12 +294,10 @@ function howToRead() {
 </div>`;
 }
 
-function legendPanel() {
+function legendList() {
   const ex = sampleRoute();
   const row = (sw, key) => `<li>${sw}<span>${esc(t(key))}</span></li>`;
-  return `<div id="legend" class="legend" role="dialog" aria-label="${esc(t('legend'))}" hidden>
-  <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">×</button></div>
-  <ul class="legend-list">
+  return `<ul class="legend-list">
     ${row(lineSample(ex), 'legendLine')}
     ${row(busSample('bus-line', lineStyle(ex).glaze.bg, '90020'), 'legendBusLine')}
     ${row(busSample('bus-unk', '', '90018'), 'legendBusUnk')}
@@ -307,8 +305,24 @@ function legendPanel() {
     ${row('<span class="dot dot-stop"></span>', 'legendStop')}
     ${row('<span class="dot dot-me"></span>', 'legendMe')}
   </ul>
-  <p class="muted">${esc(t('howNumbers'))} ${esc(t('howSpecial'))}</p>
+  <p class="muted">${esc(t('howNumbers'))} ${esc(t('howSpecial'))}</p>`;
+}
+function legendPanel() {
+  return `<div id="legend" class="legend" role="dialog" aria-label="${esc(t('legend'))}" hidden>
+  <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">×</button></div>
+  ${legendList()}
 </div>`;
+}
+// Colonna laterale della mappa (solo desktop, da 1000px): titolo, linee in servizio che mettono a fuoco la mappa, legenda sempre aperta.
+function mapSide(rid) {
+  const run = runningRoutes();
+  const tiles = run.length
+    ? `<ul class="tile-row">${run.map((r) => `<li><a href="#/mappa/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul>`
+    : `<p class="note">${esc(t('noLinesNow'))}</p>`;
+  return `<aside class="map-side">${pageHead(t('mapTitle'), { lead: t('mapSideLead') })}
+<section class="block"><h2>${esc(t('linesNow'))}</h2>${tiles}${rid ? `<p class="note"><a href="#/mappa">${esc(t('mapAll'))}</a></p>` : ''}</section>
+<section class="block"><h2>${esc(t('legend'))}</h2>${legendList()}</section>
+</aside>`;
 }
 
 function viewStop(id) {
@@ -536,7 +550,7 @@ ${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
 }
 
 function viewMap(rid) {
-  return `<section class="map-wrap">
+  return `${mapSide(rid)}<section class="map-wrap">
   <div id="map" role="application" aria-label="${esc(t('mapTitle'))}"></div>
   <div class="map-bar"><p id="bus-count" class="chip" role="status">${esc(t('busesNote'))}</p></div>
   <button id="legend-btn" class="legend-btn" data-act="legend" aria-expanded="false" aria-controls="legend">${icon('info', 20)}<span>${esc(t('legend'))}</span></button>
