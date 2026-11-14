@@ -41,8 +41,6 @@ function clearHash() {
 const SVG = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICON = {
   home: SVG('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>'),
-  plus: SVG('<path d="M12 5v14M5 12h14"/>'),
-  minus: SVG('<path d="M5 12h14"/>'),
   locate: SVG('<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.500v3M12 19.500v3M1.500 12h3M19.500 12h3"/>'),
   compass: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.500l4 9.500h-8z" fill="#C8412B"/><path d="M12 21.500l-4-9.500h8z" fill="currentColor" opacity="0.55"/></svg>',
   full: SVG('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
@@ -116,7 +114,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   map.addLayer({ id: 'lines-casing', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#0F1B3D' : '#FFFFFF', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 10], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.15] : 0.9 } });
   map.addLayer({ id: 'lines', type: 'line', source: 'lines', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 6], 'line-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0.25] : 0.85 } });
   // Il numero di linea sul percorso: l'identità non dipende solo dal colore.
-  map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
+  map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true, 'text-padding': 8 }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Mezzi: sagome allungate orientate come la marcia (muso scuro davanti), colorate come la linea stimata.
   // Mezzi: poligoni piatti in 2D, parallelepipedi (fill-extrusion) in 3D. Stessi id: i gestori di click/tooltip restano validi.
@@ -132,7 +130,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
       map.addLayer({ id: 'buses-nose', type: 'fill', source: 'buses-nose', paint: { 'fill-color': nose, 'fill-opacity': ['case', ['==', ['get', 'state'], 'idle'], 0.55, 1] } }, 'bus-labels');
     }
   }
-  map.addLayer({ id: 'bus-labels', type: 'symbol', source: 'bus-pts', filter: ['==', ['get', 'state'], 'active'], layout: { 'text-field': ['get', 'num'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': ['get', 'ink'], 'text-halo-color': ['get', 'color'], 'text-halo-width': 3 } });
+  map.addLayer({ id: 'bus-labels', type: 'symbol', source: 'bus-pts', minzoom: 13, filter: ['==', ['get', 'state'], 'active'], layout: { 'text-field': ['get', 'num'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': ['get', 'ink'], 'text-halo-color': ['get', 'color'], 'text-halo-width': 3 } });
   addBusLayers();
   if (loc) {
     map.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-radius': 18, 'circle-color': '#1B3A94', 'circle-opacity': 0.2 } });
@@ -198,7 +196,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   document.addEventListener('fullscreenchange', onFs);
   function initControls() {
     const homeBtn = mkBtn('map-home', ICON.home, t('mapHome'), () => goHome(reduced ? 0 : 700));
-    ctrls.append(homeBtn, mkBtn('map-in', ICON.plus, t('mapZoomIn'), () => map.zoomIn()), mkBtn('map-out', ICON.minus, t('mapZoomOut'), () => map.zoomOut()));
+    ctrls.append(homeBtn); // lo zoom si fa col cursore (tastiera compresa), con pizzico o rotella: niente +/−
     const compassBtn = mkBtn('map-compass', ICON.compass, t('mapCompass'), () => map.resetNorth({ duration: reduced ? 0 : 400 }));
     const paintCompass = () => { compassBtn.firstElementChild.style.transform = `rotate(${-map.getBearing()}deg)`; };
     map.on('rotate', paintCompass);
