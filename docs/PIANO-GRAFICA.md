@@ -1,6 +1,6 @@
 # Piano grafica: uniformità, gradevolezza, attrattività
 
-Stato (2026-11-14): fasi 1, 2, 3, 4, 5, 6, 7, 8 eseguite; 9 eseguita in forma ridotta (colonna 680px da 900px, nessun layout a due colonne); 10 in parte (DESIGN.md, guida e screenshot home/linee/cerca aggiornati; restano gli screenshot fermata, percorso, mappa e il badge avvisi). Commit: fff7154, 393b4b4, 20166b8, a308749, bc1bec0 e successivi.
+Stato (2026-11-14): fasi 1-9 eseguite (9: colonna 680px da 900px e layout a due colonne da 1000px); 10 in parte (DESIGN.md, guida e screenshot home/linee/cerca aggiornati; restano gli screenshot fermata, percorso, mappa e il badge avvisi). Commit: fff7154, 393b4b4, 20166b8, a308749, bc1bec0 e successivi.
 Metodo: critique + audit con la skill `impeccable` (modalità **Operate**), letti `PRODUCT.md`, `DESIGN.md`, `.impeccable/surfaces/index-html.md`, `css/app.css` (462 righe); screenshot a 390×844 di home, vicino, linee, percorso, mappa, avvisi, info (+ linee in scuro); detector `impeccable detect`.
 ⚠️ Esecuzione singolo contesto (A e B non isolati: nessun sub-agente richiesto dall'utente). Non verificati: schermata fermata con partenze, linea aperta, tema scuro completo, desktop ≥700px.
 

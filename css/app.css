@@ -322,6 +322,21 @@ button { font: inherit; color: inherit; }
 }
 /* Schermi larghi: colonna un po' più larga (tab bar e gutter seguono `--col`); la mappa resta a tutto schermo. */
 @media (min-width: 900px) { :root { --col: 680px; } .page-head h1 { font-size: 40px; } }
+/* Desktop (>= 1000px): due colonne. A sinistra il campo cobalto resta fisso (fermata, linea, titolo di pagina),
+   a destra scorrono le liste. La mappa resta a tutto schermo. Barra in basso e banner seguono la stessa larghezza. */
+@media (min-width: 1000px) {
+  :root { --col: 1080px; --gut: 24px; }
+  .app:not(:has(> .map-wrap)) { display: grid; grid-template-columns: 440px minmax(0, 640px); justify-content: center; align-items: start; }
+  .app:not(:has(> .map-wrap)) > * { grid-column: 2; }
+  .app:not(:has(> .map-wrap)) > .hero { grid-column: 1; grid-row: 1 / span 40; position: sticky; top: 0; align-self: start; min-height: calc(100dvh - var(--tabs-h) - env(safe-area-inset-bottom)); }
+  /* schermate con testata di pagina (Linee, Cerca, Altro, Avvisi, Guida, Info): testata a tutta larghezza, contenuto in una colonna centrata */
+  .app:has(> .page-head) { display: block; }
+  .app:has(> .page-head) > :not(.page-head):not(.banner) { max-width: 688px; margin-inline: auto; }
+  .app:has(> .page-head) > .page-head, .app:has(> .page-head) > .banner { padding-inline: max(24px, calc((100% - 640px) / 2)); }
+  .app:has(> .page-head) > .page-head { position: static; min-height: 0; }
+  .consent { max-width: 640px; }
+  .page-head h1 { font-size: 36px; }
+}
 
 /* ---------- home ---------- */
 .howto { display: grid; gap: 14px; }
