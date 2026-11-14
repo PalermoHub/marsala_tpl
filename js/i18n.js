@@ -154,7 +154,7 @@ const IT = {
       'Ingrandendo compaiono le fermate: tocca un puntino per aprirla.',
       'I piccoli bus sono i mezzi in servizio. Toccane uno per seguirlo lungo il percorso.',
       'Il pulsante «Legenda» in basso spiega i simboli.',
-      'Sul bordo destro ci sono i comandi: casetta (mostra tutta la rete), «+» e «−» (zoom), bussola (rimette il nord in alto), mirino (la tua posizione), riquadro (schermo intero). Accanto c’è il cursore dello zoom.',
+      'Sul bordo destro ci sono i comandi: casetta (mostra tutta la rete), bussola (rimette il nord in alto), mirino (la tua posizione), riquadro (schermo intero). Accanto c’è il cursore dello zoom (puoi anche pizzicare lo schermo).',
       'Le fonti dei dati della mappa si aprono toccando la piccola «i» in basso a destra.',
     ], 'La linea di un bus è stimata dal suo percorso: può non essere esatta.', [['mappa', 'La mappa con i percorsi delle linee e i bus in servizio']]],
     ['map3d', 'map', 'Come vedere la mappa in 3D', 'Il pulsante «3D» inclina la mappa e mostra gli edifici in rilievo e i bus come piccoli mezzi in tre dimensioni.', [
@@ -167,9 +167,9 @@ const IT = {
     ['extra', 'sliders', 'Altre cose utili', '', [
       '<b>Senza internet.</b> Gli orari restano salvati nel telefono: l’app funziona anche offline (la mappa e le posizioni dei bus no).',
       '<b>Installarla.</b> Dal menu del browser scegli «Aggiungi a schermata Home»: l’app si apre come tutte le altre.',
-      '<b>Lingua e aspetto.</b> In «Info» puoi scegliere italiano o inglese e il tema chiaro o scuro.',
+      '<b>Lingua e aspetto.</b> In «Altro» → «Informazioni» puoi scegliere italiano o inglese e il tema chiaro o scuro.',
       '<b>Orari scaduti.</b> Se vedi un avviso sugli orari, sono quelli ufficiali del Comune e potrebbero non essere aggiornati.',
-      '<b>Errori.</b> Un orario o una fermata sbagliati? In «Info» → «Segnala un errore» trovi come scrivere al Comune.',
+      '<b>Errori.</b> Un orario o una fermata sbagliati? In «Altro» → «Informazioni» → «Segnala un errore» trovi come scrivere al Comune.',
     ], '', []],
     ['trouble', 'flag', 'Se qualcosa non va', '', [
       '<b>«Nessun collegamento trovato».</b> Non c’è un percorso con al massimo un cambio. Prova con un’altra fermata vicina o un altro orario.',

@@ -176,7 +176,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   const hereSub = (r) => { const it = nextByRoute.get(r); return it ? `${t('nextPass')} ${formatClock(it.secs)} · ${relText(it)}` : t('noMoreLine'); };
   const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}/fermata/${esc(state.data.stops[si].id)}">
   ${tileSvg(state.data.routes[r], 44)}
-  <span class="row-main"><span class="row-title">${esc(t('line'))} ${esc(state.data.routes[r].short)} · ${esc(state.data.routes[r].long)}</span><span class="row-sub">${esc(hereSub(r))}</span></span>
+  <span class="row-main"><span class="row-title">${state.data.routes[r].short ? `${esc(t('line'))} ${esc(state.data.routes[r].short)} · ` : ''}${esc(state.data.routes[r].long)}</span><span class="row-sub">${esc(hereSub(r))}</span></span>
   <span class="chev">${icon('chevron', 20)}</span></a></li>`).join('')}</ul></section>` : '';
 
   return `${banners(now)}
