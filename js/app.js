@@ -40,6 +40,7 @@ const ICON = {
   scale: '<path d="M12 4v16M7 20h10M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0z"/>',
   heart: '<path d="M12 20s-7.500-4.600-7.500-10A4.200 4.200 0 0112 7.500 4.200 4.200 0 0119.500 10c0 5.400-7.500 10-7.500 10z"/>',
   sliders: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  more: '<circle cx="5.500" cy="12" r="1.500"/><circle cx="12" cy="12" r="1.500"/><circle cx="18.500" cy="12" r="1.500"/>',
   shield: '<path d="M12 3l7 3v5c0 4.500-3 8-7 10-4-2-7-5.500-7-10V6z"/>',
   flag: '<path d="M5 21V4M5 5h12l-2 4 2 4H5"/>',
   calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
@@ -205,10 +206,11 @@ function stopRow(si, meters) {
 }
 
 // ---------- viste ----------
-function viewNear() {
+function viewNear(home = false) {
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const last = stopById(store.get('last', ''));
-  const current = last >= 0 ? last : favs[0] ?? -1;
+  // la fermata preferita ha la precedenza sull'ultima vista: chi ha salvato una fermata la ritrova subito
+  const current = favs[0] ?? last;
   const near = state.loc ? nearestStops(state.data, state.loc.lat, state.loc.lon, 6) : [];
   const geoMsg = state.locStatus === 'asking' ? t('locating') : state.locStatus === 'denied' ? t('locDenied') : '';
 
@@ -224,7 +226,7 @@ function viewNear() {
   if (current >= 0) {
     return `${stopScreen(current, { home: true })}
 <div class="actions">${geoBtn}${searchLink}</div>
-${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}${favBlock}`;
+${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}${favBlock}${home ? communityNote() : ''}`;
   }
 
   // Primo avvio: nessuna fermata, nessuna posizione.
@@ -238,36 +240,28 @@ ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}$
 </section>
 ${nearBlock}
 <section class="block"><h2>${esc(t('mainStops'))}</h2><ul class="plain">${mainStops().map((i) => stopRow(i)).join('')}</ul></section>
-<section class="block"><h2>${esc(t('lines'))}</h2>
-<ul class="tile-row">${active.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>`;
+${home ? `<section class="block"><ul class="plain">${quick('#/percorso', 'route', 'homePlan', 'homePlanSub')}${quick('#/mappa', 'map', 'homeMap', 'homeMapSub')}</ul></section>
+<section class="block"><h2>${esc(t('linesNow'))}</h2>${linesNowTiles()}</section>
+<section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>${communityNote()}`
+  : `<section class="block"><h2>${esc(t('lines'))}</h2>
+<ul class="tile-row">${active.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul></section>`}`;
 }
 
-function viewHome() {
-  const now = romeNow();
-  const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
-  const card = (href, ic, title, sub, main) => `<a class="card${main ? ' card-main' : ''}" href="${href}">${icon(ic, 28)}<span class="card-text"><b>${esc(t(title))}</b><small>${esc(t(sub))}</small></span>${icon('chevron', 20)}</a>`;
-  return `${communityNote()}
-<section class="hero hero-first" data-strip="${stripState(now)}">
-  <h1>${esc(t('appName'))}</h1>
-  <p class="lead">${esc(t('homeLead'))}</p>
-  <nav class="home-cards" aria-label="${esc(t('appName'))}">
-    ${card('#/percorso', 'route', 'homePlan', 'homePlanSub', true)}
-    ${card('#/vicino', 'pin', 'homeNext', 'homeNextSub')}
-    ${card('#/mappa', 'map', 'homeMap', 'homeMapSub')}
-    ${card('#/avvisi', 'bell', 'homeNews', 'homeNewsSub')}
-    ${card('#/guida', 'help', 'homeGuide', 'homeGuideSub')}
-  </nav>
-</section>
-${banners(now)}
-${favs.length ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>` : ''}
-<section class="block"><h2>${esc(t('linesNow'))}</h2>
-${(() => { const run = runningRoutes(); return run.length ? `<ul class="tile-row">${run.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul>` : `<p class="note">${esc(t('noLinesNow'))}</p>`; })()}</section>
-<section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>`;
+const quick = (href, ic, title, sub) => `<li><a class="row" href="${href}">${icon(ic, 24)}<span class="row-main"><span class="row-title">${esc(t(title))}</span><span class="row-sub">${esc(t(sub))}</span></span><span class="chev">${icon('chevron', 20)}</span></a></li>`;
+function linesNowTiles() {
+  const run = runningRoutes();
+  return run.length
+    ? `<ul class="tile-row">${run.map((r) => `<li><a href="#/linea/${esc(state.data.routes[r].id)}" aria-label="${esc(t('lines'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 48)}</a></li>`).join('')}</ul>`
+    : `<p class="note">${esc(t('noLinesNow'))}</p>`;
 }
+
+// Home: risponde alla domanda "quando passa il bus?" con la fermata preferita (o l'ultima vista);
+// senza fermata propone un solo gesto, cercarla o usare la posizione. Il resto sta sotto.
+function viewHome() { return viewNear(true); }
 
 /** Logo Open Data Sicilia con avviso: app della community, non un servizio ufficiale. */
 function communityNote() {
-  return `<aside class="community">
+  return `<aside class="community community-foot">
   <a class="osd-chip" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
   <p>${esc(t('communityNote'))}</p>
 </aside>`;
@@ -780,10 +774,21 @@ function avvisoItem(i) {
 </a></li>`;
 }
 
+// "Altro": avvisi, guida, informazioni e privacy, fuori dalla barra per tenerla a 5 voci.
+function viewMore() {
+  const row = (href, ic, title, sub) => `<li><a class="row" href="${href}">${icon(ic, 24)}<span class="row-main"><span class="row-title">${esc(t(title))}</span><span class="row-sub">${esc(t(sub))}</span></span><span class="chev">${icon('chevron', 20)}</span></a></li>`;
+  return `${banners(romeNow())}${pageHead(t('tabMore'))}<section class="block"><ul class="plain">
+${row('#/avvisi', 'bell', 'homeNews', 'homeNewsSub')}
+${row('#/guida', 'help', 'guideTitle', 'homeGuideSub')}
+${row('#/info', 'info', 'info', 'moreInfoSub')}
+${row('#/privacy', 'shield', 'privacyFull', 'morePrivacySub')}
+</ul></section>`;
+}
+
 function viewAvvisi() {
   const src = AVVISI_SOURCES.map(([u, k]) => `<li><a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(new URL(u).host)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
   const cont = COMUNE_CONTATTI.map(([u, ic, k, sub]) => `<li><a class="row" href="${esc(u)}"${u.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${icon(ic, 20)}<span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(sub)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
-  return `${banners(romeNow())}${pageHead(t('news'), { lead: t('newsLead'), back: ['#/', t('tabHome')] })}<section class="block">
+  return `${banners(romeNow())}${pageHead(t('news'), { lead: t('newsLead'), back: ['#/altro', t('tabMore')] })}<section class="block">
 <div id="news-list" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
 <section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>
 <section class="block"><h2>${esc(t('contactsH'))}</h2><ul class="plain">${cont}</ul><p class="note">${esc(t('contactsNote'))}</p></section>`;
@@ -811,7 +816,7 @@ ${intro ? `<p>${esc(intro)}</p>` : ''}
 ${tip ? `<p class="guide-tip"><b>${esc(t('guideTip'))}:</b> ${esc(tip)}</p>` : ''}
 ${shots.map(([f, alt]) => `<figure class="guide-shot"><img src="img/guida/${esc(f)}.webp" width="390" height="720" loading="lazy" decoding="async" alt="${esc(alt)}"></figure>`).join('')}
 </div></details>`;
-  return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead') })}<section class="block"><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
+  return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead'), back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
 }
 
 function viewInfo() {
@@ -836,7 +841,7 @@ function viewInfo() {
     acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h3 class="h3">${esc(t('consentManage'))}</h3>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
     acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
   ];
-  return `${banners(now)}${pageHead(t('info'))}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
+  return `${banners(now)}${pageHead(t('info'), { back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
 }
 
 function viewPrivacy() {
@@ -882,10 +887,11 @@ const routes = [
   [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => { state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1; return viewLine(decodeURIComponent(m[1])); }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
-  [/^\/avvisi$/, () => viewAvvisi(), 'news', bindAvvisi],
-  [/^\/guida$/, () => viewGuida(), 'guide'],
-  [/^\/info$/, () => viewInfo(), 'info'],
-  [/^\/privacy$/, () => viewPrivacy(), 'info'],
+  [/^\/altro$/, () => viewMore(), 'more'],
+  [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],
+  [/^\/guida$/, () => viewGuida(), 'more'],
+  [/^\/info$/, () => viewInfo(), 'more'],
+  [/^\/privacy$/, () => viewPrivacy(), 'more'],
 ];
 let current = null;
 
@@ -1012,7 +1018,7 @@ function applyTheme() {
 
 // Barra inferiore: toggle on/off. Tab attiva + clic: da una sotto-pagina torna
 // alla radice del tab (es. dettaglio linea -> lista linee), dalla radice spegne e va alla home.
-const TAB_ROOT = { plan: '#/percorso', lines: '#/linee', map: '#/mappa', guide: '#/guida', info: '#/info' };
+const TAB_ROOT = { plan: '#/percorso', lines: '#/linee', map: '#/mappa', more: '#/altro' };
 $nav.addEventListener('click', (e) => {
   const a = e.target.closest('a[data-tab]');
   const root = a && TAB_ROOT[a.dataset.tab];
@@ -1023,7 +1029,7 @@ $nav.addEventListener('click', (e) => {
 
 function renderChrome() {
   $nav.setAttribute('aria-label', t('appName'));
-  const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['guide', '#/guida', 'help', 'tabGuide'], ['info', '#/info', 'info', 'tabInfo']];
+  const items = [['home', '#/', 'home', 'tabHome'], ['plan', '#/percorso', 'route', 'tabPlan'], ['lines', '#/linee', 'list', 'tabLines'], ['map', '#/mappa', 'map', 'tabMap'], ['more', '#/altro', 'more', 'tabMore']];
   $nav.innerHTML = items.map(([tab, href, ic, key]) => `<a href="${href}" data-tab="${tab}">${icon(ic, 24)}<span>${esc(t(key))}</span></a>`).join('');
 }
 

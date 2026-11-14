@@ -2,7 +2,7 @@
 
 const IT = {
   appName: 'Marsala TPL',
-  tabHome: 'Home', tabPlan: 'Percorso', tabNear: 'Vicino', tabLines: 'Linee', tabMap: 'Mappa', tabInfo: 'Info',
+  tabHome: 'Home', tabPlan: 'Percorso', tabNear: 'Vicino', tabLines: 'Linee', tabMap: 'Mappa', tabInfo: 'Info', tabMore: 'Altro', moreInfoSub: 'Fonti, licenze, lingua e tema', morePrivacySub: 'Dati, statistiche e consenso',
   stop: 'Fermata', toward: 'direzione',
   now: 'ora', min: 'min', inMin: (n) => `tra ${n} min`, inHm: (h, m) => (m ? `tra ${h} h ${m} min` : `tra ${h} h`),
   atTime: (t) => `alle ${t}`,
@@ -99,8 +99,7 @@ const IT = {
       '<b>Percorso</b>: ti dice quale bus prendere per andare da un posto a un altro.',
       '<b>Linee</b>: l’elenco di tutte le linee, con fermate e orari.',
       '<b>Mappa</b>: la mappa con i percorsi e i bus che stanno circolando.',
-      '<b>Guida</b>: questa pagina.',
-      '<b>Info</b>: lingua, aspetto (chiaro o scuro), fonti dei dati e privacy.',
+      '<b>Altro</b>: gli avvisi del Comune, questa guida, le informazioni (lingua, aspetto chiaro o scuro, fonti dei dati) e la privacy.',
     ], 'Nella Home trovi anche il pulsante «Prossimo bus» e gli «Avvisi» del Comune sul trasporto.', [['home', 'La pagina Home con i pulsanti principali e la barra in basso']]],
     ['stop', 'pin', 'Come cercare una fermata', 'Ci sono tre modi, scegli quello che ti viene più comodo.', [
       '<b>Per nome.</b> Tocca «Cerca una fermata» (nella Home o nella pagina «Prossimo bus») e scrivi qualche lettera, per esempio «crispi» o «piazza rep». Non servono le maiuscole né gli accenti. Tocca il risultato giusto per aprire la fermata.',
@@ -183,7 +182,7 @@ const IT = {
 
 const EN = {
   ...IT,
-  tabHome: 'Home', tabPlan: 'Trip', tabNear: 'Nearby', tabLines: 'Lines', tabMap: 'Map', tabInfo: 'Info',
+  tabHome: 'Home', tabPlan: 'Journey', tabNear: 'Nearby', tabLines: 'Lines', tabMap: 'Map', tabInfo: 'Info', tabMore: 'More', moreInfoSub: 'Sources, licences, language and theme', morePrivacySub: 'Data, statistics and consent',
   stop: 'Stop', toward: 'toward',
   now: 'now', inMin: (n) => `in ${n} min`, inHm: (h, m) => (m ? `in ${h} h ${m} min` : `in ${h} h`),
   atTime: (t) => `at ${t}`,
