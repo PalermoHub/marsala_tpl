@@ -43,6 +43,9 @@ const ICON = {
   flag: '<path d="M5 21V4M5 5h12l-2 4 2 4H5"/>',
   calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"/>',
+  phone: '<path d="M6.500 4h3l1.500 4-2 1.500a11 11 0 005 5L15.500 12.500l4 1.500v3a2 2 0 01-2 2A13 13 0 014.500 6a2 2 0 012-2z"/>',
+  mail: '<rect x="3.500" y="5.500" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
+  pin: '<path d="M12 21s-6-5.500-6-11a6 6 0 0112 0c0 5.500-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',
   swap: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/>',
 };
 const icon = (name, size = 22, filled = false) =>
@@ -743,6 +746,15 @@ function bindPlan() {
   runPlan();
 }
 
+// Contatti generali del Comune (centralino, PEC, sede), copiati da comune.marsala.tp.it/it/page/orari-del-trasporto-pubblico-locale
+const COMUNE_CONTATTI = [
+  ['tel:0923993111', 'phone', 'contactPhone', '0923 993111'],
+  ['mailto:protocollo@pec.comune.marsala.tp.it', 'mail', 'contactPec', 'protocollo@pec.comune.marsala.tp.it'],
+  ['https://www.google.com/maps/search/?api=1&query=Via+Giuseppe+Garibaldi+47+Marsala', 'pin', 'contactAddr', 'Via Giuseppe Garibaldi, 47 · 91025 Marsala'],
+  ['https://www.comune.marsala.tp.it/it/help', 'external', 'contactHelp', 'comune.marsala.tp.it'],
+  ['https://www.comune.marsala.tp.it/it/new-issue', 'external', 'contactIssue', 'comune.marsala.tp.it'],
+];
+
 const AVVISI_SOURCES = [
   ['https://www.comune.marsala.tp.it/it/news', 'newsComune'],
   ['https://www.comune.marsala.tp.it/it/page/mobilita-e-trasporti', 'newsMobility'],
@@ -762,11 +774,13 @@ function avvisoItem(i) {
 
 function viewAvvisi() {
   const src = AVVISI_SOURCES.map(([u, k]) => `<li><a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(new URL(u).host)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
+  const cont = COMUNE_CONTATTI.map(([u, ic, k, sub]) => `<li><a class="row" href="${esc(u)}"${u.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${icon(ic, 20)}<span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(sub)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
   return `${banners(romeNow())}<section class="block"><a class="back back-ink" href="#/" aria-label="${esc(t('back'))}">${icon('back', 22)}<span>${esc(t('tabHome'))}</span></a>
 <h1 class="h1">${esc(t('news'))}</h1>
 <p class="note news-lead">${esc(t('newsLead'))}</p>
 <div id="news-list" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
-<section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>`;
+<section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>
+<section class="block"><h2>${esc(t('contactsH'))}</h2><ul class="plain">${cont}</ul><p class="note">${esc(t('contactsNote'))}</p></section>`;
 }
 
 function bindAvvisi() {

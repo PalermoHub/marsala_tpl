@@ -195,6 +195,7 @@ button { font: inherit; color: inherit; }
 
 .row { grid-template-columns: 1fr auto; }
 .row:has(> .tile) { grid-template-columns: auto 1fr auto; }
+.row:has(> .ico:first-child) { grid-template-columns: auto 1fr auto; }
 .row-main { display: flex; flex-direction: column; min-width: 0; }
 .row-title { font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 .row-sub { font-size: 15px; color: var(--ink-2); }
