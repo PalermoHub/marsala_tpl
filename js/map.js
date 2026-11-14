@@ -6,6 +6,9 @@ import { formatClock, romeNow } from './schedule.js';
 const ML_VERSION = '4.7.1';
 const ML_JS = `https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/maplibre-gl.js`;
 const ML_CSS = `https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/maplibre-gl.css`;
+// Integrità (SRI) della versione bloccata: se il file sul CDN cambia, il browser lo rifiuta. Da rigenerare se si cambia ML_VERSION.
+const ML_JS_SRI = 'sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj';
+const ML_CSS_SRI = 'sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V';
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron';
 const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
 const CENTER = [12.4437, 37.7985];
@@ -18,9 +21,13 @@ function loadMapLibre() {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
     css.href = ML_CSS;
+    css.integrity = ML_CSS_SRI;
+    css.crossOrigin = 'anonymous';
     document.head.append(css);
     const s = document.createElement('script');
     s.src = ML_JS;
+    s.integrity = ML_JS_SRI;
+    s.crossOrigin = 'anonymous';
     s.onload = () => resolve(window.maplibregl);
     s.onerror = () => { loading = null; reject(new Error('maplibre')); };
     document.head.append(s);
