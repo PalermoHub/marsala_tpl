@@ -1,0 +1,68 @@
+name: Aggiorna orari extraurbani (treni e pullman)
+
+# Alimenta le tabelle dei luoghi (js/orari-luoghi.js):
+# - treni RFI: le corse si rileggono dal tabellone di Marsala e si riscrivono da sole;
+# - pullman Autoservizi Salemi: i PDF non si leggono in modo affidabile, quindi si confronta l'impronta del testo
+#   e, se cambia, si apre una segnalazione (issue) senza toccare le corse;
+# - pullman AST: la ricerca orari è un modulo ASP.NET non automatizzabile, resta a mano.
+# Dopo gli orari GTFS (03:30 UTC): stesso gruppo di concorrenza, così i push non si sovrappongono.
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Installa pdftotext
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+      - name: Leggi le fonti
+        id: fonti
+        run: |
+          # Codice 3 = una fonte non è stata aggiornata (avviso già stampato): non è un errore del job.
+          set +e
+          node scripts/build-extraurbani.mjs
+          rc=$?
+          [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] || exit "$rc"
+      - name: Test logica orari e dati
+        run: node --test scripts/test.mjs
+      - name: Segnala le fonti Salemi cambiate
+        if: steps.fonti.outputs.salemi_cambiato == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ steps.fonti.outputs.messaggio }}
+        run: |
+          titolo="Orari Autoservizi Salemi cambiati: rivedere js/orari-luoghi.js"
+          if [ -n "$(gh issue list --state open --search "\"$titolo\" in:title" --json number --jq '.[].number')" ]; then
+            echo "Segnalazione già aperta."; exit 0
+          fi
+          gh issue create --title "$titolo" --body "I PDF di Autoservizi Salemi sono cambiati: $MSG.
+
+          Confrontarli con le corse \`s: \"salemi\"\` in \`js/orari-luoghi.js\`, correggerle, poi eseguire \`node scripts/build-extraurbani.mjs --solo salemi --accetta\` e committare \`scripts/fonti-extraurbani.json\`."
+      - name: Commit e ripubblicazione se le corse sono cambiate
+        run: |
+          if [ -z "$(git status --porcelain js/orari-luoghi.js)" ]; then echo "Nessuna novità."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/orari-luoghi.js
+          git commit -m "chore(dati): aggiorna treni extraurbani da RFI"
+          git pull --rebase
+          git push
+          gh workflow run deploy.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
