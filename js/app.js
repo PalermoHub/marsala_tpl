@@ -690,10 +690,39 @@ ${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
   tick();
 }
 
+/** Fila di targhette con le linee di oggi sopra la mappa (telefono): un tocco mette a fuoco la linea. Su desktop c'è già la colonna laterale. */
+function mapLinesRow(rid) {
+  const list = activeRoutes();
+  if (!list.length || state.pickSide) return '';
+  const cur = rid ? routeById(rid) : -1;
+  return `<ul class="map-lines" aria-label="${esc(t('lines'))}">${cur >= 0 ? `<li><a class="map-all" href="#/mappa">${esc(t('mapAllLines'))}</a></li>` : ''}${list.map((r) => `<li><a href="#/mappa/${esc(state.data.routes[r].id)}"${r === cur ? ' aria-current="true"' : ''} aria-label="${esc(t('line'))} ${esc(state.data.routes[r].short)}">${tileSvg(state.data.routes[r], 36)}</a></li>`).join('')}</ul>`;
+}
+
+/** Scheda di una fermata toccata sulla mappa: prossimo passaggio, metri da te, parti/arriva qui, apri. */
+function stopSheetHtml(si) {
+  const s = state.data.stops[si];
+  const { name, dir } = stopTitle(si);
+  const { items, tomorrow } = nextDepartures(state.data, state.index, si, romeNow(), 1);
+  const it = items[0];
+  let when;
+  if (it) when = `${tileSvg(routeOfTrip(it.trip), 30)}<span>${esc(t('nextPass'))} <b>${esc(formatClock(it.secs))}</b> · ${esc(relText(it))}</span>`;
+  else when = `<span>${esc(t('noMoreToday'))}${tomorrow ? ` · ${esc(t('firstTomorrow', formatClock(tomorrow.secs)))}` : ''}</span>`;
+  let walk = '';
+  if (state.loc && !state.loc.moving) {
+    const m = walkDist(state.walkMap)(si, distanceM(state.loc.lat, state.loc.lon, s.lat, s.lon));
+    if (Number.isFinite(m) && m <= 5000) walk = walkBadge(m, { exact: isExactWalk(state.walkMap, si), near: true });
+  }
+  return `<div class="sheet-top"><div class="sheet-title"><b>${esc(name)}</b><span>${dir ? `${esc(t('toward'))} ${esc(dir)}` : `${esc(t('stop'))} ${esc(s.code)}`}</span></div><button type="button" class="icon-btn icon-btn-quiet" data-sheet="close" aria-label="${esc(t('close'))}">${icon('close', 22)}</button></div>
+<div class="sheet-meta"><span class="sheet-tiles">${routesOfStop(si, 26, 6)}</span>${walk}</div>
+<p class="sheet-next">${when}</p>
+<div class="sheet-btns"><button type="button" class="btn" data-sheet="from" data-id="${esc(s.id)}">${icon('pin', 18)}<span>${esc(t('planFromHere'))}</span></button><button type="button" class="btn" data-sheet="to" data-id="${esc(s.id)}">${icon('flag', 18)}<span>${esc(t('planToHere'))}</span></button><a class="btn btn-quiet" href="#/stop/${esc(s.id)}">${icon('chevron', 18)}<span>${esc(t('openStop'))}</span></a></div>`;
+}
+
 function viewMap(rid) {
   return `${mapSide(rid)}<section class="map-wrap">
   <div id="map" role="application" aria-label="${esc(t('mapTitle'))}"></div>
-  <div class="map-bar">${state.pickSide ? `<p class="chip chip-route" role="status"><span>${esc(t(state.pickSide === 'from' ? 'planPickFrom' : 'planPickTo'))}</span><button type="button" data-act="cancelpick" aria-label="${esc(t('planPickCancel'))}">${icon('close', 18)}</button></p>` : ''}<p id="bus-count" class="chip" role="status"${(state.mapRoute && !rid) || state.pickSide ? ' hidden' : ''}>${esc(t('busesNote'))}</p>${state.mapRoute && !rid ? `<p class="chip chip-route"><span>${esc(state.mapRoute.label)}</span><button type="button" data-act="closeroute" aria-label="${esc(t('planCloseRoute'))}">${icon('close', 18)}</button></p>` : ''}</div>
+  <div class="map-bar">${state.pickSide ? `<p class="chip chip-route" role="status"><span>${esc(t(state.pickSide === 'from' ? 'planPickFrom' : 'planPickTo'))}</span><button type="button" data-act="cancelpick" aria-label="${esc(t('planPickCancel'))}">${icon('close', 18)}</button></p>` : ''}<p id="bus-count" class="chip" role="status"${(state.mapRoute && !rid) || state.pickSide ? ' hidden' : ''}>${esc(t('busesNote'))}</p>${state.mapRoute && !rid ? `<p class="chip chip-route"><span>${esc(state.mapRoute.label)}</span><button type="button" data-act="closeroute" aria-label="${esc(t('planCloseRoute'))}">${icon('close', 18)}</button></p>` : ''}${mapLinesRow(rid)}</div>
+  <div id="stop-sheet" class="stop-sheet" role="dialog" aria-label="${esc(t('stop'))}" hidden></div>
   <button id="legend-btn" class="legend-btn" data-act="legend" aria-expanded="false" aria-controls="legend">${icon('info', 20)}<span>${esc(t('legend'))}</span></button>
   ${legendPanel()}
   <a class="osd" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
@@ -711,9 +740,16 @@ function setPlanPoint(side, id) {
 }
 async function bindMap(rid) {
   const msg = document.getElementById('map-msg');
+  const sheet = document.getElementById('stop-sheet');
+  const showStopSheet = (id) => { const si = stopById(id); if (si < 0 || !sheet) return; sheet.innerHTML = stopSheetHtml(si); sheet.hidden = false; };
+  sheet?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-sheet]');
+    if (!b) return;
+    if (b.dataset.sheet === 'close') sheet.hidden = true; else setPlanPoint(b.dataset.sheet, b.dataset.id);
+  });
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet });
     state.cleanup = () => ctl.destroy();
   } catch (e) {
     msg.hidden = false;

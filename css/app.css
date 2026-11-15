@@ -583,3 +583,27 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .near-head h2 { margin-top: 18px; }
 .gps-state { margin-top: 10px; }
 .here-name { font-size: 15px; }
+
+/* ---------- Mappa: fila delle linee e scheda fermata ---------- */
+.map-lines { display: flex; gap: 8px; list-style: none; margin: 8px -64px 0 0; padding: 4px 64px 8px 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.map-lines::-webkit-scrollbar { display: none; }
+.map-lines li { flex: none; scroll-snap-align: start; }
+.map-lines a { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 3px; border-radius: var(--r); background: var(--glaze); box-shadow: var(--shadow-float); text-decoration: none; color: var(--ink); font-weight: 700; font-size: 15px; }
+.map-lines a[aria-current] { outline: 3px solid var(--cobalt-hi); outline-offset: 0; }
+.map-lines .map-all { padding: 0 14px; }
+.stop-sheet { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 6; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; border-radius: var(--r-lg); background: var(--glaze); color: var(--ink); box-shadow: var(--shadow-sheet); }
+.stop-sheet[hidden] { display: none; }
+.sheet-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sheet-title { display: flex; flex-direction: column; min-width: 0; }
+.sheet-title b { font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
+.sheet-title span { font-size: 15px; color: var(--ink-2); }
+.sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sheet-tiles { display: flex; align-items: center; gap: 4px; }
+.sheet-next { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 16px; }
+.sheet-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.sheet-btns .btn { flex: 1 1 auto; min-height: 44px; padding: 0 12px; gap: 6px; font-size: 15px; }
+@media (min-width: 1000px) { .map-lines { display: none; } .stop-sheet { left: auto; width: 380px; } }
+/* popup «Parti da qui / Arriva qui»: i due pulsanti vanno a capo invece di uscire dal riquadro */
+.maplibregl-popup:has(.civico-pop) { max-width: min(340px, calc(100vw - 32px)) !important; }
+.pick-btns { flex-wrap: wrap; }
+.pick-btns button { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
