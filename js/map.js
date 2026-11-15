@@ -136,13 +136,26 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true, 'text-padding': 8 }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Numeri civici (ANNCSU): compaiono solo da zoom alto, caricati in background per non rallentare l'apertura.
-  const CIVICI_MINZ = 17;
+  const CIVICI_MINZ = 14;
+  let civiciOn = true;
   loadIndirizzi().then((db) => {
     if (!db || destroyedEarly) return;
     const features = [];
-    for (const st of db.streets) for (const c of st.civ) features.push({ type: 'Feature', properties: { n: c.e ? `${c.n}/${c.e}` : String(c.n) }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } });
+    for (const st of db.streets) for (const c of st.civ) features.push({ type: 'Feature', properties: { n: c.e ? `${c.n}/${c.e}` : String(c.n), v: st.name }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } });
     map.addSource('civici', { type: 'geojson', data: { type: 'FeatureCollection', features } });
-    map.addLayer({ id: 'civici', type: 'symbol', source: 'civici', minzoom: CIVICI_MINZ, layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], CIVICI_MINZ, 10, 20, 14], 'text-allow-overlap': false, 'text-padding': 2 }, paint: { 'text-color': isDark() ? '#F2C14E' : '#8A1C3A', 'text-halo-color': isDark() ? '#0F1B3D' : '#FBF7EE', 'text-halo-width': 1.8 } }, 'stops');
+    map.addLayer({ id: 'civici', type: 'symbol', source: 'civici', minzoom: CIVICI_MINZ, layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], CIVICI_MINZ, 8, 17, 10, 20, 14], 'text-allow-overlap': false, 'text-padding': 2 }, paint: { 'text-color': isDark() ? '#F2C14E' : '#8A1C3A', 'text-halo-color': isDark() ? '#0F1B3D' : '#FBF7EE', 'text-halo-width': 1.8 } }, 'stops');
+    if (!civiciOn) map.setLayoutProperty('civici', 'visibility', 'none');
+    // Tocco su un numero civico: popup con la via (le fermate, se toccate insieme, hanno la precedenza).
+    map.on('click', 'civici', (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ['stops'] }).length) return;
+      const f = e.features?.[0]; if (!f) return;
+      const d = document.createElement('div');
+      d.className = 'civico-pop';
+      d.textContent = `${f.properties.v} ${f.properties.n}`;
+      new maplibregl.Popup({ offset: 8, closeButton: false }).setLngLat(f.geometry.coordinates).setDOMContent(d).addTo(map);
+    });
+    map.on('mouseenter', 'civici', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'civici', () => { map.getCanvas().style.cursor = ''; });
   }).catch(() => { /* senza civici la mappa funziona lo stesso */ });
   let destroyedEarly = false;
 
@@ -260,7 +273,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     ctrls.append(compassBtn);
     if (navigator.geolocation) ctrls.append(locBtn);
     if (fsTarget?.requestFullscreen) ctrls.append(fsBtn);
-    ctrls.append(btn3d, zoomBox);
+    ctrls.append(btn3d, btnCiv, zoomBox);
     el.parentElement.append(ctrls);
     showZoom();
   }
@@ -283,6 +296,18 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     draw();
   });
   paintBtn();
+  // Numeri civici: attiva/disattiva (il livello arriva in ritardo, quindi si ricorda lo stato).
+  const btnCiv = document.createElement('button');
+  btnCiv.type = 'button';
+  btnCiv.className = 'map-btn map-civ';
+  btnCiv.textContent = 'N°';
+  const paintCiv = () => { btnCiv.setAttribute('aria-pressed', String(civiciOn)); btnCiv.setAttribute('aria-label', t(civiciOn ? 'mapCivOff' : 'mapCivOn')); btnCiv.title = btnCiv.getAttribute('aria-label'); };
+  btnCiv.addEventListener('click', () => {
+    civiciOn = !civiciOn;
+    paintCiv();
+    if (map.getLayer('civici')) map.setLayoutProperty('civici', 'visibility', civiciOn ? 'visible' : 'none');
+  });
+  paintCiv();
   const btnSat = document.createElement('button');
   btnSat.type = 'button';
   btnSat.className = 'map-btn map-sat';
