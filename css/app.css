@@ -585,7 +585,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .here-name { font-size: 15px; }
 
 /* ---------- Mappa: fila delle linee e scheda fermata ---------- */
-.map-lines { display: flex; gap: 8px; list-style: none; margin: 8px -64px 0 0; padding: 4px 64px 8px 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.map-lines { display: flex; gap: 8px; list-style: none; margin: 8px 0 0; padding: 4px 4px 8px 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .map-lines::-webkit-scrollbar { display: none; }
 .map-lines li { flex: none; scroll-snap-align: start; }
 .map-lines a { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 3px; border-radius: var(--r); background: var(--glaze); box-shadow: var(--shadow-float); text-decoration: none; color: var(--ink); font-weight: 700; font-size: 15px; }

@@ -54,7 +54,7 @@ const IT = {
   privacyDoc: [
     ['Chi siamo', ['Marsala TPL è un’app non ufficiale, realizzata con i dati aperti del Comune di Marsala. Non è un servizio del Comune. Il titolare del trattamento dei dati descritto qui è Open Data Sicilia (https://opendatasicilia.it/).', 'Per esercitare i tuoi diritti o chiedere chiarimenti contatta Open Data Sicilia tramite il sito https://opendatasicilia.it/ oppure scrivi nelle Issues del progetto: https://github.com/PalermoHub/marsala_tpl/issues']],
     ['In breve', ['Non ci sono account, moduli, pubblicità né profilazione. Open Data Sicilia non vende né cede dati. Le statistiche d’uso partono solo se le accetti.']],
-    ['Posizione', ['Se tocchi «Usa la mia posizione» o parti dalla tua posizione nel pianificatore, il browser ti chiede il permesso. La posizione è elaborata solo sul tuo dispositivo per trovare le fermate vicine: non viene inviata al titolare né salvata. Puoi revocare il permesso dalle impostazioni del browser.']],
+    ['Posizione', ['Se tocchi «La mia posizione» o parti dalla tua posizione nel pianificatore, il browser ti chiede il permesso. Una volta concesso, l’app legge la posizione da sola quando apri una schermata, per mostrare i metri a piedi dalle fermate. La posizione è elaborata solo sul tuo dispositivo e resta in memoria finché l’app è aperta: non viene inviata al titolare né salvata. Puoi revocare il permesso dalle impostazioni del browser.']],
     ['Dati salvati sul tuo dispositivo', ['Lingua, tema, fermate preferite, ultima fermata vista e la tua scelta sulle statistiche sono nel «localStorage» del browser; gli orari e i file dell’app nella cache offline. Sono strumenti tecnici necessari al funzionamento (art. 122, c. 1, Codice privacy) e non richiedono consenso. Restano sul dispositivo e si cancellano dai dati del sito nelle impostazioni del browser.']],
     ['Statistiche d’uso (solo con consenso)', ['Se accetti, usiamo Google Analytics 4 (Google Ireland Limited) per capire quali sezioni sono più usate. Vengono impostati i cookie «_ga» e «_ga_G-KHR1GHDRQS» (durata 2 anni) e raccolti: pagine viste, tipo di dispositivo e browser, lingua, zona approssimativa e un identificativo casuale. L’indirizzo IP è anonimizzato e non usiamo funzioni pubblicitarie né il collegamento con altri servizi Google.', 'Base giuridica: il tuo consenso (art. 6, par. 1, lett. a GDPR e art. 122 Codice privacy). I dati sono conservati per il periodo impostato in Analytics, al massimo 14 mesi. Google può trattare dati anche fuori dallo Spazio economico europeo, sulla base della decisione di adeguatezza UE-USA (Data Privacy Framework) o di clausole contrattuali standard.', 'Puoi rifiutare o cambiare idea in ogni momento da Info → Privacy: la revoca ferma l’invio di dati e cancella i cookie. La scelta è chiesta di nuovo dopo 6 mesi.']],
     ['Servizi tecnici di terzi', ['Per funzionare l’app si collega a servizi che, come ogni sito, ricevono necessariamente il tuo indirizzo IP e i dati tecnici della richiesta: GitHub Pages (hosting dell’app), il servizio del Comune di Marsala per le posizioni dei bus in tempo reale (ospitato su Amazon Web Services), e, solo quando apri la mappa, jsDelivr (libreria della mappa), OpenFreeMap (tessere cartografiche) e, solo se attivi l’ortofoto, Regione Siciliana (immagini). Non inviamo loro altre informazioni su di te. Hanno proprie informative: GitHub, Amazon Web Services, jsDelivr, OpenFreeMap, Regione Siciliana.', 'Questi collegamenti sono necessari a fornire il servizio che richiedi (art. 6, par. 1, lett. b e f GDPR).']],
@@ -104,16 +104,16 @@ const IT = {
   // [id, icona, titolo, introduzione, passi, consiglio, [[foto, descrizione]...]]
   guideDoc: [
     ['start', 'home', 'Come è fatta l’app', 'In basso c’è sempre una barra con i pulsanti per spostarti. Eccoli da sinistra a destra:', [
-      '<b>Home</b>: la pagina di partenza. Mostra subito la tua fermata preferita; se non ne hai ancora una, ti aiuta a trovarla.',
+      '<b>Home</b>: la pagina di partenza. In alto ci sono «La mia posizione» e «Cerca fermata»; sotto, «Vicino a te» ti dice dove sei e quali fermate e linee hai attorno, con i metri a piedi.',
       '<b>Percorso</b>: ti dice quale bus prendere per andare da un posto a un altro.',
       '<b>Linee</b>: l’elenco di tutte le linee, con fermate e orari.',
       '<b>Mappa</b>: la mappa con i percorsi e i bus che stanno circolando.',
       '<b>Altro</b>: gli avvisi del Comune, questa guida, le informazioni (lingua, aspetto chiaro o scuro, fonti dei dati) e la privacy.',
-    ], 'Tocca la stella su una fermata per salvarla: da quel momento la ritrovi subito aprendo l’app.', [['home', 'La pagina Home con i pulsanti principali e la barra in basso']]],
+    ], 'Tocca la stella su una fermata per salvarla: da quel momento la ritrovi subito aprendo l’app.', [['home', 'La Home con «La mia posizione», «Cerca fermata» e le fermate vicine con i metri a piedi']]],
     ['stop', 'pin', 'Come cercare una fermata', 'Ci sono tre modi, scegli quello che ti viene più comodo.', [
-      '<b>Per nome.</b> Tocca «Cerca una fermata» (nella Home o nella pagina «Prossimo bus») e scrivi qualche lettera, per esempio «crispi» o «piazza rep». Non servono le maiuscole né gli accenti. Tocca il risultato giusto per aprire la fermata.',
-      '<b>Dove ti trovi.</b> Tocca «Usa la mia posizione» e consenti al telefono di usarla: l’app ti mostra le fermate più vicine, con la distanza. La tua posizione resta nel telefono e non viene inviata a nessuno.',
-      '<b>Dalla mappa.</b> Apri «Mappa», ingrandisci con due dita fino a vedere i puntini delle fermate e toccane uno: si apre la fermata.',
+      '<b>Per nome.</b> Tocca «Cerca fermata» (nella Home) e scrivi qualche lettera, per esempio «crispi» o «piazza rep». Non servono le maiuscole né gli accenti. Tocca il risultato giusto per aprire la fermata.',
+      '<b>Dove ti trovi.</b> Tocca «La mia posizione» e consenti al telefono di usarla: l’app ti mostra le fermate più vicine, con i metri a piedi da te («290 m da te»). Se sei su un bus in movimento i metri spariscono e compare «Sei in movimento»: quando scendi tocca «Aggiorna posizione». La tua posizione resta nel telefono e non viene inviata a nessuno.',
+      '<b>Dalla mappa.</b> Apri «Mappa», ingrandisci con due dita fino a vedere i puntini delle fermate e toccane uno: in basso compare una scheda con il prossimo passaggio e le linee. «Apri la fermata» mostra tutti i dettagli.',
     ], 'La stessa strada ha di solito due fermate, una per senso di marcia. Guarda la scritta «direzione…» sotto il nome per scegliere quella giusta. Se hai sbagliato lato, in fondo alla pagina c’è «Altro senso di marcia».', [['cerca', 'La pagina di ricerca con alcune lettere scritte e l’elenco dei risultati']]],
     ['next', 'clock', 'Come vedere quando passa il bus', 'Apri una fermata (vedi sopra). In alto vedi subito il prossimo bus.', [
       'Il numero grande è l’attesa in minuti: «21 min» significa che il bus passa tra 21 minuti. L’orario preciso è scritto sotto.',
@@ -175,14 +175,15 @@ const IT = {
     ['map', 'map', 'Come usare la mappa', 'La mappa mostra i percorsi delle linee e i bus che circolano in questo momento.', [
       'Tocca «Mappa» nella barra in basso. Serve la connessione a internet.',
       'Trascina con un dito per spostarti, con due dita per ingrandire o rimpicciolire.',
-      'Ingrandendo compaiono le fermate: tocca un puntino per aprirla.',
+      'Sopra la mappa, la fila di targhette con le linee di oggi: tocca una linea per metterla a fuoco, «Tutte» per tornare alla rete.',
+      'Ingrandendo compaiono le fermate: tocca un puntino e in basso si apre la scheda con il prossimo passaggio, i metri da te e i pulsanti «Parti da qui» e «Arriva qui».',
       'I piccoli bus sono i mezzi in servizio. Toccane uno per seguirlo lungo il percorso.',
       'Il pulsante «Legenda» in basso spiega i simboli.',
-      'Sul bordo destro ci sono i comandi: casetta (mostra tutta la rete), bussola (rimette il nord in alto), mirino (la tua posizione), riquadro (schermo intero). Accanto c’è il cursore dello zoom (puoi anche pizzicare lo schermo).',
+      'Sul bordo destro ci sono i comandi: «MAP/ORTO» (sfondo stradale o foto aeree), mirino (la tua posizione), riquadro (schermo intero) e «Vista», che apre casetta (mostra tutta la rete), bussola (rimette il nord in alto), 3D e civici. Accanto c’è il cursore dello zoom (puoi anche pizzicare lo schermo).',
       'Le fonti dei dati della mappa si aprono toccando la piccola «i» in basso a destra.',
-    ], 'La linea di un bus è stimata dal suo percorso: può non essere esatta.', [['mappa', 'La mappa con i percorsi delle linee e i bus in servizio']]],
+    ], 'La linea di un bus è stimata dal suo percorso: può non essere esatta.', [['mappa', 'La mappa con la fila delle linee in alto e la scheda di una fermata toccata']]],
     ['map3d', 'map', 'Come vedere la mappa in 3D', 'Il pulsante «3D» inclina la mappa e mostra gli edifici in rilievo e i bus come piccoli mezzi in tre dimensioni.', [
-      'Apri «Mappa» e tocca il pulsante «3D» nella colonna di comandi a destra: la mappa si inclina.',
+      'Apri «Mappa» e tocca «Vista» nella colonna di comandi a destra e poi «3D»: la mappa si inclina.',
       'Gli edifici compaiono lungo i percorsi delle linee, con l’altezza stimata. Ingrandisci per vederli meglio.',
       'Per girare la mappa trascina con due dita in senso circolare; per cambiare l’inclinazione trascina in su o in giù con due dita.',
       'Tocca la bussola per rimettere il nord in alto.',
