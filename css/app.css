@@ -639,6 +639,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .tbl th, .tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .tbl thead th { font-size: 14px; color: var(--muted, inherit); border-bottom: 2px solid var(--line); }
 .tbl tbody th { font-weight: 700; }
+.coin-stop-link { color: var(--cobalt, inherit); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .coin-stop { font-weight: 700; color: var(--cobalt, inherit); text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
 .coin-line { display: inline-block; vertical-align: middle; margin: 0 2px; border-radius: 8px; line-height: 0; }
 .coin-line .tile { display: block; }
@@ -657,3 +658,6 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .coin-promo-title { display: block; font-size: 19px; font-weight: 700; line-height: 1.2; }
 .coin-promo-sub { display: block; font-size: 15px; opacity: 0.9; }
 .coin-promo .chev { color: inherit; }
+.hit { display: flex; align-items: center; gap: 4px; }
+.hit .row { flex: 1; min-width: 0; }
+.hit-map { flex: none; }

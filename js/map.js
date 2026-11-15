@@ -84,7 +84,7 @@ const isDark = () => {
   return th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route = null, plan = null, onStop = null }) {
+export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route = null, plan = null, onStop = null, pin = null }) {
   const maplibregl = await loadMapLibre();
   const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, maxBounds: BBOX, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">Zhu et al. 2025</a>, <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
   // Attribuzione chiusa all'avvio: si apre solo toccando la «i».
@@ -573,6 +573,14 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     timer = setTimeout(poll, POLL_MS);
   }
   poll();
+
+  // Fermata cercata: puntatore con alone e vista centrata su di lei.
+  if (pin) {
+    map.addSource('pin', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [pin.lon, pin.lat] } } });
+    map.addLayer({ id: 'pin-halo', type: 'circle', source: 'pin', paint: { 'circle-radius': 20, 'circle-color': '#B5532F', 'circle-opacity': 0.22 } });
+    map.addLayer({ id: 'pin', type: 'circle', source: 'pin', paint: { 'circle-radius': 9, 'circle-color': '#B5532F', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
+    map.jumpTo({ center: [pin.lon, pin.lat], zoom: Math.max(map.getZoom(), 16.5) });
+  }
 
   return { destroy() { destroyed = true; destroyedEarly = true; ctrls.remove(); zoomBox.remove(); clearHash(); document.removeEventListener('fullscreenchange', onFs); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
 }

@@ -254,6 +254,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
     </div>
     <div class="hero-actions">
       <a class="icon-btn" href="#/cerca" aria-label="${esc(t('searchStop'))}">${icon('search', 24)}</a>
+      <a class="icon-btn" href="#/mappa/fermata/${esc(encodeURIComponent(s.id))}" aria-label="${esc(t('showOnMap'))}" title="${esc(t('showOnMap'))}">${icon('map', 24)}</a>
       <button class="icon-btn" data-act="fav" data-id="${esc(s.id)}" aria-pressed="${fav}" aria-label="${esc(t(fav ? 'removeFav' : 'addFav'))}">${icon('star', 24, fav)}</button>
       <button class="icon-btn" data-act="share" data-id="${esc(s.id)}" aria-label="${esc(t('share'))}">${icon('share', 24)}</button>
     </div>
@@ -489,7 +490,7 @@ function bindSearch() {
     if (!q) { $r.innerHTML = ''; return; }
     const words = q.split(/\s+/);
     const hits = index.filter((x) => words.every((w) => x.k.includes(w))).slice(0, 40);
-    $r.innerHTML = hits.length ? hits.map((h) => stopRow(h.i)).join('') : `<li class="note">${esc(t('noResults'))}</li>`;
+    $r.innerHTML = hits.length ? hits.map((h) => stopRow(h.i).replace('<li>', '<li class="hit">').replace(/<\/li>$/, `<a class="icon-btn hit-map" href="#/mappa/fermata/${encodeURIComponent(state.data.stops[h.i].id)}" aria-label="${esc(t('showOnMap'))}" title="${esc(t('showOnMap'))}">${icon('map', 24)}</a></li>`)).join('') : `<li class="note">${esc(t('noResults'))}</li>`;
   };
   $q.addEventListener('input', run);
   $q.focus({ preventScroll: true });
@@ -766,7 +767,7 @@ function setPlanPoint(side, id) {
   state.mapRoute = null;
   location.hash = planHash();
 }
-async function bindMap(rid) {
+async function bindMap(rid, stopId = null) {
   const msg = document.getElementById('map-msg');
   const sheet = document.getElementById('stop-sheet');
   const showStopSheet = (id) => { const si = stopById(id); if (si < 0 || !sheet) return; sheet.innerHTML = stopSheetHtml(si); sheet.hidden = false; };
@@ -777,7 +778,8 @@ async function bindMap(rid) {
   });
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet, pin: stopId && stopById(stopId) >= 0 ? state.data.stops[stopById(stopId)] : null });
+    if (stopId) showStopSheet(stopId);
     state.cleanup = () => ctl.destroy();
   } catch (e) {
     msg.hidden = false;
@@ -1135,7 +1137,9 @@ function bindAvvisi() {
 let coinCur = 0;
 function viewCoincidenze() {
   const en = getLang() === 'en';
-  const L = (a) => esc(a[en ? 1 : 0]);
+  // Nei testi, [[id|nome]] diventa un link alla pagina di quella fermata (se è nel feed).
+  const rich = (str) => esc(str).replace(/\[\[(\w+)\|([^\]]+)\]\]/g, (m, id, label) => (stopById(id) >= 0 ? `<a class="coin-stop-link" href="#/stop/${id}">${label}</a>` : label));
+  const L = (a) => rich(a[en ? 1 : 0]);
   // Ogni numero di linea presente nel feed diventa un link alla pagina della linea.
   const chip = (n) => {
     const r = state.data.routes.find((x) => x.id === LINEA_ID[n]);
@@ -1152,21 +1156,21 @@ function viewCoincidenze() {
   };
   const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
   const stz = STAZIONI.map((s) => `<li class="coin-card"><div class="coin-head"><h3>${esc(s.n)}</h3>${s.m ? `<span class="coin-walk"><span class="wbadge wbadge-strong">${icon('walk', 14)}<span>${esc(t('meters', s.m))}</span></span><b>${esc(t('coinMinShort', Math.max(1, Math.round(s.m / 1.2 / 60))))}</b></span>` : ''}</div><p class="muted">${esc(t('coinLines'))} ${lineHtml(s.lines)}</p><p>${L(s.d)}</p>${s.stop && stopById(s.stop) >= 0 ? `<p><a class="coin-stop" href="#/stop/${esc(s.stop)}">${icon('pin', 18)} ${esc(stopTitle(stopById(s.stop)).name)}</a></p>` : ''}</li>`).join('');
-  const treni = `<h2 class="gd-h">${esc(t('coinStations'))}</h2><p>${esc(t('coinStationsLead'))}</p><ul class="plain coin-list">${stz}</ul>
+  const treni = `<h2 class="gd-h">${esc(t('coinStations'))}</h2><p>${rich(t('coinStationsLead'))}</p><ul class="plain coin-list">${stz}</ul>
 <h2 class="h3">${esc(t('coinToTrain'))}</h2><p>${esc(t('coinToTrainLead'))}</p>
 ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap(([h, to, bus]) => bus.map(([l, p], k) => [k ? '' : `${h} ${t('coinToward')} ${to}`, l, p])), [1], [2])}
 <p class="note">${esc(t('coinNoRfiTable'))}</p>
 <div class="info-links">${LINK.slice(0, 2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
-  const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${esc(t('coinOperatorsLead'))}</p><ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
-<h2 class="h3">${esc(t('coinToBus'))}</h2><p>${esc(t('coinToBusLead'))}</p>${tbl([t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')], flat(A_PULLMAN), [1], [2], [0])}
-<h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${esc(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
+  const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${rich(t('coinOperatorsLead'))}</p><ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
+<h2 class="h3">${esc(t('coinToBus'))}</h2><p>${rich(t('coinToBusLead'))}</p>${tbl([t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')], flat(A_PULLMAN), [1], [2], [0])}
+<h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${rich(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
 <div class="info-links">${LINK.slice(2, 6).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const wk = (m) => t('coinMinWalk', Math.round(m / 1.2 / 60));
   // Stesso schema delle stazioni: nome, badge con il mezzo e tempo in grassetto, linee, dettagli.
-  const airCard = (name, badge, time, linesStr, text, extra = '') => `<li class="coin-card"><div class="coin-head"><h3>${esc(name)}</h3><span class="coin-walk"><span class="wbadge wbadge-strong">${icon('bus', 14)}<span>${esc(badge)}</span></span><b>${esc(time)}</b></span></div>${linesStr ? `<p class="muted">${esc(t('coinLines'))} ${lineHtml(linesStr)}</p>` : ''}<p>${esc(text)}</p>${extra}</li>`;
+  const airCard = (name, badge, time, linesStr, text, extra = '') => `<li class="coin-card"><div class="coin-head"><h3>${esc(name)}</h3><span class="coin-walk"><span class="wbadge wbadge-strong">${icon('bus', 14)}<span>${esc(badge)}</span></span><b>${esc(time)}</b></span></div>${linesStr ? `<p class="muted">${esc(t('coinLines'))} ${lineHtml(linesStr)}</p>` : ''}<p>${rich(text)}</p>${extra}</li>`;
   const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
   const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
-  const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${esc(t('coinAirLead'))}</p><ul class="plain coin-list">
+  const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${rich(t('coinAirLead'))}</p><ul class="plain coin-list">
 ${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`)}
 ${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'))}</ul>
 <h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
@@ -1313,6 +1317,7 @@ const routes = [
     return viewLine(rid, o?.i);
   }, 'lines', (m) => { bindLine(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
+  [/^\/mappa\/fermata\/(.+)$/, () => viewMap(null), 'map', (m) => bindMap(null, decodeURIComponent(m[1]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/coincidenze$/, () => viewCoincidenze(), 'home', bindCoincidenze],
   [/^\/altro$/, () => viewMore(), 'more'],
