@@ -284,3 +284,36 @@ test('isApprox: solo le fermate intermedie con lo stesso minuto della precedente
   assert.equal(isApprox(trip, 3), true);
   assert.equal(isApprox(trip, 4), false);
 });
+
+// ---------- ricerca per indirizzo (civici ANNCSU) ----------
+import { buildIndirizzi, searchIndirizzi, parseQuery } from '../js/indirizzi.js';
+const indirizzi = buildIndirizzi(JSON.parse(readFileSync(new URL('../dati/indirizzi.json', import.meta.url), 'utf8')));
+
+test('indirizzi: il numero civico e l’esponente si separano dalla via', () => {
+  assert.deepEqual(parseQuery('Via Mazzini 12'), { street: 'via mazzini', civico: 12, esp: '' });
+  assert.deepEqual(parseQuery('via xi maggio 1/a'), { street: 'via xi maggio', civico: 1, esp: 'A' });
+  assert.deepEqual(parseQuery('mazzini'), { street: 'mazzini', civico: null, esp: '' });
+  assert.equal(parseQuery('Via dell’Università').civico, null);
+});
+
+test('indirizzi: via e civico danno prima il numero esatto, con coordinate dentro Marsala', () => {
+  const r = searchIndirizzi(indirizzi, 'via mazzini 12');
+  assert.equal(r[0].label, 'Via Giuseppe Mazzini 12');
+  assert.ok(r[0].lat > 37.6 && r[0].lat < 37.95 && r[0].lon > 12.3 && r[0].lon < 12.7);
+});
+
+test('indirizzi: senza numero propone la via e i primi civici; accenti e maiuscole non contano', () => {
+  assert.equal(searchIndirizzi(indirizzi, 'GARIBALDI')[0].kind, 'street'); // più vie: prima si sceglie la via
+  const r = searchIndirizzi(indirizzi, 'Via Giuseppe Garibaldi');
+  assert.equal(r[0].kind, 'street');
+  assert.ok(r.some((x) => x.kind === 'civico'));
+  assert.deepEqual(searchIndirizzi(indirizzi, 'zzzzzz'), []);
+});
+
+test('indirizzi: dati integri (vie, civici, nessun punto fuori area, nessuna via vuota)', () => {
+  assert.ok(indirizzi.streets.length > 300);
+  for (const s of indirizzi.streets) {
+    assert.ok(s.civ.length > 0, s.name);
+    for (const c of s.civ) assert.ok(c.lat > 37.6 && c.lat < 37.95 && c.lon > 12.3 && c.lon < 12.7, `${s.name} ${c.n}`);
+  }
+});

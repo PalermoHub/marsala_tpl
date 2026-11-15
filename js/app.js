@@ -5,6 +5,7 @@ import { tileSvg, motifField, lineStyle } from './tiles.js';
 import { fetchVehicles } from './rt.js';
 import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops } from './match.js';
 import { planJourney, groupOf, walkable } from './planner.js';
+import { loadIndirizzi, searchIndirizzi } from './indirizzi.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
 import { getConsent, setConsent, applyConsent } from './consent.js';
@@ -608,15 +609,20 @@ function stopGroups() {
   });
   return state.groups;
 }
-/** "gps" oppure l'id di una fermata -> scelta del pianificatore. */
+/** "gps", "@lat,lon,etichetta" (un civico) oppure l'id di una fermata -> scelta del pianificatore. */
 function resolveSide(id) {
   if (id === 'gps') return { kind: 'gps', id: 'gps' };
+  if (id.startsWith('@')) {
+    const m = id.match(/^@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?),(.+)$/);
+    return m ? { kind: 'point', id, name: m[3], lat: Number(m[1]), lon: Number(m[2]) } : null;
+  }
   const si = stopById(id);
   if (si < 0) return null;
   const g = stopGroups().find((x) => x.stops.includes(si));
   return g ? { kind: 'group', id: g.id, name: g.name, stops: g.stops } : null;
 }
 const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
+const pointId = (lat, lon, label) => `@${lat.toFixed(5)},${lon.toFixed(5)},${label}`;
 
 function viewPlan(m) {
   if (m[1]) {
@@ -712,11 +718,12 @@ async function runPlan() {
   syncPlanUrl();
   const ends = [];
   for (const sd of [from, to]) {
-    if (sd.kind === 'gps') {
-      if (!(await getLoc())) { out.innerHTML = `<p class="note">${esc(t('planNeedLoc'))}</p>`; return; }
+    if (sd.kind === 'gps' || sd.kind === 'point') {
+      if (sd.kind === 'gps' && !(await getLoc())) { out.innerHTML = `<p class="note">${esc(t('planNeedLoc'))}</p>`; return; }
+      const at = sd.kind === 'gps' ? state.loc : sd; // la posizione dell'utente oppure il civico scelto
       const g = await loadWalk();
-      const wm = g ? walkFrom(g, state.data.stops, state.loc.lat, state.loc.lon) : null;
-      const w = walkable(state.data, state.loc.lat, state.loc.lon, 800, 4, walkDist(wm));
+      const wm = g ? walkFrom(g, state.data.stops, at.lat, at.lon) : null;
+      const w = walkable(state.data, at.lat, at.lon, 800, 4, walkDist(wm));
       if (!w.length) { out.innerHTML = `<p class="note">${esc(t('planFar'))}</p>`; return; }
       ends.push(w);
     } else ends.push(sd.stops.map((stop) => ({ stop, walk: 0 })));
@@ -763,9 +770,13 @@ function bindPlan() {
     const $in = document.getElementById(`pf-${side}`);
     const $ul = document.getElementById(`pl-${side}`);
     if (state.plan[side]) $in.value = sideLabel(state.plan[side]);
-    const show = () => {
+    let seq = 0;
+    const show = async () => {
       const q = norm($in.value.trim());
+      const my = ++seq;
       const items = [];
+      const addr = q.length >= 2 ? await loadIndirizzi().then((db) => (db ? searchIndirizzi(db, $in.value) : [])) : [];
+      if (my !== seq) return; // nel frattempo l'utente ha scritto altro
       if (!q || norm(t('planMyPos')).startsWith(q)) {
         items.push(`<li><button type="button" class="row row-btn" data-act="pick" data-side="${side}" data-id="gps"><span class="row-main"><span class="row-title">${icon('locate', 18)} ${esc(t('planMyPos'))}</span></span></button></li>`);
       }
@@ -775,6 +786,11 @@ function bindPlan() {
           .sort((a, b) => (norm(a.name).startsWith(q) ? 0 : 1) - (norm(b.name).startsWith(q) ? 0 : 1))
           .slice(0, 6)
           .forEach((g) => items.push(`<li><button type="button" class="row row-btn" data-act="pick" data-side="${side}" data-id="${esc(g.id)}"><span class="row-main"><span class="row-title">${esc(g.name)}</span></span><span class="row-tiles">${routesOfStop(g.stops[0], 24, 4)}</span></button></li>`));
+        for (const a of addr) {
+          items.push(a.kind === 'street'
+            ? `<li><button type="button" class="row row-btn" data-act="pickstreet" data-side="${side}" data-name="${esc(a.label)}"><span class="row-main"><span class="row-title">${icon('route', 18)} ${esc(a.label)}</span><span class="row-sub">${esc(t('planStreet'))}</span></span></button></li>`
+            : `<li><button type="button" class="row row-btn" data-act="pick" data-side="${side}" data-id="${esc(pointId(a.lat, a.lon, a.label))}"><span class="row-main"><span class="row-title">${icon('pin', 18)} ${esc(a.label)}</span><span class="row-sub">${esc(t('planAddress'))}</span></span></button></li>`);
+        }
         if (items.length === 0 || (items.length === 1 && items[0].includes('data-id="gps"'))) items.push(`<li class="note">${esc(t('noResults'))}</li>`);
       }
       $ul.innerHTML = items.join('');
@@ -880,6 +896,7 @@ function viewInfo() {
 <p>${esc(t('citeBuildings'))} <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">doi:10.5194/essd-17-6647-2025</a> · <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a></p>
 <p>${esc(t('citeOrtho'))} <a href="https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer" target="_blank" rel="noopener">SITR Regione Siciliana</a></p>
 <p>${esc(t('osmWalk'))} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, ODbL.</p>
+<p>${esc(t('citeAddresses'))} <a href="https://palermohub.opendatasicilia.it/anncus.html" target="_blank" rel="noopener">ANNCSU · PalermoHub</a></p>
 <p>${esc(t('approxInfo'))}</p>
 <p>${esc(t('notOfficial'))}</p>
 <h2 class="h3">${esc(t('licenses'))}</h2>
@@ -1035,6 +1052,10 @@ $app.addEventListener('click', async (e) => {
   else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
   else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); }
   else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
+  else if (act === 'pickstreet') {
+    const $i = document.getElementById(`pf-${b.dataset.side}`);
+    $i.value = `${b.dataset.name} `; $i.focus(); $i.dispatchEvent(new Event('input'));
+  }
   else if (act === 'swap') {
     [state.plan.from, state.plan.to] = [state.plan.to, state.plan.from];
     for (const sd of ['from', 'to']) { const $i = document.getElementById(`pf-${sd}`); $i.value = state.plan[sd] ? sideLabel(state.plan[sd]) : ''; }
