@@ -139,6 +139,8 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
   // Numeri civici (ANNCSU): compaiono solo da zoom alto, caricati in background per non rallentare l'apertura.
   const CIVICI_MINZ = 14;
+  const CIVICI_CAP = 1500; // etichette passate alla mappa sotto zoom 16 (il triplo da lì in su)
+  let updateCivici = () => {};
   let civiciOn = true;
   const civList = []; // [lat, lon, "Via 12"] per dare un nome ai punti scelti sulla mappa
   // Scelta di partenza/arrivo: popup con due pulsanti, oppure (modo «Scegli sulla mappa») il punto toccato è subito quello richiesto.
@@ -168,7 +170,35 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     const features = [];
     for (const st of db.streets) for (const c of st.civ) civList.push([c.lat, c.lon, `${st.name} ${c.e ? `${c.n}/${c.e}` : c.n}`]);
     for (const st of db.streets) for (const c of st.civ) features.push({ type: 'Feature', properties: { n: c.e ? `${c.n}/${c.e}` : String(c.n), v: st.name }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } });
-    map.addSource('civici', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+    // Alla mappa va solo un sottoinsieme: i civici dell'inquadratura più vicini al centro, entro un tetto.
+    // Le etichette che si fanno la guerra sono il costo vero; così restano poche migliaia anche in centro.
+    const empty = { type: 'FeatureCollection', features: [] };
+    map.addSource('civici', { type: 'geojson', data: empty });
+    let last = null;
+    updateCivici = (force) => {
+      const src = map.getSource('civici');
+      if (!src || !civiciOn) return;
+      const z = map.getZoom();
+      if (z < CIVICI_MINZ) { if (last) { src.setData(empty); last = null; } return; }
+      const b = map.getBounds(), c = map.getCenter();
+      const w = b.getEast() - b.getWest();
+      if (!force && last && Math.abs(last.z - z) < 0.5 && Math.abs(last.lng - c.lng) < w * 0.2 && Math.abs(last.lat - c.lat) < (b.getNorth() - b.getSouth()) * 0.2) return;
+      const mx = w * 0.15, my = (b.getNorth() - b.getSouth()) * 0.15;
+      const k = Math.cos(c.lat * Math.PI / 180);
+      const inView = [];
+      for (const f of features) {
+        const [lo, la] = f.geometry.coordinates;
+        if (lo < b.getWest() - mx || lo > b.getEast() + mx || la < b.getSouth() - my || la > b.getNorth() + my) continue;
+        const dx = (lo - c.lng) * k, dy = la - c.lat;
+        inView.push([dx * dx + dy * dy, f]);
+      }
+      const cap = z < 16 ? CIVICI_CAP : CIVICI_CAP * 3;
+      if (inView.length > cap) inView.sort((a, b2) => a[0] - b2[0]).length = cap;
+      last = { z, lng: c.lng, lat: c.lat };
+      src.setData({ type: 'FeatureCollection', features: inView.map((x) => x[1]) });
+    };
+    map.on('moveend', () => updateCivici());
+    updateCivici(true);
     map.addLayer({ id: 'civici', type: 'symbol', source: 'civici', minzoom: CIVICI_MINZ, layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], CIVICI_MINZ, 8, 17, 10, 20, 14], 'text-allow-overlap': false, 'text-padding': 2 }, paint: { 'text-color': isDark() ? '#F2C14E' : '#8A1C3A', 'text-halo-color': isDark() ? '#0F1B3D' : '#FBF7EE', 'text-halo-width': 1.8 } }, 'stops');
     if (!civiciOn) map.setLayoutProperty('civici', 'visibility', 'none');
     // Tocco su un numero civico: popup con la via (le fermate, se toccate insieme, hanno la precedenza).
@@ -336,6 +366,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     civiciOn = !civiciOn;
     paintCiv();
     if (map.getLayer('civici')) map.setLayoutProperty('civici', 'visibility', civiciOn ? 'visible' : 'none');
+    if (civiciOn) updateCivici(true);
   });
   paintCiv();
   const btnSat = document.createElement('button');
