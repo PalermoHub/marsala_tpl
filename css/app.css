@@ -402,6 +402,8 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .step::before { content: ""; position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: var(--cobalt-hi); opacity: 0.4; }
 .step:first-child::before { top: 20px; }
 .step-end::before { bottom: calc(100% - 20px); }
+/* Tratto a piedi (fino alla fermata, cambio, fino alla meta): linea tratteggiata, come sulla mappa. */
+.step-walk::before, .step-walk + .step-end::before { background: repeating-linear-gradient(to bottom, var(--cobalt-hi) 0 4px, transparent 4px 8px); opacity: 0.75; }
 .step-dot { justify-self: center; align-self: start; margin-top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--glaze); border: 3px solid var(--cobalt-hi); position: relative; z-index: 1; }
 .step-ico { position: relative; z-index: 1; justify-self: center; align-self: start; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--glaze); border: 2px solid var(--cobalt-hi); color: var(--ink-2); }
 .step-tile { position: relative; z-index: 1; }
@@ -627,3 +629,31 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .pf-time { flex-wrap: wrap; gap: 8px; }
 .pf-time .seg button { padding-inline: 10px; }
 .day-in { min-width: 0; width: 9.6em; padding: 0 6px; font-size: 14px; }
+
+.coin-list { display: grid; gap: 10px; margin: 0 0 16px; }
+.coin-card { padding: 12px 14px; border: 2px solid var(--line); border-radius: var(--r); }
+.coin-card h3 { margin: 0 0 4px; font-size: 18px; }
+.coin-card p { margin: 0 0 6px; }
+.tbl-wrap { overflow-x: auto; margin: 0 0 12px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 16px; }
+.tbl th, .tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tbl thead th { font-size: 14px; color: var(--muted, inherit); border-bottom: 2px solid var(--line); }
+.tbl tbody th { font-weight: 700; }
+.coin-stop { font-weight: 700; color: var(--cobalt, inherit); text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+.coin-line { display: inline-block; vertical-align: middle; margin: 0 2px; border-radius: 8px; line-height: 0; }
+.coin-line .tile { display: block; }
+.coin-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.coin-head h3 { margin: 0; }
+.coin-walk { display: inline-flex; align-items: center; gap: 10px; }
+.coin-walk b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.nw { white-space: nowrap; }
+.tbl { font-size: 15px; }
+.tbl th, .tbl td { padding: 8px 6px; }
+.tbl .coin-line { margin: 0 1px; }
+.coin-line-note { display: flex; align-items: center; gap: 10px; }
+/* Scorciatoia in evidenza nella home: le coincidenze con treni, pullman e aeroporti */
+.coin-promo { display: grid; margin-inline: var(--gut); grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; margin-top: 18px; padding: 14px 16px; border-radius: var(--r); background: var(--cobalt); color: var(--on-cobalt); text-decoration: none; }
+.coin-promo-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: var(--ocra); color: var(--on-ocra); }
+.coin-promo-title { display: block; font-size: 19px; font-weight: 700; line-height: 1.2; }
+.coin-promo-sub { display: block; font-size: 15px; opacity: 0.9; }
+.coin-promo .chev { color: inherit; }

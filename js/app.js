@@ -1,4 +1,5 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
+import { LINEA_ID, STAZIONI, AL_TRENO, PULLMAN, A_PULLMAN, DA_PULLMAN, LINK, FONTE } from './coincidenze.js';
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM } from './schedule.js';
 import { loadWalk, walkFrom, walkDist, walkBetween, isExactWalk } from './walk.js';
 import { routeGeometry, streetNames } from './route.js';
@@ -97,6 +98,8 @@ const ICON = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.500v2.500M12 19v2.500M2.500 12H5M19 12h2.500M5.300 5.300l1.800 1.800M16.900 16.900l1.800 1.800M5.300 18.700l1.800-1.800M16.900 7.100l1.800-1.800"/>',
   moon: '<path d="M20 14.500A8 8 0 019.500 4a8 8 0 1010.500 10.500z"/>',
   contrast: '<circle cx="12" cy="12" r="8.500"/><path d="M12 3.500v17a8.500 8.500 0 000-17z" fill="currentColor"/>',
+  train: '<rect x="5" y="3.500" width="14" height="13" rx="3"/><path d="M5 11h14M9 20l-2 1.500M15 20l2 1.500M8.500 14h.01M15.500 14h.01"/>',
+  plane: '<path d="M21 15.500l-8.500-4.500V5.500a1.500 1.500 0 00-3 0V11L1 15.500V17l8.500-2v3.500L7.500 20v1.500l4.500-1 4.500 1V20l-2-1.500V15l6.500 2z"/>',
   swap: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/>',
 };
 const icon = (name, size = 22, filled = false) =>
@@ -283,6 +286,7 @@ const walkBadge = (m, { exact = true, strong = false, near = false, air = false 
  * Home: testata (cosa è l'app), poi i due gesti (posizione / cerca), poi «Vicino a te» che dice dove sei
  * e quali linee passano. Tre stati: posizione non nota, posizione recente, utente in movimento (sul bus).
  */
+const coinPromo = () => `<a class="coin-promo" href="#/coincidenze"><span class="coin-promo-ico" aria-hidden="true">${icon('train', 28)}</span><span class="row-main"><span class="coin-promo-title">${esc(t('coinTitle'))}</span><span class="coin-promo-sub">${esc(t('coinSub'))}</span></span><span class="chev">${icon('chevron', 22)}</span></a>`;
 function viewHomeScreen() {
   const now = romeNow();
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
@@ -342,6 +346,7 @@ function viewHomeScreen() {
   <a class="btn btn-quiet" href="#/cerca">${icon('search', 20)}<span>${esc(t('searchStopShort'))}</span></a>
 </div>
 ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}
+${coinPromo()}
 <section class="block near-home" aria-live="polite"><div class="near-head"><h2>${esc(t('nearYou'))}</h2><span class="gps-state gps-${status[0]}"><i aria-hidden="true"></i>${esc(status[1])}</span></div>${body}</section>
 ${favBlock}${communityNote()}`;
 }
@@ -380,6 +385,7 @@ ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}${nearBlock}$
   <div class="actions actions-hero">${geoBtn}${searchLink}</div>
   ${geoMsg ? `<p class="note note-hero" role="status">${esc(geoMsg)}</p>` : ''}
 </section>
+${home ? coinPromo() : ''}
 ${nearBlock}
 <section class="block"><h2>${esc(t('mainStops'))}</h2><ul class="plain">${mainStops().map((i) => stopRow(i)).join('')}</ul></section>
 ${home ? `<section class="block"><ul class="plain">${quick('#/percorso', 'route', 'homePlan', 'homePlanSub')}${quick('#/mappa', 'map', 'homeMap', 'homeMapSub')}</ul></section>
@@ -1125,6 +1131,47 @@ function bindAvvisi() {
   });
 }
 
+// Coincidenze con treni, pullman extraurbani e aeroporti (dati del Comune, in js/coincidenze.js).
+let coinCur = 0;
+function viewCoincidenze() {
+  const en = getLang() === 'en';
+  const L = (a) => esc(a[en ? 1 : 0]);
+  // Ogni numero di linea presente nel feed diventa un link alla pagina della linea.
+  const chip = (n) => {
+    const r = state.data.routes.find((x) => x.id === LINEA_ID[n]);
+    return r ? `<a class="coin-line" href="#/linea/${esc(r.id)}" aria-label="${esc(t('line'))} ${n}">${tileSvg(r, 28)}</a>` : n;
+  };
+  const lineHtml = (str) => str.split(' / ').map((seg) => { const [ls, ...rest] = seg.split(' · '); return `<span class="nw">${[ls.replace(/\d+/g, chip), ...rest.map((x) => `<b>${esc(x)}</b>`)].join(' · ')}</span>`; }).join(' / ');
+  // Colonne AST/Salemi: il nome dell'azienda sta già nell'intestazione, gli orari vanno in grassetto.
+  const timesHtml = (c) => esc(c.replace(/^(AST|Salemi) /, '')).replace(/\d{1,2}\.\d{2}/g, '<b class="nw">$&</b>');
+  const plain = (c) => esc(c);
+  const flat = (rows) => rows.flatMap(([h, buses]) => buses.map(([l, p], k) => [k ? '' : h, l, p]));
+  const tbl = (head, rows, lineCols = [], boldCols = [], timeCols = []) => {
+    const cell = (c, i) => (lineCols.includes(i) ? lineHtml(c) : timeCols.includes(i) ? timesHtml(c) : boldCols.includes(i) ? `<b>${plain(c)}</b>` : plain(c));
+    return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${head.map((h) => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => (i ? `<td>${cell(c, i)}</td>` : `<th scope="row">${cell(c, i)}</th>`)).join('')}</tr>`).join('')}</tbody></table></div>`;
+  };
+  const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
+  const stz = STAZIONI.map((s) => `<li class="coin-card"><div class="coin-head"><h3>${esc(s.n)}</h3>${s.m ? `<span class="coin-walk"><span class="wbadge wbadge-strong">${icon('walk', 14)}<span>${esc(t('meters', s.m))}</span></span><b>${esc(t('coinMinShort', Math.max(1, Math.round(s.m / 1.2 / 60))))}</b></span>` : ''}</div><p class="muted">${esc(t('coinLines'))} ${lineHtml(s.lines)}</p><p>${L(s.d)}</p>${s.stop && stopById(s.stop) >= 0 ? `<p><a class="coin-stop" href="#/stop/${esc(s.stop)}">${icon('pin', 18)} ${esc(stopTitle(stopById(s.stop)).name)}</a></p>` : ''}</li>`).join('');
+  const treni = `<h2 class="gd-h">${esc(t('coinStations'))}</h2><p>${esc(t('coinStationsLead'))}</p><ul class="plain coin-list">${stz}</ul>
+<h2 class="h3">${esc(t('coinToTrain'))}</h2><p>${esc(t('coinToTrainLead'))}</p>
+${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap(([h, to, bus]) => bus.map(([l, p], k) => [k ? '' : `${h} ${t('coinToward')} ${to}`, l, p])), [1], [2])}
+<p class="note">${esc(t('coinNoRfiTable'))}</p>
+<div class="info-links">${LINK.slice(0, 2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
+  const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${esc(t('coinOperatorsLead'))}</p><ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
+<h2 class="h3">${esc(t('coinToBus'))}</h2><p>${esc(t('coinToBusLead'))}</p>${tbl([t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')], flat(A_PULLMAN), [1], [2], [0])}
+<h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${esc(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
+<div class="info-links">${LINK.slice(2, 6).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
+  const wk = (m) => t('coinMinWalk', Math.round(m / 1.2 / 60));
+  const air = `<h2 class="gd-h">${esc(t('coinDistTime'))}</h2>${tbl([t('coinFromTo'), t('coinDist'), t('coinTime')], [[t('coinStationToAirport'), '1,6 km', wk(1600)], [t('coinBusToFlorio'), '–', t('coinMinBus', 30)], [t('coinBusToPalermo'), '–', t('coinHours', 2)]], [], [1, 2])}<p class="note">${esc(t('coinDistNote'))}</p><h2 class="gd-h">${esc(t('coinFlorio'))}</h2><p>${esc(t('coinFlorioText'))}</p><p class="coin-line-note">${chip('4')} <span>${esc(t('coinLine4Birgi'))}</span></p><h2 class="gd-h">${esc(t('coinPalermo'))}</h2><p>${esc(t('coinPalermoText'))}</p>
+<h2 class="h3">${esc(t('coinLinks'))}</h2><div class="info-links">${LINK.slice(2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
+  const secs = [['train', 'train', t('coinTabTrain'), treni], ['bus', 'bus', t('coinTabBus'), pull], ['air', 'plane', t('coinTabAir'), air]];
+  const tab = ([id, ic, ti], i) => `<button type="button" role="tab" id="ct-${id}" data-gi="${i}" aria-controls="cp-${id}" aria-selected="${i === coinCur}" tabindex="${i === coinCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(ti)}</span></button>`;
+  const page = ([id, , , body]) => `<section class="gd-page" role="tabpanel" id="cp-${id}" aria-labelledby="ct-${id}"><div class="guide-body">${body}</div></section>`;
+  return `${banners(romeNow())}${pageHead(t('coinTitle'), { lead: t('coinLead'), back: ['#/', t('tabHome')] })}<div class="gd-tabs" role="tablist">${secs.map(tab).join('')}</div><div class="gd-pages">${secs.map(page).join('')}</div>
+<p class="note"><a href="${esc(FONTE)}" target="_blank" rel="noopener">${esc(t('coinSource'))}</a></p>`;
+}
+function bindCoincidenze() { bindPager(coinCur, (i) => { coinCur = i; }); }
+
 let infoCur = 0, privCur = 0;
 let guideCur = 0;
 // Guida: una pagina per sezione, affiancate in orizzontale con snap; la barra di linguette segue lo scorrimento.
@@ -1259,6 +1306,7 @@ const routes = [
   }, 'lines', (m) => { bindLine(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
+  [/^\/coincidenze$/, () => viewCoincidenze(), 'home', bindCoincidenze],
   [/^\/altro$/, () => viewMore(), 'more'],
   [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],
   [/^\/guida$/, () => viewGuida(), 'more', bindGuida],
