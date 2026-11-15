@@ -1,4 +1,5 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
+import { loadVoli, VOLI_SOURCE } from './voli.js';
 import { LINEA_ID, STAZIONI, AL_TRENO, PULLMAN, A_PULLMAN, DA_PULLMAN, LINK, FONTE } from './coincidenze.js';
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM } from './schedule.js';
 import { loadWalk, walkFrom, walkDist, walkBetween, isExactWalk } from './walk.js';
@@ -1135,6 +1136,39 @@ function bindAvvisi() {
   });
 }
 
+// Voli di Trapani-Birgi in tempo reale: arrivi e partenze di oggi, aggiornati ogni minuto.
+function viewVoli() {
+  return `${banners(romeNow())}${pageHead(t('flightsTitle'), { lead: t('flightsLead'), back: ['#/coincidenze', t('coinTitle')] })}<section class="block">
+<div class="gd-tabs" role="tablist">${['arr', 'dep'].map((k, i) => `<button type="button" role="tab" data-gi="${i}" id="vt-${k}" aria-controls="vp-${k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><span>${esc(t(k === 'arr' ? 'flightsArr' : 'flightsDep'))}</span></button>`).join('')}</div>
+<div class="gd-pages" aria-live="polite">${['arr', 'dep'].map((k) => `<section class="gd-page" role="tabpanel" id="vp-${k}" aria-labelledby="vt-${k}"><p class="note">${esc(t('flightsLoading'))}</p></section>`).join('')}</div>
+<p class="note" id="voli-upd"></p><p class="note"><a href="${esc(VOLI_SOURCE)}" target="_blank" rel="noopener">${esc(t('flightsSource'))}</a></p></section>`;
+}
+
+function bindVoli() {
+  let destroyed = false, timer, abort;
+  const row = (f) => {
+    const late = f.actual && f.scheduled && f.actual > f.scheduled;
+    const name = getLang() === 'en' ? f.destinationEN : f.destinationIT, st = getLang() === 'en' ? f.statusEN : f.statusIT;
+    return `<li class="row"><span class="row-main"><span class="row-title">${esc(f.scheduled)}${f.actual && f.actual !== f.scheduled ? ` <span class="${late ? 'flight-late' : 'flight-early'}">→ ${esc(f.actual)}</span>` : ''} · ${esc(name)}</span><span class="row-sub">${esc(f.flightCode)} · ${esc(f.airline)}${f.terminal ? ` · ${esc(t('flightsTerm'))} ${esc(f.terminal)}` : ''}</span></span><span class="flight-st flight-${esc(f.statusClass || 'info')}">${esc(st)}</span></li>`;
+  };
+  const tick = async () => {
+    abort = new AbortController();
+    try {
+      const { arrivi: arr, partenze: dep } = await loadVoli(abort.signal);
+      if (destroyed) return;
+      for (const [k, list] of [['arr', arr], ['dep', dep]]) document.getElementById(`vp-${k}`).innerHTML = list.length ? `<ul class="plain flights">${list.map(row).join('')}</ul>` : `<p class="note">${esc(t('flightsNone'))}</p>`;
+      document.getElementById('voli-upd').textContent = t('flightsUpdated', new Date().toLocaleTimeString(getLang() === 'en' ? 'en-GB' : 'it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }));
+    } catch {
+      if (destroyed || abort.signal.aborted) return;
+      for (const k of ['arr', 'dep']) { const el = document.getElementById(`vp-${k}`); if (el && !el.querySelector('.flights')) el.innerHTML = `<p class="note">${esc(t('flightsErr'))}</p>`; }
+    }
+    if (!destroyed) timer = setTimeout(tick, 60000);
+  };
+  bindPager(0, () => {});
+  tick();
+  state.cleanup = () => { destroyed = true; clearTimeout(timer); abort?.abort(); };
+}
+
 // Coincidenze con treni, pullman extraurbani e aeroporti (dati del Comune, in js/coincidenze.js).
 let coinCur = 0;
 function viewCoincidenze() {
@@ -1174,7 +1208,7 @@ ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap
   const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
   const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
   const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${rich(t('coinAirLead'))}</p><ul class="plain coin-list">
-${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p>${mapLink('florio', true)}</p>`)}
+${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p>${mapLink('florio', true)} · <a href="#/voli">${esc(t('flightsOpen'))}</a></p>`)}
 ${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'), `<p>${mapLink('palermo', true)}</p>`)}</ul>
 <h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${tbl(toHead, rowsTo('Palermo · Salemi'), [1], [2], [0])}
@@ -1323,6 +1357,7 @@ const routes = [
   [/^\/mappa\/luogo\/(florio|palermo)$/, () => viewMap(null), 'map', (m) => bindMap(null, null, m[1])],
   [/^\/mappa\/fermata\/(.+)$/, () => viewMap(null), 'map', (m) => bindMap(null, decodeURIComponent(m[1]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
+  [/^\/voli$/, () => viewVoli(), 'home', bindVoli],
   [/^\/coincidenze$/, () => viewCoincidenze(), 'home', bindCoincidenze],
   [/^\/altro$/, () => viewMore(), 'more'],
   [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],

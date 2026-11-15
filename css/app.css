@@ -661,3 +661,13 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .hit { display: flex; align-items: center; gap: 4px; }
 .hit .row { flex: 1; min-width: 0; }
 .hit-map { flex: none; }
+
+/* ---------- voli (Trapani-Birgi) ---------- */
+.flights .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.flight-st { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--ink, #14213D) 10%, transparent); }
+.flight-success { background: color-mix(in srgb, #2E7D4F 18%, transparent); color: #1F5C38; }
+.flight-warning { background: color-mix(in srgb, #D98E04 22%, transparent); color: #7A4F00; }
+.flight-danger { background: color-mix(in srgb, #B3261E 16%, transparent); color: #8C1D18; }
+.flight-late { color: #B5532F; font-weight: 700; }
+.flight-early { color: #1F5C38; font-weight: 700; }
+@media (prefers-color-scheme: dark) { .flight-success { color: #8FD3A8; } .flight-warning { color: #F2C66B; } .flight-danger { color: #F4A6A0; } .flight-late { color: #F0A584; } .flight-early { color: #8FD3A8; } }

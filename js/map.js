@@ -587,13 +587,18 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
       if (!map.hasImage(`poi-${kind}`)) map.addImage(`poi-${kind}`, img, { pixelRatio: 2 });
     };
     const fazio = data.stops.find((x) => x.id === '20984');
-    const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130] }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] }].filter(Boolean);
+    const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130], go: '#/voli' }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] }].filter(Boolean);
     try { await Promise.all([badge('bus'), badge('plane')]); } catch { /* senza icone restano le etichette */ }
     if (!destroyed) {
       map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n, k: q.k }, geometry: { type: 'Point', coordinates: q.c } })) } });
       map.addLayer({ id: 'poi', type: 'symbol', source: 'poi', layout: { 'icon-image': ['concat', 'poi-', ['get', 'k']], 'icon-size': 0.8, 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.7], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });
     }
   }
+
+  // Aeroporto Florio: il tocco apre arrivi e partenze in tempo reale.
+  map.on('click', 'poi', (e) => { const g = e.features?.[0]?.properties?.go; if (g) location.hash = g; });
+  map.on('mouseenter', 'poi', (e) => { if (e.features?.[0]?.properties?.go) map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'poi', () => { map.getCanvas().style.cursor = ''; });
 
   // Fermata cercata: puntatore con alone e vista centrata su di lei.
   if (pin) {
