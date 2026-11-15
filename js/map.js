@@ -3,6 +3,7 @@ import { lineStyle } from './tiles.js';
 import { fetchVehicles } from './rt.js';
 import { buildRouteLines, inferRoute } from './match.js';
 import { formatClock, romeNow } from './schedule.js';
+import { loadIndirizzi } from './indirizzi.js';
 
 const ML_VERSION = '4.7.1';
 const ML_JS = `https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VERSION}/dist/maplibre-gl.js`;
@@ -80,7 +81,7 @@ const isDark = () => {
   return th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
+export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route = null }) {
   const maplibregl = await loadMapLibre();
   const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, maxBounds: BBOX, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">Zhu et al. 2025</a>, <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
   // Attribuzione chiusa all'avvio: si apre solo toccando la «i».
@@ -107,6 +108,8 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   if (dim) data.trips.forEach((trip) => { if (trip.r === focus) trip.s.forEach((i) => focusStops.add(i)); });
   const stopFeatures = data.stops.map((s, i) => ({ type: 'Feature', properties: { id: s.id, name: s.name, i }, geometry: { type: 'Point', coordinates: [s.lon, s.lat] } })).filter((f) => !dim || focusStops.has(f.properties.i));
   if (dim) lineFeatures.splice(0, lineFeatures.length, ...lineFeatures.filter((f) => f.properties.r === focus));
+  // Con un percorso pianificato la mappa mostra solo quello: né rete delle linee, né fermate, né bus.
+  if (route) { lineFeatures.length = 0; stopFeatures.length = 0; }
 
   const empty = { type: 'FeatureCollection', features: [] };
   await new Promise((r) => (map.loaded() ? r() : map.once('load', r)));
@@ -132,6 +135,39 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   // Il numero di linea sul percorso: l'identità non dipende solo dal colore.
   map.addLayer({ id: 'line-labels', type: 'symbol', source: 'lines', minzoom: 10, layout: { 'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-rotation-alignment': 'viewport', 'text-keep-upright': true, 'text-padding': 8 }, paint: { 'text-color': '#14213D', 'text-halo-color': '#FBF7EE', 'text-halo-width': 2.5, 'text-opacity': dim ? ['case', ['==', ['get', 'r'], focus], 1, 0] : 1 } });
   map.addLayer({ id: 'stops', type: 'circle', source: 'stops', minzoom: dim ? 11 : 13.5, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], dim ? 11 : 13.5, 3, 17, 7], 'circle-color': '#FBF7EE', 'circle-stroke-color': '#1B3A94', 'circle-stroke-width': 2 } });
+  // Numeri civici (ANNCSU): compaiono solo da zoom alto, caricati in background per non rallentare l'apertura.
+  const CIVICI_MINZ = 17;
+  loadIndirizzi().then((db) => {
+    if (!db || destroyedEarly) return;
+    const features = [];
+    for (const st of db.streets) for (const c of st.civ) features.push({ type: 'Feature', properties: { n: c.e ? `${c.n}/${c.e}` : String(c.n) }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } });
+    map.addSource('civici', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+    map.addLayer({ id: 'civici', type: 'symbol', source: 'civici', minzoom: CIVICI_MINZ, layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], CIVICI_MINZ, 10, 20, 14], 'text-allow-overlap': false, 'text-padding': 2 }, paint: { 'text-color': isDark() ? '#F2C14E' : '#8A1C3A', 'text-halo-color': isDark() ? '#0F1B3D' : '#FBF7EE', 'text-halo-width': 1.8 } }, 'stops');
+  }).catch(() => { /* senza civici la mappa funziona lo stesso */ });
+  let destroyedEarly = false;
+
+  // Percorso pianificato: tratti a piedi tratteggiati, tratti in bus col colore della linea, partenza, arrivo e fermate di salita/discesa.
+  if (route) {
+    const ll = (pts) => pts.map(([la, lo]) => [lo, la]);
+    const walk = route.legs.filter((l) => l.kind === 'walk' && l.pts.length > 1).map((l) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: ll(l.pts) } }));
+    const bus = route.legs.filter((l) => l.kind === 'bus').map((l) => ({ type: 'Feature', properties: { color: lineStyle(data.routes[data.trips[l.trip].r]).glaze.bg, label: lineStyle(data.routes[data.trips[l.trip].r]).label }, geometry: { type: 'LineString', coordinates: ll(l.pts) } }));
+    const pts = [
+      ...(route.from ? [{ type: 'Feature', properties: { k: 'A', mark: 'A' }, geometry: { type: 'Point', coordinates: [route.from.lon, route.from.lat] } }] : []),
+      ...(route.to ? [{ type: 'Feature', properties: { k: 'B', mark: 'B' }, geometry: { type: 'Point', coordinates: [route.to.lon, route.to.lat] } }] : []),
+      ...route.stops.map((m) => ({ type: 'Feature', properties: { k: m.kind, mark: '' }, geometry: { type: 'Point', coordinates: [m.lon, m.lat] } })),
+    ];
+    map.addSource('route-walk', { type: 'geojson', data: { type: 'FeatureCollection', features: walk } });
+    map.addSource('route-bus', { type: 'geojson', data: { type: 'FeatureCollection', features: bus } });
+    map.addSource('route-pts', { type: 'geojson', data: { type: 'FeatureCollection', features: pts } });
+    const casing = isDark() ? '#0F1B3D' : '#FFFFFF';
+    map.addLayer({ id: 'route-bus-casing', type: 'line', source: 'route-bus', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': casing, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 7, 17, 14] } });
+    map.addLayer({ id: 'route-bus', type: 'line', source: 'route-bus', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 17, 9] } });
+    map.addLayer({ id: 'route-walk-casing', type: 'line', source: 'route-walk', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': casing, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 6, 17, 10] } });
+    map.addLayer({ id: 'route-walk', type: 'line', source: 'route-walk', layout: { 'line-join': 'round' }, paint: { 'line-color': isDark() ? '#F2C14E' : '#14213D', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 3, 17, 5], 'line-dasharray': [1.2, 1.6] } });
+    map.addLayer({ id: 'route-pts', type: 'circle', source: 'route-pts', paint: { 'circle-radius': ['match', ['get', 'k'], ['A', 'B'], 11, 6], 'circle-color': ['match', ['get', 'k'], 'A', '#1B7F4B', 'B', '#B3261E', '#FBF7EE'], 'circle-stroke-color': ['match', ['get', 'k'], ['A', 'B'], '#FFFFFF', '#1B3A94'], 'circle-stroke-width': 2.5 } });
+    map.addLayer({ id: 'route-pts-label', type: 'symbol', source: 'route-pts', filter: ['in', ['get', 'k'], ['literal', ['A', 'B']]], layout: { 'text-field': ['get', 'mark'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-allow-overlap': true }, paint: { 'text-color': '#FFFFFF' } });
+  }
+
   // Mezzi: sagome allungate orientate come la marcia (muso scuro davanti), colorate come la linea stimata.
   // Mezzi: poligoni piatti in 2D, parallelepipedi (fill-extrusion) in 3D. Stessi id: i gestori di click/tooltip restano validi.
   const IDLE_COLOR = '#8A93A6';
@@ -311,11 +347,12 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
 
   // Inquadra la linea scelta, oppure tutta la rete.
   const b = new maplibregl.LngLatBounds();
-  lineFeatures.forEach((f) => f.geometry.coordinates.forEach((c) => b.extend(c)));
-  const homeFit = { padding: { top: 72, right: 32, bottom: 40, left: 32 }, maxZoom: 15 };
+  if (route) { for (const l of route.legs) for (const [la, lo] of l.pts) b.extend([lo, la]); for (const p of [route.from, route.to]) if (p) b.extend([p.lon, p.lat]); }
+  else lineFeatures.forEach((f) => f.geometry.coordinates.forEach((c) => b.extend(c)));
+  const homeFit = { padding: { top: 72, right: 32, bottom: 40, left: 32 }, maxZoom: route ? 17 : 15 };
   const goHome = (duration) => { if (!b.isEmpty()) map.fitBounds(b, { ...homeFit, duration, pitch: is3d ? 60 : 0, bearing: 0 }); };
   const shared = readHash();
-  if (shared) map.jumpTo(shared); else goHome(0);
+  if (shared && !route) map.jumpTo(shared); else goHome(0);
   initControls();
   const syncHash = () => writeHash(map);
   map.on('moveend', syncHash);
@@ -407,7 +444,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   let timer = null, abort = null, destroyed = false;
   async function poll() {
     if (destroyed) return;
-    if (!document.hidden) {
+    if (!document.hidden && !route) {
       abort = new AbortController();
       try {
         const { active, idle } = await fetchVehicles(abort.signal);
@@ -424,5 +461,5 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t }) {
   }
   poll();
 
-  return { destroy() { destroyed = true; ctrls.remove(); zoomBox.remove(); clearHash(); document.removeEventListener('fullscreenchange', onFs); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
+  return { destroy() { destroyed = true; destroyedEarly = true; ctrls.remove(); zoomBox.remove(); clearHash(); document.removeEventListener('fullscreenchange', onFs); clearTimeout(timer); cancelAnimationFrame(raf); abort?.abort(); map.remove(); } };
 }

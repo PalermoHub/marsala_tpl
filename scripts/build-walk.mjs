@@ -44,12 +44,19 @@ const ways = (arg === '--fetch' ? await fetchWays() : JSON.parse(fs.readFileSync
 // 1. Nodi e archi (consecutivi lungo ogni via).
 const idx = new Map(); const LA = [], LO = [];
 const nodeOf = (id, g) => { let k = idx.get(id); if (k === undefined) { k = LA.length; idx.set(id, k); LA.push(g.lat); LO.push(g.lon); } return k; };
-const edges = new Set();
+const edges = new Map(); // chiave arco -> indice del nome della via (0 = senza nome)
+const names = ['']; const nameIdx = new Map([['', 0]]);
 for (const w of ways) {
+  const nm = (w.tags?.name ?? '').trim();
+  if (!nameIdx.has(nm)) { nameIdx.set(nm, names.length); names.push(nm); }
   const ns = w.nodes.map((id, i) => nodeOf(id, w.geometry[i]));
-  for (let i = 0; i < ns.length - 1; i++) if (ns[i] !== ns[i + 1]) edges.add(ns[i] < ns[i + 1] ? ns[i] * 4194304 + ns[i + 1] : ns[i + 1] * 4194304 + ns[i]);
+  for (let i = 0; i < ns.length - 1; i++) {
+    if (ns[i] === ns[i + 1]) continue;
+    const k = ns[i] < ns[i + 1] ? ns[i] * 4194304 + ns[i + 1] : ns[i + 1] * 4194304 + ns[i];
+    if (!edges.get(k)) edges.set(k, nameIdx.get(nm)); // il primo nome non vuoto resta
+  }
 }
-const E = [...edges].map((k) => [Math.floor(k / 4194304), k % 4194304]);
+const E = [...edges].map(([k, n]) => [Math.floor(k / 4194304), k % 4194304, n]);
 
 // 2. Si tengono i nodi vicini a una fermata (distanza in linea d'aria), poi la componente connessa più grande.
 const kx = (lat) => 111320 * Math.cos((lat * Math.PI) / 180);
@@ -77,9 +84,15 @@ const renum = new Map(used.map((o, i) => [o, i]));
 const q5 = (v) => Math.round(v * 1e5);
 const la = used.map((o) => q5(LA[o])), lo = used.map((o) => q5(LO[o]));
 const dLa = la.map((v, i) => (i ? v - la[i - 1] : v)), dLo = lo.map((v, i) => (i ? v - lo[i - 1] : v));
-const e = E2.map(([a, b]) => [renum.get(a), renum.get(b)]).sort((x, y) => x[0] - y[0] || x[1] - y[1]).flatMap(([a, b], i, all) => [i ? a - all[i - 1][0] : a, b]);
+const sorted = E2.map(([a, b, n]) => [renum.get(a), renum.get(b), n]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+const e = sorted.flatMap(([a, b], i, all) => [i ? a - all[i - 1][0] : a, b]);
+// Nomi delle vie: solo quelli usati, ordinati per frequenza (indici piccoli = JSON più corto); en[i] = nome dell'arco i, 0 = senza nome.
+const freq = new Map(); for (const [, , n] of sorted) if (n) freq.set(n, (freq.get(n) ?? 0) + 1);
+const used2 = [...freq.entries()].sort((x, y) => y[1] - x[1]).map(([n]) => n);
+const remap = new Map(used2.map((n, i) => [n, i + 1]));
+const en = sorted.map(([, , n]) => (n ? remap.get(n) : 0));
 
-const out = { v: 1, src: '© OpenStreetMap contributors, ODbL', built: new Date().toISOString().slice(0, 10), la: dLa, lo: dLo, e };
+const out = { v: 2, src: '© OpenStreetMap contributors, ODbL', built: new Date().toISOString().slice(0, 10), la: dLa, lo: dLo, e, nm: used2.map((n) => names[n]), en };
 const path = new URL('dati/walk.json', ROOT);
 fs.writeFileSync(path, JSON.stringify(out));
 const bytes = fs.statSync(path).size;

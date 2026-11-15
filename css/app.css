@@ -285,6 +285,16 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 #map { position: absolute; inset: 0; }
 .map-bar { position: absolute; left: 12px; right: 64px; top: calc(env(safe-area-inset-top) + 12px); }
 .chip { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 9px 14px; border-radius: var(--r); background: var(--glaze); color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.25; box-shadow: var(--shadow-float); }
+.map-bar .chip + .chip { margin-top: 8px; }
+.chip-route { max-width: 100%; }
+.chip-route span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-route button { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -8px -6px 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.chip-route button:focus-visible { outline: 3px solid var(--focus, currentColor); outline-offset: 1px; }
+.tile-walk { display: inline-grid; place-items: center; min-height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glaze); border: 2px solid var(--ink-2); color: var(--ink); font-size: 14px; font-weight: 700; }
+.swap-row:has(.pf-reset) { display: flex; justify-content: space-between; align-items: center; }
+.pf-reset { min-height: 44px; padding: 0 14px; gap: 6px; font-size: 15px; }
+.pf-mode { margin-bottom: 16px; }
+.opt-map { margin-top: 12px; }
 .chip.live::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--rame); box-shadow: 0 0 0 3px var(--glaze), 0 0 0 5px var(--rame); margin-right: 4px; }
 /* Comandi mappa: colonna di pulsanti a destra, sotto il cursore di zoom. */
 .map-ctrls { position: absolute; right: 10px; top: calc(env(safe-area-inset-top) + 12px); z-index: 2; display: flex; flex-direction: column; gap: 8px; }

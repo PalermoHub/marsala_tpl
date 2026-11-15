@@ -317,3 +317,78 @@ test('indirizzi: dati integri (vie, civici, nessun punto fuori area, nessuna via
     for (const c of s.civ) assert.ok(c.lat > 37.6 && c.lat < 37.95 && c.lon > 12.3 && c.lon < 12.7, `${s.name} ${c.n}`);
   }
 });
+
+// ---------- percorso a piedi sulla rete, tratto bus sulle shape, geometria della soluzione ----------
+import { walkPath } from '../js/walk.js';
+import { sliceShape, routeGeometry, streetNames } from '../js/route.js';
+const walkG = buildGraph(JSON.parse(readFileSync(new URL('../dati/walk.json', import.meta.url), 'utf8')));
+const shapesAll = JSON.parse(readFileSync(new URL('../dati/shapes.json', import.meta.url), 'utf8'));
+
+test('tracciato a piedi: lungo quanto la distanza calcolata, parte dal punto e arriva alla fermata, con i nomi delle vie', () => {
+  const from = { lat: 37.79614, lon: 12.43571 }; // Via Mazzini 4
+  const wm = walkFrom(walkG, data.stops, from.lat, from.lon);
+  const near = [...wm.entries()].sort((a, b) => a[1] - b[1]).slice(0, 8);
+  assert.ok(near.length > 3);
+  for (const [i, m] of near) {
+    const p = walkPath(wm, i);
+    assert.deepEqual(p.pts[0], [from.lat, from.lon]);
+    assert.deepEqual(p.pts[p.pts.length - 1], [data.stops[i].lat, data.stops[i].lon]);
+    let len = 0;
+    for (let k = 1; k < p.pts.length; k++) len += distanceM(p.pts[k - 1][0], p.pts[k - 1][1], p.pts[k][0], p.pts[k][1]);
+    assert.ok(Math.abs(len - m) < 12, `${data.stops[i].name}: tracciato ${len.toFixed(0)} m, distanza ${m.toFixed(0)} m`);
+  }
+  assert.ok(streetNames(walkPath(wm, near[1][0]).steps).includes('Via Giuseppe Mazzini'));
+});
+
+test('tracciato a piedi: fermata fuori rete -> linea retta, non esatta', () => {
+  const wm = walkFrom(walkG, data.stops, 37.79614, 12.43571);
+  const off = [...wm.offNet][0];
+  if (off != null) assert.equal(walkPath(wm, off).exact, false);
+  assert.equal(walkPath(null, 0), null);
+});
+
+test('shape: il tratto fra due fermate segue la linea nel verso di marcia', () => {
+  const trip = data.trips.find((t) => t.sh && shapesAll[t.sh] && t.s.length > 10);
+  const a = data.stops[trip.s[2]], b = data.stops[trip.s[8]];
+  const seg = sliceShape(shapesAll[trip.sh], a, b);
+  assert.deepEqual(seg[0], [a.lat, a.lon]);
+  assert.deepEqual(seg[seg.length - 1], [b.lat, b.lon]);
+  assert.ok(seg.length >= 3);
+  assert.deepEqual(sliceShape(null, a, b), [[a.lat, a.lon], [b.lat, b.lon]]); // senza shape: retta
+});
+
+test('geometria della soluzione: un elemento per tratto, piedi + bus + piedi', () => {
+  const A = { lat: 37.79614, lon: 12.43571 }, B = { lat: 37.7960, lon: 12.4357 };
+  const wa = walkFrom(walkG, data.stops, A.lat, A.lon);
+  const ends = walkable(data, A.lat, A.lon, 800, 4, walkDist(wa));
+  const opt = planJourney(data, index, { from: ends, to: [{ stop: data.trips[0].s[10], walk: 0 }], ymd: 20261116, secs: 36000 })[0];
+  assert.ok(opt);
+  const geo = routeGeometry(data, shapesAll, opt, { from: { at: A, wm: wa }, to: { at: null, wm: null } });
+  assert.equal(geo.legs.length, opt.legs.length);
+  geo.legs.forEach((l, k) => { assert.equal(l.kind, opt.legs[k].kind); assert.ok(l.pts.length >= 2); });
+  assert.equal(geo.stops.filter((s) => s.kind === 'board').length, opt.legs.filter((l) => l.kind === 'bus').length);
+});
+
+// ---------- alternativa tutta a piedi (punto-punto sulla rete) ----------
+import { walkBetween } from '../js/walk.js';
+
+test('a piedi punto-punto: Via Mazzini 4 -> Via Boeo 4, percorso sulla rete e coerente con la linea d’aria', () => {
+  const A = { lat: 37.79614, lon: 12.43571 }, B = { lat: 37.7943, lon: 12.4402 };
+  const w = walkBetween(walkG, A, B);
+  assert.ok(w, 'percorso trovato');
+  const crow = distanceM(A.lat, A.lon, B.lat, B.lon);
+  assert.ok(w.m >= crow - 1 && w.m <= crow * 2.5, `${w.m.toFixed(0)} m contro ${crow.toFixed(0)} m in linea d'aria`);
+  assert.equal(w.secs, Math.round(w.m / 1.2));
+  assert.deepEqual(w.pts[0], [A.lat, A.lon]);
+  assert.deepEqual(w.pts[w.pts.length - 1], [B.lat, B.lon]);
+  assert.ok(w.steps.length > 0);
+});
+
+test('a piedi punto-punto: la cache delle fermate dell’app resta intatta; punto fuori rete o troppo lontano -> null', () => {
+  walkFrom(walkG, data.stops, 37.79614, 12.43571); // popola la cache con le fermate
+  const ref = walkG.stopsRef;
+  walkBetween(walkG, { lat: 37.79614, lon: 12.43571 }, { lat: 37.7943, lon: 12.4402 });
+  assert.equal(walkG.stopsRef, ref);
+  assert.equal(walkBetween(walkG, { lat: 37.79614, lon: 12.43571 }, { lat: 38.5, lon: 13.5 }), null); // in mare/fuori area
+  assert.equal(walkBetween(walkG, { lat: 37.79614, lon: 12.43571 }, { lat: 37.7943, lon: 12.4402 }, 200), null); // oltre maxM
+});

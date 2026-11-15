@@ -1,6 +1,7 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
-import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox } from './schedule.js';
-import { loadWalk, walkFrom, walkDist, isExactWalk } from './walk.js';
+import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM } from './schedule.js';
+import { loadWalk, walkFrom, walkDist, walkBetween, isExactWalk } from './walk.js';
+import { routeGeometry, streetNames } from './route.js';
 import { tileSvg, motifField, lineStyle } from './tiles.js';
 import { fetchVehicles } from './rt.js';
 import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops } from './match.js';
@@ -13,7 +14,7 @@ import { getConsent, setConsent, applyConsent } from './consent.js';
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { plan: { from: null, to: null, time: null }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null };
+const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null };
 
 // ---------- utilità ----------
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -28,6 +29,7 @@ if (embedded) document.documentElement.classList.add('embed');
 const shareUrl = (hash = location.hash) => (embedded ? `${EMBED_URL}${hash}` : `${base()}${hash}`);
 
 const ICON = {
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
   star: '<path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
   share: '<path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/>',
   pin: '<path d="M12 21s6-5.6 6-10.5a6 6 0 10-12 0C6 15.400 12 21 12 21z"/><circle cx="12" cy="10.500" r="2.200"/>',
@@ -576,7 +578,7 @@ ${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
 function viewMap(rid) {
   return `${mapSide(rid)}<section class="map-wrap">
   <div id="map" role="application" aria-label="${esc(t('mapTitle'))}"></div>
-  <div class="map-bar"><p id="bus-count" class="chip" role="status">${esc(t('busesNote'))}</p></div>
+  <div class="map-bar"><p id="bus-count" class="chip" role="status"${state.mapRoute && !rid ? ' hidden' : ''}>${esc(t('busesNote'))}</p>${state.mapRoute && !rid ? `<p class="chip chip-route"><span>${esc(state.mapRoute.label)}</span><button type="button" data-act="closeroute" aria-label="${esc(t('planCloseRoute'))}">${icon('close', 18)}</button></p>` : ''}</div>
   <button id="legend-btn" class="legend-btn" data-act="legend" aria-expanded="false" aria-controls="legend">${icon('info', 20)}<span>${esc(t('legend'))}</span></button>
   ${legendPanel()}
   <a class="osd" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
@@ -587,7 +589,7 @@ async function bindMap(rid) {
   const msg = document.getElementById('map-msg');
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, loc: state.loc, countEl: document.getElementById('bus-count'), t });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, loc: state.loc, countEl: document.getElementById('bus-count'), t });
     state.cleanup = () => ctl.destroy();
   } catch (e) {
     msg.hidden = false;
@@ -622,11 +624,13 @@ function resolveSide(id) {
   return g ? { kind: 'group', id: g.id, name: g.name, stops: g.stops } : null;
 }
 const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
+const WALK_MAX_CROW_M = 5000, WALK_MAX_M = 7000; // a piedi: oltre queste distanze (linea d'aria / sulla rete) non si propone il percorso
 const pointId = (lat, lon, label) => `@${lat.toFixed(5)},${lon.toFixed(5)},${label}`;
 
 function viewPlan(m) {
   if (m[1]) {
     state.plan.from = resolveSide(decodeURIComponent(m[1])); state.plan.to = resolveSide(decodeURIComponent(m[2]));
+    state.plan.mode = m[4] ? 'walk' : 'bus';
     const hh = m[3] ? Number(m[3].slice(0, 2)) : NaN, mm = m[3] ? Number(m[3].slice(2)) : NaN;
     state.plan.time = hh < 24 && mm < 60 ? hh * 3600 + mm * 60 : null;
   }
@@ -644,8 +648,12 @@ function viewPlan(m) {
   <p class="lead">${esc(t('planHint'))}</p>
 </section>
 <section class="block plan-form">
+  <div class="seg seg-inline pf-mode" role="radiogroup" aria-label="${esc(t('planModeLabel'))}">
+    <button type="button" role="radio" aria-checked="${state.plan.mode !== 'walk'}" data-act="travelmode" data-v="bus">${esc(t('planModeBus'))}</button>
+    <button type="button" role="radio" aria-checked="${state.plan.mode === 'walk'}" data-act="travelmode" data-v="walk">${esc(t('planModeWalk'))}</button>
+  </div>
   ${field('from', 'planFrom', 'planFromPh')}
-  <div class="swap-row"><button type="button" class="icon-btn icon-btn-quiet" data-act="swap" aria-label="${esc(t('planSwap'))}">${icon('swap', 22)}</button></div>
+  <div class="swap-row"><button type="button" class="btn btn-quiet pf-reset" data-act="resetplan">${icon('close', 18)} ${esc(t('planReset'))}</button><button type="button" class="icon-btn icon-btn-quiet" data-act="swap" aria-label="${esc(t('planSwap'))}">${icon('swap', 22)}</button></div>
   ${field('to', 'planTo', 'planToPh')}
   <div class="pf-time">
     <div class="seg seg-inline" role="radiogroup">
@@ -683,9 +691,16 @@ function optionHtml(o, i, tomorrow) {
     if (l.kind === 'walk') {
       const nextBus = legs.slice(k + 1).find((x) => x.kind === 'bus');
       const first = k === 0;
-      const where = nextBus ? ` · ${nameOf(d.trips[nextBus.trip].s[nextBus.from])}` : '';
-      const label = !first && nextBus ? `${t('stepChange')}: ${t('stepWalk', Math.max(1, Math.round(l.secs / 60))).toLowerCase()}` : t('stepWalk', Math.max(1, Math.round(l.secs / 60)));
-      return `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(label)}${esc(where)}</span></li>`;
+      const mins = Math.max(1, Math.round(l.secs / 60));
+      const g = o.geo?.legs[k];
+      const lastLeg = k === legs.length - 1;
+      const metres = g?.m ? Math.max(10, Math.round(g.m / 10) * 10) : 0;
+      const walkTxt = metres ? t('stepWalkM', metres, mins) : t('stepWalk', mins);
+      const names = g?.steps?.length ? streetNames(g.steps).join(' › ') : '';
+      const dest = nextBus ? nameOf(d.trips[nextBus.trip].s[nextBus.from]) : lastLeg ? sideLabel(state.plan.to) : '';
+      const where = [names, dest && `${t('stepUntil')} ${dest}`].filter(Boolean).join(' · ');
+      const label = !first && nextBus ? `${t('stepChange')}: ${walkTxt.toLowerCase()}` : walkTxt;
+      return `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(label)}${where ? `<span class="step-sub">${esc(where)}</span>` : ''}</span></li>`;
     }
     const trip = d.trips[l.trip];
     const prev = legs[k - 1];
@@ -697,16 +712,17 @@ function optionHtml(o, i, tomorrow) {
     <b>${esc(t('stepAlight', nameOf(trip.s[l.to]), fmtHm(l.arr)))}</b></span></li>`;
   }).join('');
   return `<li><details class="opt"${i === 0 ? ' open' : ''}>
-  <summary><span class="opt-head"><span class="opt-time">${tomorrow ? esc(t('planTomorrow')) + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}</span><span class="opt-meta">${esc(t('planDuration', mins))} · ${esc(t(o.transfers ? 'planTransfer' : 'planDirect'))}</span></span><span class="opt-tiles">${tiles}</span></summary>
+  <summary><span class="opt-head"><span class="opt-time">${tomorrow && !o.walkOnly ? esc(t('planTomorrow')) + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}</span><span class="opt-meta">${esc(t('planDuration', mins))} · ${esc(o.walkOnly ? t('planWalkMeta', Math.round((o.geo?.legs[0]?.m ?? 0) / 10) * 10) : t(o.transfers ? 'planTransfer' : 'planDirect'))}</span></span><span class="opt-tiles">${o.walkOnly ? `<span class="tile-walk">${esc(t('planWalkOnly'))}</span>` : tiles}</span></summary>
   <ol class="steps">${steps}<li class="step step-end"><span class="step-dot"></span><span class="step-body"><b>${esc(t('stepArrive', fmtHm(o.end)))}</b></span></li></ol>
+  <button type="button" class="btn btn-quiet opt-map" data-act="showmap" data-i="${i}">${icon('map', 20)} ${esc(t('planOnMap'))}</button>
 </details></li>`;
 }
 
 /** Testo di anteprima per la condivisione: tratta + migliore soluzione. */
 function planShareText(o, tomorrow) {
   const { from, to } = state.plan;
-  const lines = o.legs.filter((l) => l.kind === 'bus').map((l) => routeOfTrip(l.trip).short).join(' › ');
-  return t('planShareText', sideLabel(from), sideLabel(to), `${tomorrow ? t('planTomorrow') + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}`, lines);
+  const lines = o.walkOnly ? t('planWalkOnly') : o.legs.filter((l) => l.kind === 'bus').map((l) => routeOfTrip(l.trip).short).join(' › ');
+  return t('planShareText', sideLabel(from), sideLabel(to), `${tomorrow && !o.walkOnly ? t('planTomorrow') + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}`, lines);
 }
 
 async function runPlan() {
@@ -716,20 +732,36 @@ async function runPlan() {
   if (!from || !to) { out.innerHTML = ''; return; }
   if (from.id === to.id) { out.innerHTML = `<p class="note">${esc(t('planSame'))}</p>`; return; }
   syncPlanUrl();
-  const ends = [];
+  const walkMode = state.plan.mode === 'walk';
+  const ends = [], ctx = [];
   for (const sd of [from, to]) {
     if (sd.kind === 'gps' || sd.kind === 'point') {
       if (sd.kind === 'gps' && !(await getLoc())) { out.innerHTML = `<p class="note">${esc(t('planNeedLoc'))}</p>`; return; }
       const at = sd.kind === 'gps' ? state.loc : sd; // la posizione dell'utente oppure il civico scelto
+      if (walkMode) { ctx.push({ at, wm: null }); continue; }
       const g = await loadWalk();
       const wm = g ? walkFrom(g, state.data.stops, at.lat, at.lon) : null;
       const w = walkable(state.data, at.lat, at.lon, 800, 4, walkDist(wm));
       if (!w.length) { out.innerHTML = `<p class="note">${esc(t('planFar'))}</p>`; return; }
-      ends.push(w);
-    } else ends.push(sd.stops.map((stop) => ({ stop, walk: 0 })));
+      ends.push(w); ctx.push({ at, wm });
+    } else { ends.push(sd.stops.map((stop) => ({ stop, walk: 0 }))); ctx.push({ at: null, wm: null }); }
   }
   const now = romeNow();
   const secs = time ?? now.secs;
+
+  if (walkMode) { // solo a piedi: un unico percorso sulla rete pedonale
+    const pt = (sd, c) => c.at ?? (sd.kind === 'group' ? state.data.stops[sd.stops[0]] : null);
+    const pa = pt(from, ctx[0]), pb = pt(to, ctx[1]);
+    const g = await loadWalk();
+    const w = g && distanceM(pa.lat, pa.lon, pb.lat, pb.lon) <= WALK_MAX_CROW_M ? walkBetween(g, pa, pb, WALK_MAX_M) : null;
+    const wo = w ? { walkOnly: true, start: secs, end: secs + w.secs, transfers: 0, legs: [{ kind: 'walk', secs: w.secs }], geo: { legs: [{ kind: 'walk', pts: w.pts, m: w.m, steps: w.steps, exact: true }], from: { lat: pa.lat, lon: pa.lon }, to: { lat: pb.lat, lon: pb.lon }, stops: [] } } : null;
+    state.planOpts = wo ? [wo] : [];
+    state.planShareText = wo ? planShareText(wo, false) : '';
+    out.innerHTML = wo ? `<ul class="plain opts">${optionHtml(wo, 0, false)}</ul>
+<div class="actions"><button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button></div>` : `<p class="note">${esc(t('planWalkNone'))}</p>`;
+    return;
+  }
+
   let opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: now.ymd, secs });
   let tomorrow = false, msg = '';
   if (!opts.length) {
@@ -737,6 +769,10 @@ async function runPlan() {
     tomorrow = opts.length > 0;
     msg = t(tomorrow ? 'planNoneNow' : 'planNone');
   }
+  let shapes = null;
+  try { shapes = await loadShapes(); } catch { /* senza shape il tratto in bus è una retta fra le fermate */ }
+  for (const o of opts) o.geo = routeGeometry(state.data, shapes, o, { from: ctx[0], to: ctx[1] });
+  state.planOpts = opts;
   const best = opts[0];
   state.planShareText = best ? planShareText(best, tomorrow) : '';
   out.innerHTML = `${msg ? `<p class="note">${esc(msg)}</p>` : ''}${opts.length ? `<ul class="plain opts">${opts.map((o, i) => optionHtml(o, i, tomorrow)).join('')}</ul><p class="muted note">${esc(t('scheduledNote'))}</p>
@@ -747,7 +783,7 @@ function syncPlanUrl() {
   const { from, to } = state.plan;
   const tm = state.plan.time;
   const hhmm = tm == null ? '' : `/${String(Math.floor(tm / 3600) % 24).padStart(2, '0')}${String(Math.floor((tm % 3600) / 60)).padStart(2, '0')}`;
-  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}` : '#/percorso';
+  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}${state.plan.mode === 'walk' ? '/piedi' : ''}` : '#/percorso';
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 
@@ -948,7 +984,7 @@ const routes = [
   [/^\/vicino$/, () => viewNear(), 'home'],
   [/^\/stop\/(.+)$/, (m) => viewStop(decodeURIComponent(m[1])), 'home'],
   [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
-  [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
+  [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?(?:\/(piedi))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
   [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => {
     state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1;
@@ -1052,6 +1088,10 @@ $app.addEventListener('click', async (e) => {
   else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
   else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); }
   else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
+  else if (act === 'showmap') {
+    const o = state.planOpts?.[Number(b.dataset.i)];
+    if (o?.geo) { state.mapRoute = { ...o.geo, label: `${sideLabel(state.plan.from)} → ${sideLabel(state.plan.to)}` }; location.hash = '#/mappa'; }
+  } else if (act === 'closeroute') { state.mapRoute = null; $app.innerHTML = viewMap(); bindMap(); }
   else if (act === 'pickstreet') {
     const $i = document.getElementById(`pf-${b.dataset.side}`);
     $i.value = `${b.dataset.name} `; $i.focus(); $i.dispatchEvent(new Event('input'));
@@ -1060,6 +1100,17 @@ $app.addEventListener('click', async (e) => {
     [state.plan.from, state.plan.to] = [state.plan.to, state.plan.from];
     for (const sd of ['from', 'to']) { const $i = document.getElementById(`pf-${sd}`); $i.value = state.plan[sd] ? sideLabel(state.plan[sd]) : ''; }
     syncPlanUrl(); runPlan();
+  } else if (act === 'resetplan') {
+    // Azzera partenza, arrivo, orario, modalità e il percorso aperto in mappa.
+    state.plan = { from: null, to: null, time: null, mode: 'bus' };
+    state.planOpts = null; state.planShareText = ''; state.mapRoute = null;
+    history.replaceState(null, '', '#/percorso');
+    $app.innerHTML = viewPlan([]); bindPlan();
+    document.getElementById('pf-from')?.focus();
+  } else if (act === 'travelmode') {
+    state.plan.mode = b.dataset.v === 'walk' ? 'walk' : 'bus';
+    document.querySelectorAll('[data-act="travelmode"]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    runPlan();
   } else if (act === 'timemode') {
     const at = b.dataset.v === 'at';
     document.querySelectorAll('[data-act="timemode"]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
