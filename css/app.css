@@ -522,9 +522,12 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .gd-tabs::-webkit-scrollbar { display: none; }
 .gd-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 2px solid var(--edge); border-radius: var(--r); background: var(--glaze); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .gd-tabs button[aria-selected="true"] { background: var(--cobalt); border-color: var(--cobalt); color: var(--on-cobalt); }
-.app > .gd-pages { display: flex; align-items: flex-start; margin: 8px 0 0; padding-inline: 0; overflow: auto hidden; transition: height 0.2s var(--ease); scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
+.gd-pages { display: flex; align-items: flex-start; margin: 8px 0 0; padding-inline: 0; overflow: auto hidden; transition: height 0.2s var(--ease); scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .gd-pages::-webkit-scrollbar { display: none; }
 .gd-page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 var(--gut) 24px; box-sizing: border-box; }
+.gd-nest .gd-tabs, .gd-nest .gd-pages { margin-inline: calc(var(--gut) * -1); }
+.gd-nest .gd-tabs { margin-top: 0; }
+.gd-nest .gd-page > h2:first-child { margin-top: 8px; }
 .gd-h { margin: 8px 0 12px; font-size: 22px; line-height: 1.2; }
 .guide-body p { margin: 0 0 12px; line-height: 1.5; }
 .guide-steps { margin: 0 0 14px; padding-left: 1.5em; display: grid; gap: 10px; line-height: 1.5; }

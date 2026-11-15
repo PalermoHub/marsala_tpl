@@ -441,8 +441,18 @@ ${off.length ? `<h2>${esc(t('notToday'))}</h2><ul class="plain dim">${off.map(ro
 
 // Fila orari: porta al centro l'orario scelto (il più vicino a ora), senza muovere la pagina.
 function centerChip() {
-  const ul = document.querySelector('.chips'), b = ul?.querySelector('[aria-selected="true"]');
-  if (b) ul.scrollLeft = b.offsetLeft - (ul.clientWidth - b.offsetWidth) / 2;
+  document.querySelectorAll('.chips').forEach((ul) => {
+    const b = ul.querySelector('[aria-selected="true"]');
+    if (b) ul.scrollLeft = b.offsetLeft - (ul.clientWidth - b.offsetWidth) / 2;
+  });
+}
+// Dopo ogni disegno della linea: pager tra le direzioni (la direzione vista resta in state.lineDir) e orari centrati.
+function bindLine() {
+  const pg = $app.querySelector('.gd-pages');
+  if (!pg) return;
+  const dirs = pg.dataset.dirs.split(',').map(Number);
+  bindPager(Number(pg.dataset.cur), (i) => { state.lineDir = dirs[i]; });
+  centerChip();
 }
 function viewLine(rid, tripSel) {
   const ri = routeById(rid);
@@ -458,35 +468,43 @@ function viewLine(rid, tripSel) {
   const focus = state.lineFocus ?? -1; // fermata da cui si arriva: la linea si apre su quella
   const dirWithFocus = focus >= 0 ? dirs.find((d) => (todays.length ? todays : all).some((x) => x.tr.d === d && x.tr.s.includes(focus))) : undefined;
   const dsel = state.lineDir != null && dirs.includes(state.lineDir) ? state.lineDir : (dirWithFocus ?? dirs[0]);
-  const pool = (todays.length ? todays : all).filter((x) => x.tr.d === dsel).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
-  // Con una fermata di partenza, "prossima corsa" = la prima che ci passa da ora in poi.
-  const at = (x) => x.tr.t[x.tr.s.indexOf(focus)];
-  const upcoming = (focus >= 0 && isToday ? pool.find((x) => x.tr.s.includes(focus) && at(x) >= now.secs) : null)
-    ?? (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
-  const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
-  state.lineView = { rid, d: dsel, i: sel?.i, day: state.lineDay };
+  state.lineView = { rid, day: state.lineDay };
   const head = (d) => {
     const c = {};
     (todays.length ? todays : all).filter((x) => x.tr.d === d).forEach((x) => { c[headOf(x.tr)] = (c[headOf(x.tr)] ?? 0) + 1; });
     return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
   };
 
-  const stopsHtml = sel ? sel.tr.s.map((si, k) => {
-    const { name } = stopTitle(si);
-    const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
-    const here = si === focus;
-    return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
-  }).join('') : '';
-
   const iso = (y) => `${Math.floor(y / 10000)}-${String(Math.floor((y % 10000) / 100)).padStart(2, '0')}-${String(y % 100).padStart(2, '0')}`;
   const m = state.data.meta;
-  const dayPool = todays.filter((x) => x.tr.d === dsel).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
-  const starts = dayPool.map((x) => x.tr.t[0]);
-  const first = starts[0], last = starts[starts.length - 1];
   const clockPlus = (secs) => `${formatClock(secs)}${secs >= 86400 ? ' (+1)' : ''}`;
   const statRow = (label, val) => `<div class="stat"><dt>${esc(t(label))}</dt><dd>${esc(val)}</dd></div>`;
-  const statsHtml = `<section class="block line-stats"><label class="day-pick">${esc(t('day'))} <input type="date" id="line-day" value="${iso(day)}"${m.validFrom ? ` min="${iso(m.validFrom)}"` : ''}${m.validTo ? ` max="${iso(m.validTo)}"` : ''} aria-label="${esc(t('day'))}"></label>
-${dayPool.length ? `<dl class="stats">${statRow('tripsPerDay', String(dayPool.length))}${statRow('firstPass', clockPlus(first))}${statRow('lastPass', clockPlus(last))}${dayPool.length > 1 ? statRow('avgFreq', t('everyMin', Math.round((last - first) / 60 / (dayPool.length - 1)))) : ''}</dl>` : `<p class="note">${esc(t('noTripsDay'))}</p>`}</section>`;
+  const dayHtml = `<section class="block line-stats"><label class="day-pick">${esc(t('day'))} <input type="date" id="line-day" value="${iso(day)}"${m.validFrom ? ` min="${iso(m.validFrom)}"` : ''}${m.validTo ? ` max="${iso(m.validTo)}"` : ''} aria-label="${esc(t('day'))}"></label></section>`;
+
+  // Una pagina per direzione: orari, corsa scelta e fermate si leggono senza cambiare schermata.
+  const dirPage = (d) => {
+    const pool = (todays.length ? todays : all).filter((x) => x.tr.d === d).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
+    // Con una fermata di partenza, "prossima corsa" = la prima che ci passa da ora in poi.
+    const at = (x) => x.tr.t[x.tr.s.indexOf(focus)];
+    const upcoming = (focus >= 0 && isToday ? pool.find((x) => x.tr.s.includes(focus) && at(x) >= now.secs) : null)
+      ?? (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
+    const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
+    const stopsHtml = sel ? sel.tr.s.map((si, k) => {
+      const { name } = stopTitle(si);
+      const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
+      const here = si === focus;
+      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
+    }).join('') : '';
+    const dayPool = todays.filter((x) => x.tr.d === d).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
+    const starts = dayPool.map((x) => x.tr.t[0]);
+    const first = starts[0], last = starts[starts.length - 1];
+    const stats = dayPool.length ? `<dl class="stats">${statRow('tripsPerDay', String(dayPool.length))}${statRow('firstPass', clockPlus(first))}${statRow('lastPass', clockPlus(last))}${dayPool.length > 1 ? statRow('avgFreq', t('everyMin', Math.round((last - first) / 60 / (dayPool.length - 1)))) : ''}</dl>` : `<p class="note">${esc(t('noTripsDay'))}</p>`;
+    return `<section class="gd-page" role="tabpanel" data-d="${d}" data-i="${sel?.i ?? ''}">
+<section class="block line-stats">${stats}</section>
+<section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
+<ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
+<section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops">${stopsHtml}</ol></section></section>`;
+  };
 
   return `${banners(now)}
 <section class="hero hero-line" data-strip="${stripState(now)}">
@@ -494,12 +512,10 @@ ${dayPool.length ? `<dl class="stats">${statRow('tripsPerDay', String(dayPool.le
   <div class="line-head">${tileSvg(route, 60)}<h1>${esc(route.long)}</h1></div>
   <a class="btn btn-on-field" href="#/mappa/${esc(route.id)}">${icon('map', 20)}<span>${esc(t('showOnMap'))}</span></a>
 </section>
-${dirs.length > 1 ? `<div class="seg" role="tablist">${dirs.map((d) => `<button role="tab" aria-selected="${d === dsel}" data-act="dir" data-d="${d}" data-r="${esc(rid)}">${esc(t('dir'))} ${esc(head(d))}</button>`).join('')}</div>` : ''}
-${statsHtml}
+${dirs.length > 1 ? `<div class="seg" role="tablist">${dirs.map((d, k) => `<button role="tab" aria-selected="${d === dsel}" data-gi="${k}">${esc(t('dir'))} ${esc(head(d))}</button>`).join('')}</div>` : ''}
+${dayHtml}
 ${todays.length ? '' : `<p class="banner">${esc(t('noTripsToday'))}</p>`}
-<section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
-<ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
-<section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops">${stopsHtml}</ol></section>`;
+<div class="gd-pages" data-cur="${dirs.indexOf(dsel)}" data-dirs="${dirs.join(',')}">${dirs.map(dirPage).join('')}</div>`;
 }
 
 // ---------- mezzo sulla linea ----------
@@ -912,7 +928,7 @@ function viewAvvisi() {
   const src = AVVISI_SOURCES.map(([u, k]) => `<li><a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(new URL(u).host)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
   const cont = COMUNE_CONTATTI.map(([u, ic, k, sub]) => `<li><a class="row" href="${esc(u)}"${u.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${icon(ic, 20)}<span class="row-main"><span class="row-title">${esc(t(k))}</span><span class="row-sub">${esc(sub)}</span></span>${icon('chevron', 20)}</a></li>`).join('');
   return `${banners(romeNow())}${pageHead(t('news'), { lead: t('newsLead'), back: ['#/altro', t('tabMore')] })}<section class="block">
-<div id="news-list" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
+<div id="news-list" class="gd-nest" aria-live="polite"><p class="note">${esc(t('newsLoading'))}</p></div></section>
 <section class="block"><h2>${esc(t('newsSources'))}</h2><ul class="plain">${src}</ul><p class="note">${esc(t('newsNoAst'))}</p></section>
 <section class="block"><h2>${esc(t('contactsH'))}</h2><ul class="plain">${cont}</ul><p class="note">${esc(t('contactsNote'))}</p></section>`;
 }
@@ -925,9 +941,16 @@ function bindAvvisi() {
     refreshNews(true);
     const tr = d.items.filter((i) => i.transport);
     const rest = d.items.filter((i) => !i.transport);
-    el.innerHTML = `${tr.length ? `<h2>${esc(t('newsTransportH'))}</h2><ul class="plain news">${tr.map(avvisoItem).join('')}</ul>` : `<p class="note">${esc(t('newsNoTransport'))}</p>`}
-${rest.length ? `<details class="news-more"><summary><span>${esc(t('newsOther'))} (${rest.length})</span>${icon('chevron', 20)}</summary><ul class="plain news">${rest.map(avvisoItem).join('')}</ul></details>` : ''}
+    const list = (arr) => `<ul class="plain news">${arr.map(avvisoItem).join('')}</ul>`;
+    const pages = [
+      ['tr', t('newsTransport'), tr.length, tr.length ? `<h2>${esc(t('newsTransportH'))}</h2>${list(tr)}` : `<p class="note">${esc(t('newsNoTransport'))}</p>`],
+      ...(rest.length ? [['alt', t('newsOther'), rest.length, list(rest)]] : []),
+    ];
+    // Due pagine affiancate (trasporti / altre notizie): chi cerca solo i bus non scorre tra le notizie del Comune.
+    el.innerHTML = `${pages.length > 1 ? `<div class="gd-tabs" role="tablist">${pages.map(([id, ti, n], k) => `<button type="button" role="tab" data-gi="${k}" id="nt-${id}" aria-controls="np-${id}" aria-selected="${k === 0}" tabindex="${k === 0 ? 0 : -1}"><span>${esc(ti)} (${n})</span></button>`).join('')}</div>` : ''}
+<div class="gd-pages">${pages.map(([id, , , html]) => `<section class="gd-page" role="tabpanel" id="np-${id}" aria-labelledby="nt-${id}">${html}</section>`).join('')}</div>
 <p class="note">${esc(t('newsUpdated', new Date(d.updated).toLocaleString(getLang() === 'en' ? 'en-GB' : 'it-IT', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Rome' })))}</p>`;
+    bindPager(0, () => {});
   });
 }
 
@@ -946,38 +969,42 @@ ${shots.map(([f, alt]) => `<figure class="guide-shot"><img src="img/guida/${esc(
 </div></section>`;
   return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead'), back: ['#/altro', t('tabMore')] })}<div class="gd-tabs" role="tablist">${doc.map(tab).join('')}</div><div class="gd-pages">${doc.map(page).join('')}</div>`;
 }
-function bindGuida() {
+// Pagine affiancate con snap + linguette: tocco sulla linguetta o swipe cambiano pagina; l'altezza segue la pagina visibile.
+function bindPager(cur, onChange) {
   const pages = $app.querySelector('.gd-pages');
-  const tabs = [...$app.querySelectorAll('.gd-tabs [role=tab]')];
-  if (!pages || !tabs.length) return;
-  guideCur = Math.min(guideCur, tabs.length - 1);
-  const mark = (i) => {
-    guideCur = i;
-    fit(); ro.disconnect(); ro.observe(pages.children[i]);
-    tabs.forEach((b, k) => { b.setAttribute('aria-selected', k === i); b.tabIndex = k === i ? 0 : -1; });
-    const b = tabs[i], bar = b.parentElement;
-    bar.scrollTo({ left: b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
-  };
-  // l'altezza segue la pagina visibile: una scheda lunga non lascia vuoto sotto le altre
-  const fit = () => { const pg = pages.children[guideCur]; if (pg) pages.style.height = `${pg.offsetHeight}px`; };
+  const tabs = [...$app.querySelectorAll('[role=tab][data-gi]')];
+  if (!pages || !pages.children.length) return;
+  let i0 = Math.min(Math.max(cur, 0), pages.children.length - 1);
+  const smooth = () => (reduceMotion.matches ? 'auto' : 'smooth');
+  const fit = () => { const pg = pages.children[i0]; if (pg) pages.style.height = `${pg.offsetHeight}px`; };
   const ro = new ResizeObserver(fit);
-  ro.observe(pages.children[guideCur]);
-  const go = (i) => pages.scrollTo({ left: i * pages.clientWidth, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
-  tabs.forEach((b, i) => b.addEventListener('click', () => go(i)));
-  tabs.forEach((b, i) => b.addEventListener('keydown', (e) => {
-    const n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
-    if (n < 0 || n >= tabs.length) return;
-    e.preventDefault(); tabs[n].focus(); go(n);
-  }));
+  const mark = (i) => {
+    i0 = i; fit(); ro.disconnect(); ro.observe(pages.children[i]);
+    tabs.forEach((b, k) => { b.setAttribute('aria-selected', k === i); b.tabIndex = k === i ? 0 : -1; });
+    const b = tabs[i], bar = b?.parentElement;
+    if (bar) bar.scrollTo({ left: b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2, behavior: smooth() });
+    onChange(i);
+  };
+  const go = (i) => pages.scrollTo({ left: i * pages.clientWidth, behavior: smooth() });
+  tabs.forEach((b, i) => {
+    b.addEventListener('click', () => go(i));
+    b.addEventListener('keydown', (e) => {
+      const n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
+      if (n < 0 || n >= tabs.length) return;
+      e.preventDefault(); tabs[n].focus(); go(n);
+    });
+  });
   let tm;
   pages.addEventListener('scroll', () => {
     clearTimeout(tm);
-    tm = setTimeout(() => { const i = Math.round(pages.scrollLeft / pages.clientWidth); if (i !== guideCur) mark(i); }, 60);
+    tm = setTimeout(() => { const i = Math.round(pages.scrollLeft / pages.clientWidth); if (i !== i0) mark(i); }, 60);
   }, { passive: true });
-  fit();
-  pages.scrollLeft = guideCur * pages.clientWidth;
-  tabs[guideCur].parentElement.scrollLeft = Math.max(0, tabs[guideCur].offsetLeft - 16);
+  fit(); ro.observe(pages.children[i0]);
+  pages.scrollLeft = i0 * pages.clientWidth;
+  const bar = tabs[i0]?.parentElement;
+  if (bar) bar.scrollLeft = Math.max(0, tabs[i0].offsetLeft - 16);
 }
+function bindGuida() { bindPager(guideCur, (i) => { guideCur = i; }); }
 
 function viewInfo() {
   const m = state.data.meta;
@@ -1053,7 +1080,7 @@ const routes = [
     const rid = decodeURIComponent(m[1]), o = state.origin?.rid === rid ? state.origin : null;
     if (o) { state.lineDir = o.d; state.lineDay = o.day; } // si torna alla linea di partenza: stessa direzione, giorno e corsa
     return viewLine(rid, o?.i);
-  }, 'lines', (m) => { centerChip(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
+  }, 'lines', (m) => { bindLine(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/altro$/, () => viewMore(), 'more'],
@@ -1117,12 +1144,13 @@ $app.addEventListener('change', (e) => {
   if (!m) return;
   state.lineDay = Number(e.target.value.replaceAll('-', ''));
   $app.innerHTML = viewLine(decodeURIComponent(m[1]));
-  centerChip();
+  bindLine();
 });
 // Da una fermata della linea: si ricorda la linea (direzione, giorno, corsa, fermata) per poter tornare, anche dopo più fermate.
 $app.addEventListener('click', (e) => {
   const a = e.target.closest('.route-stops a');
-  const v = state.lineView;
+  const pg = a?.closest('.gd-page');
+  const v = state.lineView && pg ? { ...state.lineView, d: Number(pg.dataset.d), i: pg.dataset.i === '' ? undefined : Number(pg.dataset.i) } : null;
   if (!a || !v) return;
   const stop = decodeURIComponent(a.getAttribute('href').replace('#/stop/', ''));
   if (!state.origin) state.origin = { ...v, stop };
@@ -1148,8 +1176,7 @@ $app.addEventListener('click', async (e) => {
       else { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t('linkCopied')); }
     } catch { /* annullato */ }
   } else if (act === 'geo') locate();
-  else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); centerChip(); }
-  else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); centerChip(); }
+  else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); bindLine(); }
   else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
   else if (act === 'pickonmap') { state.pickSide = b.dataset.side === 'to' ? 'to' : 'from'; state.mapRoute = null; location.hash = '#/mappa'; }
   else if (act === 'cancelpick') { state.pickSide = null; location.hash = planHash(); }
