@@ -607,3 +607,8 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .maplibregl-popup:has(.civico-pop) { max-width: min(340px, calc(100vw - 32px)) !important; }
 .pick-btns { flex-wrap: wrap; }
 .pick-btns button { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
+
+/* menu «Vista» della mappa: inquadra rete, nord, 3D e civici in una fila accanto al pulsante */
+.map-view-wrap { position: relative; }
+.map-viewmenu { position: absolute; right: 48px; top: 0; display: flex; gap: 8px; padding: 6px; border-radius: var(--r-lg); background: var(--glaze-2); box-shadow: var(--shadow-float); }
+.map-viewmenu[hidden] { display: none; }

@@ -55,6 +55,7 @@ const ICON = {
   compass: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.500l4 9.500h-8z" fill="#C8412B"/><path d="M12 21.500l-4-9.500h8z" fill="currentColor" opacity="0.55"/></svg>',
   full: SVG('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
   exit: SVG('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'),
+  view: SVG('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'),
 };
 
 let loading = null;
@@ -325,15 +326,29 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   document.addEventListener('fullscreenchange', onFs);
   function initControls() {
     const homeBtn = mkBtn('map-home', ICON.home, t('mapHome'), () => goHome(reduced ? 0 : 700));
-    ctrls.append(homeBtn, btnSat); // lo zoom si fa col cursore (tastiera compresa), con pizzico o rotella: niente +/−
     const compassBtn = mkBtn('map-compass', ICON.compass, t('mapCompass'), () => map.resetNorth({ duration: reduced ? 0 : 400 }));
     const paintCompass = () => { compassBtn.firstElementChild.style.transform = `rotate(${-map.getBearing()}deg)`; };
     map.on('rotate', paintCompass);
     paintCompass();
-    ctrls.append(compassBtn);
+    // In vista restano sfondo, posizione e schermo intero; inquadra rete, nord, 3D e civici stanno nel menu «Vista».
+    // Lo zoom si fa col cursore (tastiera compresa), con pizzico o rotella: niente +/−.
+    ctrls.append(btnSat);
     if (navigator.geolocation) ctrls.append(locBtn);
     if (fsTarget?.requestFullscreen) ctrls.append(fsBtn);
-    ctrls.append(btn3d, btnCiv, zoomBox);
+    const viewPanel = document.createElement('div');
+    viewPanel.className = 'map-viewmenu';
+    viewPanel.hidden = true;
+    viewPanel.append(homeBtn, compassBtn, btn3d, btnCiv);
+    const viewBtn = mkBtn('map-view', ICON.view, t('mapView'), () => {
+      viewPanel.hidden = !viewPanel.hidden;
+      viewBtn.setAttribute('aria-expanded', String(!viewPanel.hidden));
+    });
+    viewBtn.setAttribute('aria-expanded', 'false');
+    const viewWrap = document.createElement('div');
+    viewWrap.className = 'map-view-wrap';
+    viewWrap.append(viewBtn, viewPanel);
+    map.on('click', () => { viewPanel.hidden = true; viewBtn.setAttribute('aria-expanded', 'false'); });
+    ctrls.append(viewWrap, zoomBox);
     el.parentElement.append(ctrls);
     showZoom();
   }
@@ -548,7 +563,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
         if (destroyed) return;
         showBuses([...idle.map((v) => ({ v, state: 'idle' })), ...active.map((v) => ({ v, state: 'active' }))]);
         const head = active.length ? t('busesRunning', active.length) : t('noBuses');
-        countEl.textContent = idle.length ? `${head} · ${t('busesIdle', idle.length)}` : head;
+        countEl.textContent = active.length && idle.length ? `${head} · ${t('busesIdle', idle.length)}` : head; // senza mezzi in servizio i fermi sono già il cerchio del deposito sulla mappa
         countEl.classList.toggle('live', active.length > 0);
       } catch {
         if (!destroyed) countEl.textContent = t('busesNote');
