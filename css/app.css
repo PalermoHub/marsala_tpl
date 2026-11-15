@@ -551,3 +551,40 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .pick-btns button svg { width: 18px; height: 18px; }
 .pick-btns button:focus-visible { outline: 3px solid #8A1C3A; outline-offset: 1px; }
 .gd-page .h3 { margin-top: 16px; }
+
+/* ---------- Home: testata dritta, azioni, «Vicino a te» ---------- */
+.hero-home::after { -webkit-mask: none; mask: none; height: 5px; }
+.hero-home h1 { font-size: 30px; line-height: 1.12; text-wrap: balance; }
+.hero-home .lead { margin-top: 10px; font-size: 16px; max-width: 36ch; }
+.badge-unoff { display: inline-flex; align-items: center; gap: 6px; margin: 14px 0 0; padding: 5px 12px 5px 9px; border-radius: var(--r-pill); background: var(--ocra); color: var(--on-ocra); font-size: 14px; font-weight: 700; }
+.near-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.near-head h2 { margin: 26px 0 6px; }
+.gps-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.gps-state i { width: 8px; height: 8px; border-radius: 50%; background: var(--rame); }
+.gps-off i { background: var(--terra); }
+.gps-moving i { background: var(--ocra); box-shadow: 0 0 0 1.5px var(--ink-2); }
+.here-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--glaze-2); }
+.here-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--cobalt); color: var(--on-cobalt); }
+.here-ico-bus { background: var(--ocra); color: var(--on-ocra); }
+.here-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.here-sub { font-size: 14px; color: var(--ink-2); }
+.here-name { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.here-empty { flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px; background: var(--glaze); border: 1.5px dashed var(--line); }
+.here-empty .here-ico { width: 48px; height: 48px; background: var(--glaze-2); color: var(--ink-2); }
+.here-empty .here-ico-bus { background: var(--ocra); color: var(--on-ocra); }
+.here-empty p { margin: 0; line-height: 1.45; color: var(--ink-2); font-size: 15px; }
+.here-empty .here-title { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.near-home .plain { margin-top: 10px; }
+.btn-ghost { min-height: 44px; padding: 0 12px; gap: 6px; font-size: 14px; background: transparent; color: var(--cobalt-hi); border: 1.5px solid var(--cobalt-hi); }
+
+/* ---------- badge «a piedi»: omino e metri da te ---------- */
+.wbadge { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 3px 9px 3px 7px; border-radius: var(--r-pill); background: var(--glaze-2); color: var(--ink); font-size: 13px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+.wbadge-strong { background: var(--cobalt); color: var(--on-cobalt); }
+.row-main > .wbadge { margin-top: 6px; }
+.route-stops .st-name { flex: 1; min-width: 0; }
+.route-stops .wbadge { flex: none; }
+.wbadge-step { margin-bottom: 4px; }
+.hero-home ~ .actions > .btn { white-space: nowrap; font-size: 15px; padding: 0 8px; gap: 6px; }
+.near-head h2 { margin-top: 18px; }
+.gps-state { margin-top: 10px; }
+.here-name { font-size: 15px; }

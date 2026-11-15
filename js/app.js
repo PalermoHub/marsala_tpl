@@ -16,6 +16,20 @@ const $nav = document.getElementById('tabs');
 
 const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null };
 
+/** Oltre ~15 km/h (4,2 m/s) non si sta camminando: si è su un mezzo e i metri a piedi non servono. Dopo 5 minuti la posizione è «vecchia». */
+const MOVING_MS = 4.2;
+const POS_OLD_MIN = 5;
+/** Salva una lettura GPS con l'ora e la velocità (del GPS, o stimata dallo spostamento dalla lettura precedente). */
+function setLoc(p) {
+  const prev = state.loc;
+  const at = Date.now();
+  const loc = { lat: p.coords.latitude, lon: p.coords.longitude, at };
+  let v = p.coords.speed;
+  if (v == null && prev && at - prev.at > 3000 && at - prev.at < 300000) v = distanceM(prev.lat, prev.lon, loc.lat, loc.lon) / ((at - prev.at) / 1000);
+  loc.moving = v != null && v > MOVING_MS;
+  state.loc = loc;
+}
+
 // ---------- utilità ----------
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
@@ -232,20 +246,87 @@ ${hereHtml}
 ${sibHtml}`;
 }
 
-function stopRow(si, meters, exact = true) {
+function stopRow(si, meters, exact = true, strong = false) {
   const { name, dir } = stopTitle(si);
   const s = state.data.stops[si];
   return `<li><a class="row" href="#/stop/${esc(s.id)}">
-  <span class="row-main"><span class="row-title">${esc(name)}</span><span class="row-sub">${dir ? `${esc(t('toward'))} ${esc(dir)}` : esc(`${t('stop')} ${s.code}`)}${meters != null ? ` · ${esc((exact ? '' : '≈ ') + t('meters', meters) + ' ' + t('onFoot'))}` : ''}</span></span>
+  <span class="row-main"><span class="row-title">${esc(name)}</span><span class="row-sub">${dir ? `${esc(t('toward'))} ${esc(dir)}` : esc(`${t('stop')} ${s.code}`)}</span>${meters != null ? walkBadge(meters, { exact, strong, near: true }) : ''}</span>
   <span class="row-tiles">${routesOfStop(si, 26)}</span>
 </a></li>`;
 }
 
 // ---------- viste ----------
 /** Logo e nome dell'app in cima alla Home (sempre presente, anche nell'embed). */
-const brandBar = () => `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b><span>${esc(t('brandTag'))}</span></div>`;
+const brandBar = () => `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b></div>`;
+
+/** Distanza a piedi dalla posizione dell'utente: icona dell'omino e metri. `strong` = la fermata più vicina. */
+const walkBadge = (m, { exact = true, strong = false, near = false } = {}) =>
+  `<span class="wbadge${strong ? ' wbadge-strong' : ''}">${icon('walk', 14)}<span>${esc((exact ? '' : '≈ ') + t('meters', m))}${near ? ` ${esc(t('fromYou'))}` : ''}</span></span>`;
+
+/**
+ * Home: testata (cosa è l'app), poi i due gesti (posizione / cerca), poi «Vicino a te» che dice dove sei
+ * e quali linee passano. Tre stati: posizione non nota, posizione recente, utente in movimento (sul bus).
+ */
+function viewHomeScreen() {
+  const now = romeNow();
+  const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
+  const loc = state.loc;
+  const moving = !!loc?.moving;
+  const ageMin = loc ? Math.floor((Date.now() - loc.at) / 60000) : 0;
+  const old = !!loc && ageMin >= POS_OLD_MIN;
+  const near = loc && !moving ? nearestStops(state.data, loc.lat, loc.lon, 6, walkDist(state.walkMap)) : [];
+  const geoMsg = state.locStatus === 'asking' ? t('locating') : state.locStatus === 'denied' ? t('locDenied') : '';
+  const status = !loc ? ['off', t('gpsOff')] : moving ? ['moving', t('gpsMoving')] : ['on', t('gpsOn')];
+  const refreshBtn = (label) => `<button class="btn btn-ghost" data-act="geo">${icon('reload', 18)}<span>${esc(label)}</span></button>`;
+
+  let body;
+  if (!loc) {
+    body = `<div class="here-card here-empty">
+  <span class="here-ico" aria-hidden="true">${icon('pin', 26)}</span>
+  <p class="here-title">${esc(t('gpsOffTitle'))}</p>
+  <p>${esc(t('gpsOffHelp'))}</p>
+  <p class="muted">${esc(t('gpsOffPrivacy'))}</p>
+</div>
+<p class="note">${esc(t('gpsOffAlt'))}</p>`;
+  } else if (moving) {
+    body = `<div class="here-card here-empty">
+  <span class="here-ico here-ico-bus" aria-hidden="true">${icon('bus', 26)}</span>
+  <p class="here-title">${esc(t('movingTitle'))}</p>
+  <p>${esc(t('movingHelp'))}</p>
+  ${refreshBtn(t('refreshPos'))}
+</div>`;
+  } else {
+    const [n0] = near;
+    body = `<div class="here-card here-on">
+  <span class="here-ico" aria-hidden="true">${icon('pin', 20)}</span>
+  <div class="here-main"><span class="here-sub">${esc(old ? t('posOld') : t('posAgo', ageMin))}</span>${n0 ? `<span class="here-name">${esc(t('youAreNear'))} ${esc(stopTitle(n0.i).name)}</span>` : ''}</div>
+  ${refreshBtn(t('refresh'))}
+</div>
+<ul class="plain">${near.map((n, k) => stopRow(n.i, n.m, isExactWalk(state.walkMap, n.i), k === 0)).join('')}</ul>`;
+  }
+
+  const favBlock = favs.length ? `<section class="block"><h2>${esc(t('yourStops'))}</h2><ul class="plain">${favs.map((i) => stopRow(i)).join('')}</ul></section>` : '';
+  return `${banners(now)}
+<section class="hero hero-first hero-home" data-strip="${stripState(now)}">
+  ${brandBar()}
+  <h1>${esc(t('homeTitle'))}</h1>
+  <p class="badge-unoff">${icon('info', 15)}<span>${esc(t('unofficial'))}</span></p>
+  <p class="lead">${esc(t('heroSource'))}</p>
+</section>
+<div class="actions">
+  <button class="btn" data-act="geo">${icon('locate', 20)}<span>${esc(t('myPosition'))}</span></button>
+  <a class="btn btn-quiet" href="#/cerca">${icon('search', 20)}<span>${esc(t('searchStopShort'))}</span></a>
+</div>
+${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}
+<section class="block near-home" aria-live="polite"><div class="near-head"><h2>${esc(t('nearYou'))}</h2><span class="gps-state gps-${status[0]}"><i aria-hidden="true"></i>${esc(status[1])}</span></div>${body}</section>
+${favBlock}
+<section class="block"><ul class="plain">${quick('#/percorso', 'route', 'homePlan', 'homePlanSub')}${quick('#/mappa', 'map', 'homeMap', 'homeMapSub')}</ul></section>
+<section class="block"><h2>${esc(t('linesNow'))}</h2>${linesNowTiles()}</section>
+<section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>${communityNote()}`;
+}
 
 function viewNear(home = false) {
+  if (home) return viewHomeScreen();
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const last = stopById(store.get('last', ''));
   // la fermata preferita ha la precedenza sull'ultima vista: chi ha salvato una fermata la ritrova subito
@@ -489,11 +570,18 @@ function viewLine(rid, tripSel) {
     const upcoming = (focus >= 0 && isToday ? pool.find((x) => x.tr.s.includes(focus) && at(x) >= now.secs) : null)
       ?? (isToday ? pool.find((x) => x.tr.t[0] >= now.secs) : null) ?? pool[0];
     const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
+    // con la posizione recente e da fermo, ogni fermata dice quanto dista a piedi da te; la più vicina è in evidenza
+    const wd = walkDist(state.walkMap);
+    // fermate fuori dalla rete pedonale (distanza non finita) o oltre 5 km (turista da casa): niente badge
+    let dists = state.loc && !state.loc.moving && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const m = wd(si, distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon)); return Number.isFinite(m) && m <= 5000 ? m : null; }) : null;
+    const known = dists ? dists.filter((m) => m != null) : [];
+    if (!known.length) dists = null;
+    const nearK = dists ? dists.indexOf(Math.min(...known)) : -1;
     const stopsHtml = sel ? sel.tr.s.map((si, k) => {
       const { name } = stopTitle(si);
       const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
       const here = si === focus;
-      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span><span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
+      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span>${dists?.[k] != null ? walkBadge(dists[k], { exact: isExactWalk(state.walkMap, si), strong: k === nearK, near: k === nearK }) : ''}<span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
     }).join('') : '';
     const dayPool = todays.filter((x) => x.tr.d === d).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
     const starts = dayPool.map((x) => x.tr.t[0]);
@@ -711,7 +799,7 @@ function getLoc() {
     if (!navigator.geolocation) return res(false);
     state.locStatus = 'asking';
     navigator.geolocation.getCurrentPosition(
-      (p) => { state.loc = { lat: p.coords.latitude, lon: p.coords.longitude }; state.locStatus = 'ok'; refreshWalk(state.loc); res(true); },
+      (p) => { setLoc(p); state.locStatus = 'ok'; refreshWalk(state.loc); res(true); },
       () => { state.locStatus = 'denied'; res(false); },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
@@ -739,11 +827,11 @@ function optionHtml(o, i, tomorrow) {
       const dest = nextBus ? nameOf(d.trips[nextBus.trip].s[nextBus.from]) : lastLeg ? sideLabel(state.plan.to) : '';
       const where = [names, dest && `${t('stepUntil')} ${dest}`].filter(Boolean).join(' · ');
       const label = !first && nextBus ? `${t('stepChange')}: ${walkTxt.toLowerCase()}` : walkTxt;
-      return `<li class="step step-walk"><span class="step-ico">${icon('walk', 20)}</span><span class="step-body">${esc(label)}${where ? `<span class="step-sub">${esc(where)}</span>` : ''}</span></li>`;
+      return `<li class="step step-walk"><span class="step-dot"></span><span class="step-body"><span class="wbadge wbadge-step">${icon('walk', 14)}<span>${esc(label)}</span></span>${where ? `<span class="step-sub">${esc(where)}</span>` : ''}</span></li>`;
     }
     const trip = d.trips[l.trip];
     const prev = legs[k - 1];
-    const change = prev && prev.kind === 'bus' ? `<li class="step step-walk"><span class="step-ico">${icon('walk', 20)}</span><span class="step-body">${esc(t('stepChange'))}</span></li>` : '';
+    const change = prev && prev.kind === 'bus' ? `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(t('stepChange'))}</span></li>` : '';
     return `${change}<li class="step step-bus">
   <span class="step-tile">${tileSvg(routeOfTrip(l.trip), 30)}</span>
   <span class="step-body"><b>${esc(t('stepBoard', nameOf(trip.s[l.from]), fmtHm(l.dep)))}</b>
@@ -1238,7 +1326,7 @@ function locate() {
   rerenderKeepScroll();
   navigator.geolocation.getCurrentPosition(
     (p) => {
-      state.loc = { lat: p.coords.latitude, lon: p.coords.longitude };
+      setLoc(p);
       state.locStatus = 'ok';
       const [n] = nearestStops(state.data, state.loc.lat, state.loc.lon, 1);
       // Se la posizione è lontana da Marsala (turista che prova l'app da casa) non forza nessuna fermata.
@@ -1248,7 +1336,7 @@ function locate() {
       refreshWalk(state.loc);
     },
     () => { state.locStatus = 'denied'; rerenderKeepScroll(); },
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }, // «Aggiorna» deve dare la posizione di adesso, non una in cache
   );
 }
 
