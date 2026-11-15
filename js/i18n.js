@@ -128,6 +128,7 @@ const IT = {
       'Nella casella «Da» scrivi dove parti: puoi usare il nome di una fermata, una via con il numero civico (per esempio «via Mazzini 10») oppure «La mia posizione» se sei già sul posto. Tocca il risultato giusto.',
       'Se scrivi solo il nome di una via, toccala nell’elenco e aggiungi il numero civico: l’app trova l’indirizzo preciso.',
       'Nella casella «A» fai lo stesso per la destinazione: fermata, indirizzo con civico o posizione.',
+      '<b>Scegliere dalla mappa.</b> Accanto a ogni casella c’è l’icona della mappa: toccala e l’app ti porta sulla mappa con la scritta «Tocca la mappa: punto di partenza» (o «di arrivo»). Tocca il punto che ti serve: compare un riquadro con l’indirizzo più vicino e due pulsanti, «Parti da qui» e «Arriva qui». Toccane uno e torni al percorso con il punto già inserito. Da vicino (zoom avanti) vedi anche i numeri civici. Per cambiare idea tocca «Annulla la scelta».',
       'Appena hai scelto tutte e due, l’app mostra le soluzioni. Non c’è un pulsante da premere. Cambiando «Bus» o «A piedi» il risultato si aggiorna subito.',
       'Per partire adesso lascia «Adesso». Per partire più tardi tocca «Parto alle» e scegli l’ora.',
       'Hai sbagliato l’ordine? Il pulsante con le due frecce, in mezzo alle caselle, inverte «Da» e «A» (comodo per il ritorno).',
