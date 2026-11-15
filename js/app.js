@@ -588,7 +588,7 @@ function viewLine(rid, tripSel) {
 <section class="block line-stats">${stats}</section>
 <section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
 <ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
-<section class="block"><h2>${esc(t('stops'))}</h2><ol class="route-stops">${stopsHtml}</ol></section></section>`;
+<section class="block"><div class="near-head"><h2>${esc(t('stops'))}</h2>${state.loc ? '' : `<button class="btn btn-ghost" data-act="geo">${icon('locate', 18)}<span>${esc(t('showDistances'))}</span></button>`}</div><ol class="route-stops">${stopsHtml}</ol></section></section>`;
   };
 
   return `${banners(now)}
@@ -1183,6 +1183,7 @@ let current = null;
 
 function render(nav = false) {
   if (!state.data) return;
+  autoLocate();
   const path = location.hash.replace(/^#/, '') || '/';
   if (state.cleanup) { state.cleanup(); state.cleanup = null; }
   for (const [re, view, tab, bind] of routes) {
@@ -1315,6 +1316,22 @@ async function refreshWalk(loc) {
   if (!g || state.loc !== loc) return; // offline senza cache, oppure nel frattempo la posizione è cambiata
   state.walkMap = walkFrom(g, state.data.stops, loc.lat, loc.lon);
   rerenderKeepScroll();
+}
+
+/**
+ * Se il permesso di posizione è già concesso la si prende senza chiedere nulla, così home e linee mostrano subito i metri
+ * (lo stato vive solo in memoria: a ogni apertura dell'app va ripresa). Senza permesso non si fa niente: serve il tocco.
+ * Si riprova se la posizione manca o è vecchia, al massimo una volta al minuto.
+ */
+async function autoLocate() {
+  try {
+    if (state.locStatus === 'asking' || !navigator.geolocation || !navigator.permissions) return;
+    if (state.loc && Date.now() - state.loc.at < POS_OLD_MIN * 60000) return;
+    if (Date.now() - (state.autoAt ?? 0) < 60000) return;
+    state.autoAt = Date.now();
+    const perm = await navigator.permissions.query({ name: 'geolocation' });
+    if (perm.state === 'granted') locate();
+  } catch { /* browser senza Permissions API: si aspetta il tocco su «La mia posizione» */ }
 }
 
 function locate() {

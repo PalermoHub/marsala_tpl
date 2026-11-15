@@ -124,15 +124,11 @@ button { font: inherit; color: inherit; }
   position: relative; background: var(--cobalt); color: var(--on-cobalt);
   padding-top: calc(env(safe-area-inset-top) + 20px); padding-bottom: 34px; overflow: hidden;
 }
-/* striscia di piastrelle sul bordo inferiore del campo: il colore segue lo stato (ok / avviso / offline) */
+/* filo continuo sul bordo inferiore del campo: il colore segue lo stato (ok / avviso / offline) */
 .hero { --strip: oklch(83% 0.15 85); }
 .hero[data-strip="warn"] { --strip: oklch(74% 0.15 45); }
 .hero[data-strip="offline"] { --strip: oklch(80% 0.04 262); }
-.hero::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: var(--strip);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M12 1.500l5 4.500-5 4.500-5-4.500z' fill='none' stroke='%23000' stroke-width='1.400'/%3E%3Ccircle cx='0' cy='6' r='1.300'/%3E%3Ccircle cx='24' cy='6' r='1.300'/%3E%3C/svg%3E") repeat-x left center / 24px 12px;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M12 1.500l5 4.500-5 4.500-5-4.500z' fill='none' stroke='%23000' stroke-width='1.400'/%3E%3Ccircle cx='0' cy='6' r='1.300'/%3E%3Ccircle cx='24' cy='6' r='1.300'/%3E%3C/svg%3E") repeat-x left center / 24px 12px;
-}
+.hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--strip); }
 .hero[data-strip="offline"]::after { opacity: 0.6; }
 /* campo di motivo: stesso disegno della piastrella della linea, grande e tenue */
 .hero > * { position: relative; }
@@ -553,7 +549,6 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .gd-page .h3 { margin-top: 16px; }
 
 /* ---------- Home: testata dritta, azioni, «Vicino a te» ---------- */
-.hero-home::after { -webkit-mask: none; mask: none; height: 5px; }
 .hero-home h1 { font-size: 30px; line-height: 1.12; text-wrap: balance; }
 .hero-home .lead { margin-top: 10px; font-size: 16px; max-width: 36ch; }
 .badge-unoff { display: inline-flex; align-items: center; gap: 6px; margin: 14px 0 0; padding: 5px 12px 5px 9px; border-radius: var(--r-pill); background: var(--ocra); color: var(--on-ocra); font-size: 14px; font-weight: 700; }
