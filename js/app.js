@@ -58,6 +58,15 @@ const ICON = {
   phone: '<path d="M6.500 4h3l1.500 4-2 1.500a11 11 0 005 5L15.500 12.500l4 1.500v3a2 2 0 01-2 2A13 13 0 014.500 6a2 2 0 012-2z"/>',
   mail: '<rect x="3.500" y="5.500" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
   pin: '<path d="M12 21s-6-5.500-6-11a6 6 0 0112 0c0 5.500-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',
+  walk: '<circle cx="13" cy="4.500" r="1.800"/><path d="M10.500 21l1.800-6.500-2.800-2.500 1-5 3-1 2 3.500 3 1M9.500 12.500L7 14M12.300 14.500l2.700 2.500V21"/>',
+  bus: '<rect x="4.500" y="3.500" width="15" height="14" rx="3"/><path d="M4.500 11h15M7.500 17.500v2.500M16.500 17.500v2.500M8 14.500h.01M16 14.500h.01"/>',
+  now: '<circle cx="12" cy="12" r="8.500"/><circle cx="12" cy="12" r="3" fill="currentColor"/>',
+  check: '<path d="M5 12.500l4.500 4.500L19 7.500"/>',
+  reload: '<path d="M19.500 12a7.500 7.500 0 11-2.300-5.400M19.500 4.500v4h-4"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.500 2.600 3.800 5.600 3.800 9s-1.300 6.400-3.800 9c-2.500-2.600-3.800-5.600-3.800-9S9.500 5.600 12 3z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.500v2.500M12 19v2.500M2.500 12H5M19 12h2.500M5.300 5.300l1.800 1.800M16.900 16.900l1.800 1.800M5.300 18.700l1.800-1.800M16.900 7.100l1.800-1.800"/>',
+  moon: '<path d="M20 14.500A8 8 0 019.500 4a8 8 0 1010.500 10.500z"/>',
+  contrast: '<circle cx="12" cy="12" r="8.500"/><path d="M12 3.500v17a8.500 8.500 0 000-17z" fill="currentColor"/>',
   swap: '<path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/>',
 };
 const icon = (name, size = 22, filled = false) =>
@@ -334,7 +343,7 @@ function legendList() {
 }
 function legendPanel() {
   return `<div id="legend" class="legend" role="dialog" aria-label="${esc(t('legend'))}" hidden>
-  <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">×</button></div>
+  <div class="legend-top"><h2>${esc(t('legend'))}</h2><button class="icon-btn icon-btn-quiet" data-act="legend" aria-label="${esc(t('close'))}">${icon('close', 22)}</button></div>
   ${legendList()}
 </div>`;
 }
@@ -352,7 +361,7 @@ function mapSide(rid) {
 
 function viewStop(id) {
   const si = stopById(id);
-  if (si < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p><a class="btn" href="#/cerca">${esc(t('searchStop'))}</a></section>`;
+  if (si < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p><a class="btn" href="#/cerca">${icon('search', 20)}<span>${esc(t('searchStop'))}</span></a></section>`;
   store.set('last', id);
   return stopScreen(si);
 }
@@ -430,6 +439,11 @@ function viewLines() {
 ${off.length ? `<h2>${esc(t('notToday'))}</h2><ul class="plain dim">${off.map(row).join('')}</ul>` : ''}</section>`;
 }
 
+// Fila orari: porta al centro l'orario scelto (il più vicino a ora), senza muovere la pagina.
+function centerChip() {
+  const ul = document.querySelector('.chips'), b = ul?.querySelector('[aria-selected="true"]');
+  if (b) ul.scrollLeft = b.offsetLeft - (ul.clientWidth - b.offsetWidth) / 2;
+}
 function viewLine(rid, tripSel) {
   const ri = routeById(rid);
   if (ri < 0) return `<section class="block"><p class="empty-title">${esc(t('noResults'))}</p></section>`;
@@ -658,16 +672,16 @@ function viewPlan(m) {
 </section>
 <section class="block plan-form">
   <div class="seg seg-inline pf-mode" role="radiogroup" aria-label="${esc(t('planModeLabel'))}">
-    <button type="button" role="radio" aria-checked="${state.plan.mode !== 'walk'}" data-act="travelmode" data-v="bus">${esc(t('planModeBus'))}</button>
-    <button type="button" role="radio" aria-checked="${state.plan.mode === 'walk'}" data-act="travelmode" data-v="walk">${esc(t('planModeWalk'))}</button>
+    <button type="button" role="radio" aria-checked="${state.plan.mode !== 'walk'}" data-act="travelmode" data-v="bus">${icon('bus', 20)} ${esc(t('planModeBus'))}</button>
+    <button type="button" role="radio" aria-checked="${state.plan.mode === 'walk'}" data-act="travelmode" data-v="walk">${icon('walk', 20)} ${esc(t('planModeWalk'))}</button>
   </div>
   ${field('from', 'planFrom', 'planFromPh')}
   <div class="swap-row"><button type="button" class="btn btn-quiet pf-reset" data-act="resetplan">${icon('close', 18)} ${esc(t('planReset'))}</button><button type="button" class="icon-btn icon-btn-quiet" data-act="swap" aria-label="${esc(t('planSwap'))}">${icon('swap', 22)}</button></div>
   ${field('to', 'planTo', 'planToPh')}
   <div class="pf-time">
     <div class="seg seg-inline" role="radiogroup">
-      <button type="button" role="radio" aria-checked="${!atMode}" data-act="timemode" data-v="now">${esc(t('planNow'))}</button>
-      <button type="button" role="radio" aria-checked="${atMode}" data-act="timemode" data-v="at">${esc(t('planAt'))}</button>
+      <button type="button" role="radio" aria-checked="${!atMode}" data-act="timemode" data-v="now">${icon('now', 18)} ${esc(t('planNow'))}</button>
+      <button type="button" role="radio" aria-checked="${atMode}" data-act="timemode" data-v="at">${icon('clock', 18)} ${esc(t('planAt'))}</button>
     </div>
     <input id="pf-time" class="time-in" type="time" aria-label="${esc(t('planAt'))}" ${atMode ? '' : 'hidden'}>
   </div>
@@ -709,19 +723,19 @@ function optionHtml(o, i, tomorrow) {
       const dest = nextBus ? nameOf(d.trips[nextBus.trip].s[nextBus.from]) : lastLeg ? sideLabel(state.plan.to) : '';
       const where = [names, dest && `${t('stepUntil')} ${dest}`].filter(Boolean).join(' · ');
       const label = !first && nextBus ? `${t('stepChange')}: ${walkTxt.toLowerCase()}` : walkTxt;
-      return `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(label)}${where ? `<span class="step-sub">${esc(where)}</span>` : ''}</span></li>`;
+      return `<li class="step step-walk"><span class="step-ico">${icon('walk', 20)}</span><span class="step-body">${esc(label)}${where ? `<span class="step-sub">${esc(where)}</span>` : ''}</span></li>`;
     }
     const trip = d.trips[l.trip];
     const prev = legs[k - 1];
-    const change = prev && prev.kind === 'bus' ? `<li class="step step-walk"><span class="step-dot"></span><span class="step-body">${esc(t('stepChange'))}</span></li>` : '';
+    const change = prev && prev.kind === 'bus' ? `<li class="step step-walk"><span class="step-ico">${icon('walk', 20)}</span><span class="step-body">${esc(t('stepChange'))}</span></li>` : '';
     return `${change}<li class="step step-bus">
   <span class="step-tile">${tileSvg(routeOfTrip(l.trip), 30)}</span>
   <span class="step-body"><b>${esc(t('stepBoard', nameOf(trip.s[l.from]), fmtHm(l.dep)))}</b>
     <span class="step-sub">${esc(t('stepTo', headOf(trip)))} · ${esc(t('stepStops', l.to - l.from))}</span>
     <b>${esc(t('stepAlight', nameOf(trip.s[l.to]), fmtHm(l.arr)))}</b></span></li>`;
   }).join('');
-  return `<li><details class="opt"${i === 0 ? ' open' : ''}>
-  <summary><span class="opt-head"><span class="opt-time">${tomorrow && !o.walkOnly ? esc(t('planTomorrow')) + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}</span><span class="opt-meta">${esc(t('planDuration', mins))} · ${esc(o.walkOnly ? t('planWalkMeta', Math.round((o.geo?.legs[0]?.m ?? 0) / 10) * 10) : t(o.transfers ? 'planTransfer' : 'planDirect'))}</span></span><span class="opt-tiles">${o.walkOnly ? `<span class="tile-walk">${esc(t('planWalkOnly'))}</span>` : tiles}</span></summary>
+  return `<li><details class="opt" open>
+  <summary><span class="opt-head"><span class="opt-time">${tomorrow && !o.walkOnly ? esc(t('planTomorrow')) + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}</span><span class="opt-meta">${esc(t('planDuration', mins))} · ${esc(o.walkOnly ? t('planWalkMeta', Math.round((o.geo?.legs[0]?.m ?? 0) / 10) * 10) : t(o.transfers ? 'planTransfer' : 'planDirect'))}</span></span><span class="opt-tiles">${o.walkOnly ? `<span class="tile-walk">${icon('walk', 20)} ${esc(t('planWalkOnly'))}</span>` : tiles}</span></summary>
   <ol class="steps">${steps}<li class="step step-end"><span class="step-dot"></span><span class="step-body"><b>${esc(t('stepArrive', fmtHm(o.end)))}</b></span></li></ol>
   <button type="button" class="btn btn-quiet opt-map" data-act="showmap" data-i="${i}">${icon('map', 20)} ${esc(t('planOnMap'))}</button>
 </details></li>`;
@@ -934,7 +948,7 @@ function viewInfo() {
   const now = romeNow();
   const fs = feedStatus(m, now.ymd);
   const theme = store.get('theme', 'auto');
-  const seg = (name, opts, cur) => `<div class="seg seg-inline" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${v === cur}" data-act="${name}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`;
+  const seg = (name, opts, cur) => `<div class="seg seg-inline" role="radiogroup">${opts.map(([v, l, ic]) => `<button role="radio" aria-checked="${v === cur}" data-act="${name}" data-v="${v}">${ic ? icon(ic, 18) + ' ' : ''}${esc(l)}</button>`).join('')}</div>`;
   const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
   const acc = (id, tone, ic, title, body) => `<details class="acc" data-acc="${id}"${infoOpen.has(id) ? ' open' : ''}><summary><span class="acc-ico acc-${tone}">${icon(ic, 26)}</span><span class="acc-t">${esc(title)}</span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body">${body}</div></details>`;
   const en = getLang() === 'en';
@@ -950,9 +964,9 @@ function viewInfo() {
 <h2 class="h3">${esc(t('licenses'))}</h2>
 <p>${esc(t('licData'))}: <a href="https://creativecommons.org/licenses/by/4.0/deed.${en ? 'en' : 'it'}" target="_blank" rel="noopener">CC BY 4.0</a><br>${esc(t('licCode'))}: <a href="https://github.com/PalermoHub/marsala_tpl/blob/main/LICENSE" target="_blank" rel="noopener">${esc(t('licCodeText'))}</a></p>`),
     acc('valid', 'cobalt', 'calendar', t('validity'), `<p>${m.validTo ? esc(t('validUntil', fmtDate(m.validTo))) : ''}</p><p class="muted">${esc(t('version'))}: ${esc(m.feedVersion ?? '–')}</p>`),
-    acc('look', 'ocra', 'sliders', `${t('language')} · ${t('theme')}`, `<h2 class="h3">${esc(t('language'))}</h2>${seg('lang', [['it', 'Italiano'], ['en', 'English']], getLang())}<h2 class="h3">${esc(t('theme'))}</h2>${seg('theme', [['auto', t('themeAuto')], ['light', t('themeLight')], ['dark', t('themeDark')]], theme)}`),
+    acc('look', 'ocra', 'sliders', `${t('language')} · ${t('theme')}`, `<h2 class="h3">${esc(t('language'))}</h2>${seg('lang', [['it', 'Italiano', 'globe'], ['en', 'English', 'globe']], getLang())}<h2 class="h3">${esc(t('theme'))}</h2>${seg('theme', [['auto', t('themeAuto'), 'contrast'], ['light', t('themeLight'), 'sun'], ['dark', t('themeDark'), 'moon']], theme)}`),
     acc('err', 'terra', 'flag', t('reportError'), `<p>${esc(t('reportHelp'))}${m.contact ? ` <a href="${esc(safeUrl(m.contact))}" rel="noopener">${esc(t('reportError'))}</a>` : ''}</p>${m.corrections?.length ? `<h2 class="h3">${esc(t('corrections'))}</h2><p>${esc(t('correctionsText'))}</p>` : ''}`),
-    acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h2 class="h3">${esc(t('consentManage'))}</h2>${seg('consent', [['granted', t('consentOn')], ['denied', t('consentOff')]], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
+    acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h2 class="h3">${esc(t('consentManage'))}</h2>${seg('consent', [['granted', t('consentOn'), 'check'], ['denied', t('consentOff'), 'close']], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
     acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
   ];
   return `${banners(now)}${pageHead(t('info'), { back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
@@ -963,7 +977,7 @@ function viewPrivacy() {
   return `${pageHead(t('privacyFull'), { lead: t('privacyUpdated'), back: ['#/info', t('info')] })}<section class="block prose">
 ${t('privacyDoc').map(([h, ps]) => `<h2>${esc(h)}</h2>${ps.map((p) => `<p>${link(p)}</p>`).join('')}`).join('')}
 <h2>${esc(t('consentManage'))}</h2>
-<div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn')], ['denied', t('consentOff')]].map(([v, l]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${esc(l)}</button>`).join('')}</div></section>`;
+<div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn'), 'check'], ['denied', t('consentOff'), 'close']].map(([v, l, ic]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${icon(ic, 18)} ${esc(l)}</button>`).join('')}</div></section>`;
 }
 
 // Banner del consenso: non blocca l'uso dell'app, Accetta e Rifiuta hanno lo stesso peso.
@@ -976,7 +990,7 @@ function renderConsent() {
   el.className = 'consent';
   el.setAttribute('aria-labelledby', 'consent-t');
   el.innerHTML = `<h2 id="consent-t" class="sr">${esc(t('consentTitle'))}</h2><p>${esc(t('consentText'))} <a href="#/privacy">${esc(t('consentInfo'))}</a></p>
-<div class="consent-btns"><button class="btn btn-choice" data-act="consent" data-v="denied">${esc(t('consentReject'))}</button><button class="btn btn-choice" data-act="consent" data-v="granted">${esc(t('consentAccept'))}</button></div>`;
+<div class="consent-btns"><button class="btn btn-choice" data-act="consent" data-v="denied">${icon('close', 20)}<span>${esc(t('consentReject'))}</span></button><button class="btn btn-choice" data-act="consent" data-v="granted">${icon('check', 20)}<span>${esc(t('consentAccept'))}</span></button></div>`;
   el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act="consent"]');
     if (!b) return;
@@ -1003,7 +1017,7 @@ const routes = [
     const rid = decodeURIComponent(m[1]), o = state.origin?.rid === rid ? state.origin : null;
     if (o) { state.lineDir = o.d; state.lineDay = o.day; } // si torna alla linea di partenza: stessa direzione, giorno e corsa
     return viewLine(rid, o?.i);
-  }, 'lines', (m) => { if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
+  }, 'lines', (m) => { centerChip(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/altro$/, () => viewMore(), 'more'],
@@ -1067,6 +1081,7 @@ $app.addEventListener('change', (e) => {
   if (!m) return;
   state.lineDay = Number(e.target.value.replaceAll('-', ''));
   $app.innerHTML = viewLine(decodeURIComponent(m[1]));
+  centerChip();
 });
 // Da una fermata della linea: si ricorda la linea (direzione, giorno, corsa, fermata) per poter tornare, anche dopo più fermate.
 $app.addEventListener('click', (e) => {
@@ -1097,8 +1112,8 @@ $app.addEventListener('click', async (e) => {
       else { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t('linkCopied')); }
     } catch { /* annullato */ }
   } else if (act === 'geo') locate();
-  else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
-  else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); }
+  else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); centerChip(); }
+  else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); centerChip(); }
   else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
   else if (act === 'pickonmap') { state.pickSide = b.dataset.side === 'to' ? 'to' : 'from'; state.mapRoute = null; location.hash = '#/mappa'; }
   else if (act === 'cancelpick') { state.pickSide = null; location.hash = planHash(); }
@@ -1241,7 +1256,7 @@ async function boot() {
     render(true);
     refreshNews(); // in coda: non rallenta la prima schermata
   } catch {
-    $app.innerHTML = `<section class="block"><p class="empty-title">${esc(t('loadError'))}</p><p>${esc(t('loadHelp'))}</p><button class="btn" data-act="reload">${esc(t('retry'))}</button></section>`;
+    $app.innerHTML = `<section class="block"><p class="empty-title">${esc(t('loadError'))}</p><p>${esc(t('loadHelp'))}</p><button class="btn" data-act="reload">${icon('reload', 20)}<span>${esc(t('retry'))}</span></button></section>`;
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }

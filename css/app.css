@@ -252,7 +252,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 
 /* ---------- linea ---------- */
 .seg { display: flex; gap: 0; margin-block: 18px 0; }
-.seg button { flex: 1; min-height: 48px; padding: 6px 10px; border: 2px solid var(--cobalt-hi); background: transparent; color: var(--ink); font-weight: 700; font-size: 15px; line-height: 1.2; cursor: pointer; text-wrap: balance; }
+.seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-height: 48px; padding: 6px 10px; border: 2px solid var(--cobalt-hi); background: transparent; color: var(--ink); font-weight: 700; font-size: 15px; line-height: 1.2; cursor: pointer; text-wrap: balance; }
 .seg button:first-child { border-radius: var(--r) 0 0 var(--r); }
 .seg button:last-child { border-radius: 0 var(--r) var(--r) 0; }
 .seg button + button { border-left-width: 0; }
@@ -290,7 +290,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .chip-route span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-route button { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -8px -6px 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .chip-route button:focus-visible { outline: 3px solid var(--focus, currentColor); outline-offset: 1px; }
-.tile-walk { display: inline-grid; place-items: center; min-height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glaze); border: 2px solid var(--ink-2); color: var(--ink); font-size: 14px; font-weight: 700; }
+.tile-walk { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glaze); border: 2px solid var(--ink-2); color: var(--ink); font-size: 14px; font-weight: 700; }
 .swap-row:has(.pf-reset) { display: flex; justify-content: space-between; align-items: center; }
 .pf-reset { min-height: 44px; padding: 0 14px; gap: 6px; font-size: 15px; }
 .pf-mode { margin-bottom: 16px; }
@@ -385,7 +385,11 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .time-in { min-height: 48px; padding: 0 12px; border: 2px solid var(--edge); border-radius: var(--r); background: var(--glaze-2); color: var(--ink); font: inherit; font-size: 18px; font-weight: 700; }
 .time-in[hidden] { display: none; }
 .plan-out { padding-top: 8px; }
-.opts { display: grid; gap: 12px; }
+.opts { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -ms-overflow-style: none; align-items: flex-start; }
+.opts::-webkit-scrollbar { display: none; }
+.opts > li { flex: 0 0 88%; min-width: 0; scroll-snap-align: start; }
+.opts > li:only-child { flex-basis: 100%; }
+.opt summary { pointer-events: none; cursor: default; }
 .opt { border: 2px solid var(--line); border-radius: var(--r); background: var(--glaze); }
 .opt[open] { border-color: var(--cobalt-hi); }
 .opt summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-height: 64px; padding: 12px 14px; cursor: pointer; list-style: none; }
@@ -401,6 +405,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .step:first-child::before { top: 20px; }
 .step-end::before { bottom: calc(100% - 20px); }
 .step-dot { justify-self: center; align-self: start; margin-top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--glaze); border: 3px solid var(--cobalt-hi); position: relative; z-index: 1; }
+.step-ico { position: relative; z-index: 1; justify-self: center; align-self: start; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--glaze); border: 2px solid var(--cobalt-hi); color: var(--ink-2); }
 .step-tile { position: relative; z-index: 1; }
 .step-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .step-sub { font-size: 15px; color: var(--ink-2); }
@@ -528,5 +533,6 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .field-map:focus-visible { outline: 3px solid var(--focus, currentColor); outline-offset: 1px; }
 .civico-pop { color: #1b1b1b; font-weight: 600; }
 .pick-btns { display: flex; gap: 8px; margin-top: 8px; }
-.pick-btns button { min-height: 40px; padding: 0 12px; border: 2px solid currentColor; border-radius: 10px; background: transparent; color: #8A1C3A; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.pick-btns button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 2px solid currentColor; border-radius: 10px; background: transparent; color: #8A1C3A; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.pick-btns button svg { width: 18px; height: 18px; }
 .pick-btns button:focus-visible { outline: 3px solid #8A1C3A; outline-offset: 1px; }

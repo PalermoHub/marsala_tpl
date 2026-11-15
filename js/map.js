@@ -50,6 +50,8 @@ const SVG = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" 
 const ICON = {
   home: SVG('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>'),
   locate: SVG('<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.500v3M12 19.500v3M1.500 12h3M19.500 12h3"/>'),
+  pinA: SVG('<path d="M12 21s-6-5.500-6-11a6 6 0 0112 0c0 5.500-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>'),
+  flagB: SVG('<path d="M5 21V4M5 5h12l-2 4 2 4H5"/>'),
   compass: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2.500l4 9.500h-8z" fill="#C8412B"/><path d="M12 21.500l-4-9.500h8z" fill="currentColor" opacity="0.55"/></svg>',
   full: SVG('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
   exit: SVG('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'),
@@ -154,7 +156,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     const h = document.createElement('div'); h.textContent = label; d.append(h);
     const row = document.createElement('div'); row.className = 'pick-btns';
     for (const [side, key] of [['from', 'planFromHere'], ['to', 'planToHere']]) {
-      const b = document.createElement('button'); b.type = 'button'; b.textContent = t(key);
+      const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `${side === 'from' ? ICON.pinA : ICON.flagB}<span></span>`; b.lastChild.textContent = t(key);
       b.addEventListener('click', () => plan.onPlan(side, id));
       row.append(b);
     }
