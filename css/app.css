@@ -521,7 +521,8 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .gd-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 2px solid var(--edge); border-radius: var(--r); background: var(--glaze); color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .gd-tabs button[aria-selected="true"] { background: var(--cobalt); border-color: var(--cobalt); color: var(--on-cobalt); }
 .gd-tabs .gd-tab-link { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; margin-left: auto; border: 2px dashed var(--cobalt); border-radius: var(--r); color: var(--cobalt); font-size: 15px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-.gd-tabs:has(.gd-tab-link) button { padding: 0 10px; gap: 5px; }
+.gd-tabs:has(.gd-tab-link) { gap: 6px; }
+.gd-tabs:has(.gd-tab-link) button, .gd-tabs .gd-tab-link { padding: 0 9px; gap: 4px; font-size: 14px; }
 .gd-pages { display: flex; align-items: flex-start; margin: 8px 0 0; padding-inline: 0; overflow: auto hidden; transition: height 0.2s var(--ease); scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .gd-pages::-webkit-scrollbar { display: none; }
 .gd-page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 var(--gut) 24px; box-sizing: border-box; }
