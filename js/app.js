@@ -1208,7 +1208,7 @@ ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap
   const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
   const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
   const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${rich(t('coinAirLead'))}</p><ul class="plain coin-list">
-${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p>${mapLink('florio', true)} · <a href="#/voli">${esc(t('flightsOpen'))}</a></p>`)}
+${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p class="coin-links">${mapLink('florio', true)}</p><p class="coin-links"><a class="coin-stop" href="#/voli">${icon('plane', 18)} ${esc(t('flightsOpen'))}</a></p>`)}
 ${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'), `<p>${mapLink('palermo', true)}</p>`)}</ul>
 <h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${tbl(toHead, rowsTo('Palermo · Salemi'), [1], [2], [0])}
