@@ -1162,7 +1162,15 @@ ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap
 <h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${esc(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
 <div class="info-links">${LINK.slice(2, 6).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const wk = (m) => t('coinMinWalk', Math.round(m / 1.2 / 60));
-  const air = `<h2 class="gd-h">${esc(t('coinDistTime'))}</h2>${tbl([t('coinFromTo'), t('coinDist'), t('coinTime')], [[t('coinStationToAirport'), '1,6 km', wk(1600)], [t('coinBusToFlorio'), '–', t('coinMinBus', 30)], [t('coinBusToPalermo'), '–', t('coinHours', 2)]], [], [1, 2])}<p class="note">${esc(t('coinDistNote'))}</p><h2 class="gd-h">${esc(t('coinFlorio'))}</h2><p>${esc(t('coinFlorioText'))}</p><p class="coin-line-note">${chip('4')} <span>${esc(t('coinLine4Birgi'))}</span></p><h2 class="gd-h">${esc(t('coinPalermo'))}</h2><p>${esc(t('coinPalermoText'))}</p>
+  // Stesso schema delle stazioni: nome, badge con il mezzo e tempo in grassetto, linee, dettagli.
+  const airCard = (name, badge, time, linesStr, text, extra = '') => `<li class="coin-card"><div class="coin-head"><h3>${esc(name)}</h3><span class="coin-walk"><span class="wbadge wbadge-strong">${icon('bus', 14)}<span>${esc(badge)}</span></span><b>${esc(time)}</b></span></div>${linesStr ? `<p class="muted">${esc(t('coinLines'))} ${lineHtml(linesStr)}</p>` : ''}<p>${esc(text)}</p>${extra}</li>`;
+  const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
+  const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
+  const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${esc(t('coinAirLead'))}</p><ul class="plain coin-list">
+${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`)}
+${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'))}</ul>
+<h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
+<h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${tbl(toHead, rowsTo('Palermo · Salemi'), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinLinks'))}</h2><div class="info-links">${LINK.slice(2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const secs = [['train', 'train', t('coinTabTrain'), treni], ['bus', 'bus', t('coinTabBus'), pull], ['air', 'plane', t('coinTabAir'), air]];
   const tab = ([id, ic, ti], i) => `<button type="button" role="tab" id="ct-${id}" data-gi="${i}" aria-controls="cp-${id}" aria-selected="${i === coinCur}" tabindex="${i === coinCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(ti)}</span></button>`;
