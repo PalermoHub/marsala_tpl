@@ -139,6 +139,7 @@ const IT = {
       '<b>Scegliere dalla mappa.</b> Accanto a ogni casella c’è l’icona della mappa: toccala e l’app ti porta sulla mappa con la scritta «Tocca la mappa: punto di partenza» (o «di arrivo»). Tocca il punto che ti serve: compare un riquadro con l’indirizzo più vicino e due pulsanti, «Parti da qui» e «Arriva qui». Toccane uno e torni al percorso con il punto già inserito. Da vicino (zoom avanti) vedi anche i numeri civici. Per cambiare idea tocca «Annulla la scelta».',
       'Appena hai scelto tutte e due, l’app mostra le soluzioni. Non c’è un pulsante da premere. Cambiando «Bus» o «A piedi» il risultato si aggiorna subito.',
       'Per partire adesso lascia «Adesso». Per partire più tardi tocca «Parto alle» e scegli l’ora.',
+      'Per un altro giorno usa il campo «Giorno» sotto l’ora: scegli la data e l’app mostra gli orari di quel giorno (la domenica ci sono meno corse). Se non scegli anche l’ora, vedi dalla prima corsa del mattino. «Oggi» torna al giorno attuale.',
       'Hai sbagliato l’ordine? Il pulsante con le due frecce, in mezzo alle caselle, inverte «Da» e «A» (comodo per il ritorno).',
       'Vuoi ricominciare? Tocca «Azzera»: cancella partenza, arrivo, ora e il percorso aperto sulla mappa.',
     ], 'Funziona anche tra due indirizzi qualsiasi, non solo tra fermate: l’app aggiunge da sola i tratti a piedi fino alla fermata e dalla fermata all’arrivo.', [['percorso-da', 'Il pianificatore con la partenza «Via Giuseppe Mazzini 10» e l’arrivo in corso di scrittura; in alto la scelta «Bus» / «A piedi»'], ['percorso-risultati', 'Soluzione con il bus: tratto a piedi, bus, tratto a piedi, con orari e minuti']]],
@@ -167,6 +168,14 @@ const IT = {
       'Se il tuo dispositivo non apre l’elenco, l’app copia il link e compare la scritta «Link copiato»: incollalo dove vuoi.',
       'Chi riceve il messaggio tocca il link e vede subito lo stesso percorso.',
     ], 'Anche una fermata si può condividere: apri la fermata e tocca la freccia in alto a destra.', [['percorso-condividi', 'Il pulsante «Condividi percorso» in fondo ai risultati']]],
+    ['saved', 'star', 'Come salvare e ritrovare un percorso', 'Se fai spesso lo stesso tragitto, per esempio da casa al lavoro, puoi salvarlo e riaprirlo con un tocco.', [
+      'Fai il percorso come spiegato sopra.',
+      'In fondo ai risultati tocca «Salva percorso»: la scritta diventa «Percorso salvato». Toccalo di nuovo per toglierlo.',
+      'Torna su «Percorso»: in alto, sopra le caselle, trovi l’elenco «Percorsi salvati».',
+      'Tocca una riga per riaprire quel tragitto: l’app ricalcola gli orari per il giorno e l’ora di quel momento, non per quelli di quando lo hai salvato.',
+      'Per eliminarlo tocca la «×» a destra della riga.',
+      '<b>Dove sono salvati.</b> Solo nel browser di questo telefono o computer: non vengono inviati a nessuno e non serve un account. Restano anche dopo aver chiuso l’app. Non li ritrovi su un altro dispositivo o con un altro browser, e si perdono se cancelli i dati del sito o usi la navigazione privata. Puoi salvarne fino a 20: oltre, il più vecchio viene tolto.',
+    ], 'Se salvi un percorso con «La mia posizione», quando lo riapri parte da dove sei in quel momento.', []],
     ['lines', 'list', 'Come vedere una linea', 'Se vuoi sapere dove passa una linea e a che ora parte.', [
       'Tocca «Linee» nella barra in basso. Sopra ci sono le linee in servizio oggi, sotto quelle che oggi non circolano.',
       'Tocca una linea per aprirla. Vedi tutte le fermate in ordine, con l’ora di passaggio.',
