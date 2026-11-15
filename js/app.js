@@ -19,6 +19,7 @@ const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 
 /** Oltre ~15 km/h (4,2 m/s) non si sta camminando: si è su un mezzo e i metri a piedi non servono. Dopo 5 minuti la posizione è «vecchia». */
 const MOVING_MS = 4.2;
 const POS_OLD_MIN = 5;
+const FAR_M = 5000;
 /** Salva una lettura GPS con l'ora e la velocità (del GPS, o stimata dallo spostamento dalla lettura precedente). */
 function setLoc(p) {
   const prev = state.loc;
@@ -27,6 +28,9 @@ function setLoc(p) {
   let v = p.coords.speed;
   if (v == null && prev && at - prev.at > 3000 && at - prev.at < 300000) v = distanceM(prev.lat, prev.lon, loc.lat, loc.lon) / ((at - prev.at) / 1000);
   loc.moving = v != null && v > MOVING_MS;
+  // lontano dal servizio (turista, o a casa fuori Marsala): niente fermate «vicine» né metri a piedi, ma un avviso
+  loc.nearestM = state.data ? Math.min(...state.data.stops.map((o) => distanceM(loc.lat, loc.lon, o.lat, o.lon))) : 0;
+  loc.far = loc.nearestM > FAR_M;
   state.loc = loc;
 }
 
@@ -271,10 +275,11 @@ function viewHomeScreen() {
   const now = romeNow();
   const favs = store.get('favs', []).map(stopById).filter((i) => i >= 0);
   const loc = state.loc;
-  const moving = !!loc?.moving;
+  const far = !!loc?.far;
+  const moving = !!loc?.moving && !far;
   const ageMin = loc ? Math.floor((Date.now() - loc.at) / 60000) : 0;
   const old = !!loc && ageMin >= POS_OLD_MIN;
-  const near = loc && !moving ? nearestStops(state.data, loc.lat, loc.lon, 6, walkDist(state.walkMap)) : [];
+  const near = loc && !moving && !far ? nearestStops(state.data, loc.lat, loc.lon, 6, walkDist(state.walkMap)) : [];
   const geoMsg = state.locStatus === 'asking' ? t('locating') : state.locStatus === 'denied' ? t('locDenied') : '';
   const status = !loc ? ['off', t('gpsOff')] : moving ? ['moving', t('gpsMoving')] : ['on', t('gpsOn')];
   const refreshBtn = (label) => `<button class="btn btn-ghost" data-act="geo">${icon('reload', 18)}<span>${esc(label)}</span></button>`;
@@ -288,6 +293,13 @@ function viewHomeScreen() {
   <p class="muted">${esc(t('gpsOffPrivacy'))}</p>
 </div>
 <p class="note">${esc(t('gpsOffAlt'))}</p>`;
+  } else if (far) {
+    body = `<div class="here-card here-empty">
+  <span class="here-ico" aria-hidden="true">${icon('pin', 26)}</span>
+  <p class="here-title">${esc(t('farTitle'))}</p>
+  <p>${esc(t('farHelp', Math.round(loc.nearestM / 1000)))}</p>
+  ${refreshBtn(t('refreshPos'))}
+</div>`;
   } else if (moving) {
     body = `<div class="here-card here-empty">
   <span class="here-ico here-ico-bus" aria-hidden="true">${icon('bus', 26)}</span>
@@ -570,7 +582,7 @@ function viewLine(rid, tripSel) {
     // con la posizione recente e da fermo, ogni fermata dice quanto dista a piedi da te; la più vicina è in evidenza
     const wd = walkDist(state.walkMap);
     // fermate fuori dalla rete pedonale (distanza non finita) o oltre 5 km (turista da casa): niente badge
-    let dists = state.loc && !state.loc.moving && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const m = wd(si, distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon)); return Number.isFinite(m) && m <= 5000 ? m : null; }) : null;
+    let dists = state.loc && !state.loc.moving && !state.loc.far && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const m = wd(si, distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon)); return Number.isFinite(m) && m <= 5000 ? m : null; }) : null;
     const known = dists ? dists.filter((m) => m != null) : [];
     if (!known.length) dists = null;
     const nearK = dists ? dists.indexOf(Math.min(...known)) : -1;
@@ -588,7 +600,7 @@ function viewLine(rid, tripSel) {
 <section class="block line-stats">${stats}</section>
 <section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
 <ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
-<section class="block"><div class="near-head"><h2>${esc(t('stops'))}</h2>${state.loc ? '' : `<button class="btn btn-ghost" data-act="geo">${icon('locate', 18)}<span>${esc(t('showDistances'))}</span></button>`}</div><ol class="route-stops">${stopsHtml}</ol></section></section>`;
+<section class="block"><div class="near-head"><h2>${esc(t('stops'))}</h2>${state.loc?.far ? `<span class="muted far-note">${esc(t('farNote'))}</span>` : state.loc ? '' : `<button class="btn btn-ghost" data-act="geo">${icon('locate', 18)}<span>${esc(t('showDistances'))}</span></button>`}</div><ol class="route-stops">${stopsHtml}</ol></section></section>`;
   };
 
   return `${banners(now)}
@@ -708,7 +720,7 @@ function stopSheetHtml(si) {
   if (it) when = `${tileSvg(routeOfTrip(it.trip), 30)}<span>${esc(t('nextPass'))} <b>${esc(formatClock(it.secs))}</b> · ${esc(relText(it))}</span>`;
   else when = `<span>${esc(t('noMoreToday'))}${tomorrow ? ` · ${esc(t('firstTomorrow', formatClock(tomorrow.secs)))}` : ''}</span>`;
   let walk = '';
-  if (state.loc && !state.loc.moving) {
+  if (state.loc && !state.loc.moving && !state.loc.far) {
     const m = walkDist(state.walkMap)(si, distanceM(state.loc.lat, state.loc.lon, s.lat, s.lon));
     if (Number.isFinite(m) && m <= 5000) walk = walkBadge(m, { exact: isExactWalk(state.walkMap, si), near: true });
   }

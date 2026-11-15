@@ -612,3 +612,4 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .map-view-wrap { position: relative; }
 .map-viewmenu { position: absolute; right: 48px; top: 0; display: flex; gap: 8px; padding: 6px; border-radius: var(--r-lg); background: var(--glaze-2); box-shadow: var(--shadow-float); }
 .map-viewmenu[hidden] { display: none; }
+.far-note { margin-top: 18px; font-size: 13px; text-align: right; max-width: 22ch; }
