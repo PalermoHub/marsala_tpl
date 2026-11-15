@@ -178,7 +178,7 @@ const IT = {
     ['saved', 'star', 'Come salvare e ritrovare un percorso', 'Se fai spesso lo stesso tragitto, per esempio da casa al lavoro, puoi salvarlo e riaprirlo con un tocco.', [
       'Fai il percorso come spiegato sopra.',
       'In fondo ai risultati tocca «Salva percorso»: la scritta diventa «Percorso salvato». Toccalo di nuovo per toglierlo.',
-      'Torna su «Percorso»: in alto, sopra le caselle, trovi l’elenco «Percorsi salvati».',
+      'Torna su «Percorso»: in alto, sopra le caselle, trovi il menù «Percorsi salvati»: toccalo per aprirlo (accanto al titolo c’è il numero di percorsi). Ogni riga mostra «Da» e «A».',
       'Tocca una riga per riaprire quel tragitto: l’app ricalcola gli orari per il giorno e l’ora di quel momento, non per quelli di quando lo hai salvato.',
       'Per eliminarlo tocca la «×» a destra della riga.',
       '<b>Dove sono salvati.</b> Solo nel browser di questo telefono o computer: non vengono inviati a nessuno e non serve un account. Restano anche dopo aver chiuso l’app. Non li ritrovi su un altro dispositivo o con un altro browser, e si perdono se cancelli i dati del sito o usi la navigazione privata. Puoi salvarne fino a 20: oltre, il più vecchio viene tolto.',

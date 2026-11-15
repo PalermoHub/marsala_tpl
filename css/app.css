@@ -628,6 +628,13 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .saved-row { display: flex; align-items: center; gap: 4px; }
 .saved-row .row { flex: 1; min-width: 0; }
 .saved-row .icon-btn { min-width: 48px; min-height: 48px; }
+.saved-routes { margin-inline: var(--gut); }
+.saved-acc summary { min-height: 56px; }
+.saved-n { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; margin-left: 6px; border-radius: 12px; background: var(--cobalt); color: var(--on-cobalt); font-size: 14px; vertical-align: 1px; }
+.saved-acc .acc-body { padding: 0 8px 8px; }
+.saved-row .row-title { display: grid; gap: 4px; }
+.saved-side { display: grid; grid-template-columns: 2.2em 1fr; gap: 6px; align-items: baseline; }
+.saved-k { font-size: 13px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
 .pf-time [hidden] { display: none; }
 .pf-time { flex-wrap: wrap; gap: 8px; }
 .pf-time .seg button { padding-inline: 10px; }

@@ -820,14 +820,17 @@ const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
 const WALK_MAX_CROW_M = 5000, WALK_MAX_M = 7000; // a piedi: oltre queste distanze (linea d'aria / sulla rete) non si propone il percorso
 const pointId = (lat, lon, label) => `@${lat.toFixed(5)},${lon.toFixed(5)},${label}`;
 
+let savedOpen = false; // il menù dei percorsi salvati resta aperto dopo un «×»
 /** Percorsi salvati: ogni riga riapre Da→A a oggi/adesso. Le fermate sparite dal feed si saltano. */
 function savedRoutesHtml() {
   const rows = listRoutes().map((r, i) => {
     const a = resolveSide(r.from), b = resolveSide(r.to);
     if (!a || !b) return '';
-    return `<li class="saved-row"><button type="button" class="row row-btn" data-act="openroute" data-i="${i}"><span class="row-main"><span class="row-title">${r.mode === 'walk' ? `${icon('walk', 18)} ` : ''}${esc(sideLabel(a))} → ${esc(sideLabel(b))}</span></span></button><button type="button" class="icon-btn icon-btn-quiet" data-act="delroute" data-i="${i}" aria-label="${esc(t('planDelete'))}">${icon('close', 20)}</button></li>`;
+    const lbl = (k, name) => `<span class="saved-side"><span class="saved-k">${esc(t(k))}</span><span class="saved-v">${esc(name)}</span></span>`;
+    return `<li class="saved-row"><button type="button" class="row row-btn" data-act="openroute" data-i="${i}"><span class="row-main"><span class="row-title">${r.mode === 'walk' ? `${icon('walk', 18)} ` : ''}${lbl('planFrom', sideLabel(a))}${lbl('planTo', sideLabel(b))}</span></span></button><button type="button" class="icon-btn icon-btn-quiet" data-act="delroute" data-i="${i}" aria-label="${esc(t('planDelete'))}">${icon('close', 20)}</button></li>`;
   }).join('');
-  return rows ? `<section class="block saved-routes"><h2>${esc(t('planSavedH'))}</h2><ul class="plain">${rows}</ul></section>` : '';
+  const n = (rows.match(/<li /g) || []).length;
+  return rows ? `<section class="block saved-routes"><details class="acc saved-acc"${savedOpen ? ' open' : ''}><summary><span class="acc-t">${esc(t('planSavedH'))} <span class="saved-n">${n}</span></span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body"><ul class="plain">${rows}</ul></div></details></section>` : '';
 }
 
 function viewPlan(m) {
@@ -1478,12 +1481,14 @@ $app.addEventListener('click', async (e) => {
     if (from && to) {
       state.plan = { from, to, time: null, ymd: null, mode: r.mode };
       state.planOpts = null; state.planShareText = ''; state.mapRoute = null;
+      savedOpen = false;
       history.replaceState(null, '', planHash());
       $app.innerHTML = viewPlan([]); bindPlan();
     }
   } else if (act === 'delroute') {
     const r = listRoutes()[Number(b.dataset.i)];
     if (r) removeRoute(r);
+    savedOpen = true;
     $app.innerHTML = viewPlan([]); bindPlan();
   } else if (act === 'dayreset') {
     state.plan.ymd = null;
