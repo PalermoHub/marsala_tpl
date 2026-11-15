@@ -392,3 +392,40 @@ test('a piedi punto-punto: la cache delle fermate dell’app resta intatta; punt
   assert.equal(walkBetween(walkG, { lat: 37.79614, lon: 12.43571 }, { lat: 38.5, lon: 13.5 }), null); // in mare/fuori area
   assert.equal(walkBetween(walkG, { lat: 37.79614, lon: 12.43571 }, { lat: 37.7943, lon: 12.4402 }, 200), null); // oltre maxM
 });
+
+// ---- percorsi salvati e hash con data ----
+import { listRoutes, saveRoute, removeRoute, isSaved, ymdFromInput, ymdToInput, parsePlanHash, buildPlanHash } from '../js/plans.js';
+
+test('percorsi salvati: salva, dedup in testa, limite 20, elimina', () => {
+  for (let i = 0; i < 22; i++) saveRoute({ from: `a${i}`, to: `b${i}`, mode: 'bus' });
+  assert.equal(listRoutes().length, 20);
+  saveRoute({ from: 'a10', to: 'b10', mode: 'bus' });
+  assert.deepEqual(listRoutes()[0], { from: 'a10', to: 'b10', mode: 'bus' });
+  assert.equal(listRoutes().filter((r) => r.from === 'a10').length, 1);
+  saveRoute({ from: 'a10', to: 'b10', mode: 'walk' });
+  assert.equal(listRoutes().filter((r) => r.from === 'a10').length, 2);
+  assert.ok(isSaved({ from: 'a10', to: 'b10', mode: 'walk' }));
+  removeRoute({ from: 'a10', to: 'b10', mode: 'walk' });
+  assert.ok(!isSaved({ from: 'a10', to: 'b10', mode: 'walk' }));
+  assert.ok(isSaved({ from: 'a10', to: 'b10', mode: 'bus' }));
+});
+
+test('data: input ↔ ymd', () => {
+  assert.equal(ymdFromInput('2026-11-17'), 20261117);
+  assert.equal(ymdToInput(20261117), '2026-11-17');
+  assert.equal(ymdFromInput('2026-13-99'), null);
+  assert.equal(ymdFromInput(''), null);
+});
+
+test('hash del percorso: round-trip con ora e data', () => {
+  const re = /^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?(?:\/(\d{8}))?(?:\/(piedi))?)?$/;
+  const st = { from: 'a b', to: '@37.8,12.4,Via X', time: 8 * 3600 + 5 * 60, ymd: 20261117, mode: 'walk' };
+  const h = buildPlanHash(st);
+  assert.equal(h, '#/percorso/a%20b/%4037.8%2C12.4%2CVia%20X/0805/20261117/piedi');
+  assert.deepEqual(parsePlanHash(h.slice(1).match(re)), st);
+  assert.equal(parsePlanHash('/percorso/x/y/0805/20261399'.match(re)).ymd, null);
+  const p = parsePlanHash('/percorso/x/y'.match(re));
+  assert.equal(p.time, null); assert.equal(p.ymd, null); assert.equal(p.mode, 'bus');
+  assert.equal(buildPlanHash({ from: 'x', to: 'y', time: null, ymd: 20261117, mode: 'bus' }), '#/percorso/x/y/0000/20261117');
+  assert.equal(buildPlanHash({ from: null, to: 'y' }), '#/percorso');
+});
