@@ -577,7 +577,7 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .wbadge-strong { background: var(--cobalt); color: var(--on-cobalt); }
 .row-main > .wbadge { margin-top: 6px; }
 .route-stops .st-name { flex: 1; min-width: 0; }
-.route-stops .wbadge { flex: none; }
+.route-stops .wbadge { flex: none; align-self: center; }
 .wbadge-step { margin-bottom: 4px; }
 .hero-home ~ .actions > .btn { white-space: nowrap; font-size: 15px; padding: 0 8px; gap: 6px; }
 .near-head h2 { margin-top: 18px; }
