@@ -1,8 +1,0 @@
-[      54ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/scripts/fonts/atkinson-hyperlegible-700.woff2:1
-[      55ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/scripts/dati/app.json:1
-[      63ms] [ERROR] Failed to load module script: Expected a JavaScript-or-Wasm module script but the server responded with a MIME type of "text/html". Strict MIME type checking is enforced for module scripts per HTML spec. @ http://localhost:8080/index.html:1
-[     115ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://localhost:8080/scripts/manifest.webmanifest:1
-[     120ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/scripts/img/favicon.png:1
-[     133ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/scripts/img/favicon.ico:1
-[    3133ms] [WARNING] The resource http://localhost:8080/scripts/fonts/atkinson-hyperlegible-700.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:8080/scripts/social.html:1
-[    3133ms] [WARNING] The resource http://localhost:8080/scripts/dati/app.json was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:8080/scripts/social.html:1
