@@ -319,10 +319,7 @@ function viewHomeScreen() {
 </div>
 ${geoMsg ? `<p class="note" role="status">${esc(geoMsg)}</p>` : ''}
 <section class="block near-home" aria-live="polite"><div class="near-head"><h2>${esc(t('nearYou'))}</h2><span class="gps-state gps-${status[0]}"><i aria-hidden="true"></i>${esc(status[1])}</span></div>${body}</section>
-${favBlock}
-<section class="block"><ul class="plain">${quick('#/percorso', 'route', 'homePlan', 'homePlanSub')}${quick('#/mappa', 'map', 'homeMap', 'homeMapSub')}</ul></section>
-<section class="block"><h2>${esc(t('linesNow'))}</h2>${linesNowTiles()}</section>
-<section class="block"><h2>${esc(t('howToRead'))}</h2>${howToRead()}</section>${communityNote()}`;
+${favBlock}${communityNote()}`;
 }
 
 function viewNear(home = false) {
