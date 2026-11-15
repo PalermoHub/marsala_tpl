@@ -14,7 +14,7 @@ import { getConsent, setConsent, applyConsent } from './consent.js';
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null };
+const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null };
 
 // ---------- utilità ----------
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -578,18 +578,27 @@ ${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
 function viewMap(rid) {
   return `${mapSide(rid)}<section class="map-wrap">
   <div id="map" role="application" aria-label="${esc(t('mapTitle'))}"></div>
-  <div class="map-bar"><p id="bus-count" class="chip" role="status"${state.mapRoute && !rid ? ' hidden' : ''}>${esc(t('busesNote'))}</p>${state.mapRoute && !rid ? `<p class="chip chip-route"><span>${esc(state.mapRoute.label)}</span><button type="button" data-act="closeroute" aria-label="${esc(t('planCloseRoute'))}">${icon('close', 18)}</button></p>` : ''}</div>
+  <div class="map-bar">${state.pickSide ? `<p class="chip chip-route" role="status"><span>${esc(t(state.pickSide === 'from' ? 'planPickFrom' : 'planPickTo'))}</span><button type="button" data-act="cancelpick" aria-label="${esc(t('planPickCancel'))}">${icon('close', 18)}</button></p>` : ''}<p id="bus-count" class="chip" role="status"${(state.mapRoute && !rid) || state.pickSide ? ' hidden' : ''}>${esc(t('busesNote'))}</p>${state.mapRoute && !rid ? `<p class="chip chip-route"><span>${esc(state.mapRoute.label)}</span><button type="button" data-act="closeroute" aria-label="${esc(t('planCloseRoute'))}">${icon('close', 18)}</button></p>` : ''}</div>
   <button id="legend-btn" class="legend-btn" data-act="legend" aria-expanded="false" aria-controls="legend">${icon('info', 20)}<span>${esc(t('legend'))}</span></button>
   ${legendPanel()}
   <a class="osd" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia - https://opendatasicilia.it/"><img src="img/opendatasicilia.png" alt="${esc(t('osdTitle'))}" width="44" height="51"></a>
   <p id="map-msg" class="map-msg" hidden></p>
 </section>`;
 }
+/** Punto scelto sulla mappa (id di fermata o «@lat,lon,etichetta») -> partenza/arrivo, poi si torna al pianificatore. */
+function setPlanPoint(side, id) {
+  const sd = resolveSide(id);
+  if (!sd) return;
+  state.plan[side] = sd;
+  state.pickSide = null;
+  state.mapRoute = null;
+  location.hash = planHash();
+}
 async function bindMap(rid) {
   const msg = document.getElementById('map-msg');
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, loc: state.loc, countEl: document.getElementById('bus-count'), t });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t });
     state.cleanup = () => ctl.destroy();
   } catch (e) {
     msg.hidden = false;
@@ -637,7 +646,7 @@ function viewPlan(m) {
   const now = romeNow();
   const field = (side, key, ph) => `<div class="pf">
   <label class="pf-label" for="pf-${side}">${esc(t(key))}</label>
-  <div class="field">${icon(side === 'from' ? 'pin' : 'route', 20)}<input id="pf-${side}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(t(ph))}" aria-controls="pl-${side}"></div>
+  <div class="field">${icon(side === 'from' ? 'pin' : 'route', 20)}<input id="pf-${side}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(t(ph))}" aria-controls="pl-${side}"><button type="button" class="field-map" data-act="pickonmap" data-side="${side}" aria-label="${esc(t('planPickMap'))}" title="${esc(t('planPickMap'))}">${icon('map', 22)}</button></div>
   <ul class="plain pf-list" id="pl-${side}"></ul>
 </div>`;
   const atMode = state.plan.time != null;
@@ -779,11 +788,14 @@ async function runPlan() {
 <div class="actions"><button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button></div>` : ''}`;
 }
 
-function syncPlanUrl() {
+function planHash() {
   const { from, to } = state.plan;
   const tm = state.plan.time;
   const hhmm = tm == null ? '' : `/${String(Math.floor(tm / 3600) % 24).padStart(2, '0')}${String(Math.floor((tm % 3600) / 60)).padStart(2, '0')}`;
-  const h = from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}${state.plan.mode === 'walk' ? '/piedi' : ''}` : '#/percorso';
+  return from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}${state.plan.mode === 'walk' ? '/piedi' : ''}` : '#/percorso';
+}
+function syncPlanUrl() {
+  const h = planHash();
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 
@@ -1088,6 +1100,8 @@ $app.addEventListener('click', async (e) => {
   else if (act === 'dir') { state.lineDir = Number(b.dataset.d); $app.innerHTML = viewLine(b.dataset.r); }
   else if (act === 'trip') { $app.innerHTML = viewLine(b.dataset.r, Number(b.dataset.i)); }
   else if (act === 'pick') pickSide(b.dataset.side, b.dataset.id);
+  else if (act === 'pickonmap') { state.pickSide = b.dataset.side === 'to' ? 'to' : 'from'; state.mapRoute = null; location.hash = '#/mappa'; }
+  else if (act === 'cancelpick') { state.pickSide = null; location.hash = planHash(); }
   else if (act === 'showmap') {
     const o = state.planOpts?.[Number(b.dataset.i)];
     if (o?.geo) { state.mapRoute = { ...o.geo, label: `${sideLabel(state.plan.from)} → ${sideLabel(state.plan.to)}` }; location.hash = '#/mappa'; }

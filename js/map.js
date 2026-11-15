@@ -81,7 +81,7 @@ const isDark = () => {
   return th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route = null }) {
+export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route = null, plan = null }) {
   const maplibregl = await loadMapLibre();
   const map = new maplibregl.Map({ container: el, style: isDark() ? STYLE_DARK : STYLE_LIGHT, center: CENTER, zoom: 12.6, maxBounds: BBOX, attributionControl: { compact: true, customAttribution: 'Edifici 3D: <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">Zhu et al. 2025</a>, <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a> (TUM), CC BY-NC 4.0 / ODbL' }, maxPitch: 70 });
   // Attribuzione chiusa all'avvio: si apre solo toccando la «i».
@@ -138,9 +138,33 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   // Numeri civici (ANNCSU): compaiono solo da zoom alto, caricati in background per non rallentare l'apertura.
   const CIVICI_MINZ = 14;
   let civiciOn = true;
+  const civList = []; // [lat, lon, "Via 12"] per dare un nome ai punti scelti sulla mappa
+  // Scelta di partenza/arrivo: popup con due pulsanti, oppure (modo «Scegli sulla mappa») il punto toccato è subito quello richiesto.
+  const planId = (lat, lon, label) => `@${lat.toFixed(5)},${lon.toFixed(5)},${label}`;
+  function labelAt(lat, lon) {
+    const k = Math.cos(lat * Math.PI / 180);
+    let best = null, bd = 150 * 150; // civico più vicino entro 150 m
+    for (const c of civList) { const dy = (c[0] - lat) * 111320, dx = (c[1] - lon) * 111320 * k, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = c[2]; } }
+    if (!best) return t('planMapPoint');
+    return bd <= 30 * 30 ? best : t('planNear', best); // sul civico: il suo nome; poco distante: «Presso Via X 12»
+  }
+  function planPopup(lngLat, label, id) {
+    const d = document.createElement('div');
+    d.className = 'civico-pop';
+    const h = document.createElement('div'); h.textContent = label; d.append(h);
+    const row = document.createElement('div'); row.className = 'pick-btns';
+    for (const [side, key] of [['from', 'planFromHere'], ['to', 'planToHere']]) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = t(key);
+      b.addEventListener('click', () => plan.onPlan(side, id));
+      row.append(b);
+    }
+    d.append(row);
+    new maplibregl.Popup({ offset: 8, closeButton: false }).setLngLat(lngLat).setDOMContent(d).addTo(map);
+  }
   loadIndirizzi().then((db) => {
     if (!db || destroyedEarly) return;
     const features = [];
+    for (const st of db.streets) for (const c of st.civ) civList.push([c.lat, c.lon, `${st.name} ${c.e ? `${c.n}/${c.e}` : c.n}`]);
     for (const st of db.streets) for (const c of st.civ) features.push({ type: 'Feature', properties: { n: c.e ? `${c.n}/${c.e}` : String(c.n), v: st.name }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } });
     map.addSource('civici', { type: 'geojson', data: { type: 'FeatureCollection', features } });
     map.addLayer({ id: 'civici', type: 'symbol', source: 'civici', minzoom: CIVICI_MINZ, layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': ['interpolate', ['linear'], ['zoom'], CIVICI_MINZ, 8, 17, 10, 20, 14], 'text-allow-overlap': false, 'text-padding': 2 }, paint: { 'text-color': isDark() ? '#F2C14E' : '#8A1C3A', 'text-halo-color': isDark() ? '#0F1B3D' : '#FBF7EE', 'text-halo-width': 1.8 } }, 'stops');
@@ -149,9 +173,13 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     map.on('click', 'civici', (e) => {
       if (map.queryRenderedFeatures(e.point, { layers: ['stops'] }).length) return;
       const f = e.features?.[0]; if (!f) return;
+      const [lo, la] = f.geometry.coordinates;
+      const label = `${f.properties.v} ${f.properties.n}`;
+      if (plan?.pick) { plan.onPlan(plan.pick, planId(la, lo, label)); return; }
+      if (plan) { planPopup(f.geometry.coordinates, label, planId(la, lo, label)); return; }
       const d = document.createElement('div');
       d.className = 'civico-pop';
-      d.textContent = `${f.properties.v} ${f.properties.n}`;
+      d.textContent = label;
       new maplibregl.Popup({ offset: 8, closeButton: false }).setLngLat(f.geometry.coordinates).setDOMContent(d).addTo(map);
     });
     map.on('mouseenter', 'civici', () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -328,7 +356,17 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
 
   map.on('click', 'stops', (e) => {
     const f = e.features?.[0];
-    if (f) location.hash = `#/stop/${encodeURIComponent(f.properties.id)}`;
+    if (!f) return;
+    if (plan?.pick) plan.onPlan(plan.pick, f.properties.id);
+    else location.hash = `#/stop/${encodeURIComponent(f.properties.id)}`;
+  });
+  // Tocco su un punto vuoto: partenza/arrivo da lì (o subito il punto richiesto da «Scegli sulla mappa»).
+  if (plan) map.on('click', (e) => {
+    const layers = ['stops', 'civici', 'buses-body', 'buses-nose', 'bus-clusters'].filter((id) => map.getLayer(id));
+    if (map.queryRenderedFeatures(e.point, { layers }).length) return;
+    const { lat, lng } = e.lngLat;
+    const label = labelAt(lat, lng), id = planId(lat, lng, label);
+    if (plan.pick) plan.onPlan(plan.pick, id); else planPopup(e.lngLat, label, id);
   });
   // Contenuto di tooltip (al passaggio) e popup (al tocco): numero mezzo, targa, stato, linea stimata, orario.
   function busInfo(p, full) {

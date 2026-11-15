@@ -521,3 +521,12 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .info-link span { flex: 1; }
 .info-link:hover { background: var(--glaze-2); }
 .row .news-tag { margin-left: 6px; vertical-align: 2px; background: var(--terra); color: var(--glaze); }
+
+/* Scelta di partenza/arrivo dalla mappa */
+.field-map { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: 0 -10px 0 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink-2); cursor: pointer; }
+.field-map:hover { color: var(--ink); }
+.field-map:focus-visible { outline: 3px solid var(--focus, currentColor); outline-offset: 1px; }
+.civico-pop { color: #1b1b1b; font-weight: 600; }
+.pick-btns { display: flex; gap: 8px; margin-top: 8px; }
+.pick-btns button { min-height: 40px; padding: 0 12px; border: 2px solid currentColor; border-radius: 10px; background: transparent; color: #8A1C3A; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.pick-btns button:focus-visible { outline: 3px solid #8A1C3A; outline-offset: 1px; }
