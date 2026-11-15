@@ -164,7 +164,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
       row.append(b);
     }
     d.append(row);
-    new maplibregl.Popup({ offset: 8, closeButton: false }).setLngLat(lngLat).setDOMContent(d).addTo(map);
+    new maplibregl.Popup({ offset: 8, closeButton: true }).setLngLat(lngLat).setDOMContent(d).addTo(map);
   }
   loadIndirizzi().then((db) => {
     if (!db || destroyedEarly) return;
