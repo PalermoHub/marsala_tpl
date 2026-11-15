@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  pages: write
+  actions: write
 
 # Stesso gruppo del workflow degli orari: evita push simultanei.
 concurrency:
@@ -34,6 +34,6 @@ jobs:
           git commit -m "chore(dati): aggiorna avvisi dal Comune"
           git pull --rebase
           git push
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+          gh workflow run deploy.yml
         env:
           GH_TOKEN: ${{ github.token }}

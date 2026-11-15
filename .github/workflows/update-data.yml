@@ -5,10 +5,10 @@ on:
     - cron: "30 3 * * *"   # ogni notte, 03:30 UTC
   workflow_dispatch:
 
-# contents: per committare i dati; pages: per chiedere la ripubblicazione del sito.
+# contents: per committare i dati; actions: per lanciare il workflow di pubblicazione.
 permissions:
   contents: write
-  pages: write
+  actions: write
 
 concurrency:
   group: update-data
@@ -46,13 +46,14 @@ jobs:
       - name: Commit e ripubblicazione se i dati sono cambiati
         run: |
           # L'output è deterministico: se non c'è differenza, il Comune non ha pubblicato novità.
-          if [ -z "$(git status --porcelain dati)" ]; then echo "Nessuna novità."; exit 0; fi
+          if [ -z "$(git status --porcelain dati/app.json dati/shapes.json)" ]; then echo "Nessuna novità."; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dati/app.json dati/shapes.json
           git commit -m "chore(dati): aggiorna orari GTFS dal Comune"
+          git pull --rebase
           git push
-          # I push fatti con il token delle Actions non fanno ripartire Pages da soli: si chiede la build.
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds"
+          # I push fatti con il token delle Actions non fanno partire altri workflow: si lancia il deploy a mano.
+          gh workflow run deploy.yml
         env:
           GH_TOKEN: ${{ github.token }}
