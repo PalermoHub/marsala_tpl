@@ -224,8 +224,8 @@ const IT = {
 };
 
 const EN = {
-  flightsTitle: 'Flights · Trapani-Birgi', flightsLead: 'Today’s arrivals and departures at Vincenzo Florio airport, updated every minute.', flightsArr: 'Arrivals', flightsDep: 'Departures', flightsLoading: 'Loading flights…', flightsNone: 'No flights listed today.', flightsErr: 'Flights not available right now. Try again shortly.', flightsTerm: 'terminal', flightsUpdated: (h) => `Updated at ${h}`, flightsSource: 'Source: Airgest, Trapani-Birgi airport', flightsOpen: 'Live arrivals and departures',
   ...IT,
+  flightsTitle: 'Flights · Trapani-Birgi', flightsLead: 'Today’s arrivals and departures at Vincenzo Florio airport, updated every minute.', flightsArr: 'Arrivals', flightsDep: 'Departures', flightsLoading: 'Loading flights…', flightsNone: 'No flights listed today.', flightsErr: 'Flights not available right now. Try again shortly.', flightsTerm: 'terminal', flightsUpdated: (h) => `Updated at ${h}`, flightsSource: 'Source: Airgest, Trapani-Birgi airport', flightsOpen: 'Live arrivals and departures',
   tabHome: 'Home', tabPlan: 'Journey', tabNear: 'Nearby', tabLines: 'Lines', tabMap: 'Map', tabInfo: 'Info', tabMore: 'More', moreInfoSub: 'Sources, licences, language and theme', morePrivacySub: 'Data, statistics and consent',
   coinTitle: 'Trains, coaches and airports', coinSub: 'Connections with other intercity services', coinTabTrain: 'Trains', coinTabBus: 'Coaches', coinTabAir: 'Airports',
   coinLead: 'Weekday times from the Municipality of Marsala. Provisional timetable: it can change even during the day. Trains are those scheduled by RFI; coach times are indicative.',
