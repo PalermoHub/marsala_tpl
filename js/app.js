@@ -932,15 +932,51 @@ ${rest.length ? `<details class="news-more"><summary><span>${esc(t('newsOther'))
 }
 
 const infoOpen = new Set(['look']);
-const guideOpen = new Set(['start']);
+let guideCur = 0;
+// Guida: una pagina per sezione, affiancate in orizzontale con snap; la barra di linguette segue lo scorrimento.
 function viewGuida() {
-  const sec = ([id, ic, title, intro, steps, tip, shots]) => `<details class="acc" data-guide="${id}"${guideOpen.has(id) ? ' open' : ''}><summary><span class="acc-ico acc-cobalt">${icon(ic, 26)}</span><span class="acc-t">${esc(title)}</span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body guide-body">
+  const doc = t('guideDoc');
+  const tab = ([id, ic, title], i) => `<button type="button" role="tab" id="gt-${id}" data-gi="${i}" aria-controls="gp-${id}" aria-selected="${i === guideCur}" tabindex="${i === guideCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(title)}</span></button>`;
+  const page = ([id, , title, intro, steps, tip, shots]) => `<section class="gd-page" role="tabpanel" id="gp-${id}" aria-labelledby="gt-${id}"><div class="guide-body">
+<h2 class="gd-h">${esc(title)}</h2>
 ${intro ? `<p>${esc(intro)}</p>` : ''}
-<ol class="guide-steps">${steps.map((s) => `<li>${s}</li>`).join('')}</ol>
+<ol class="guide-steps">${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
 ${tip ? `<p class="guide-tip"><b>${esc(t('guideTip'))}:</b> ${esc(tip)}</p>` : ''}
 ${shots.map(([f, alt]) => `<figure class="guide-shot"><img src="img/guida/${esc(f)}.webp" width="390" height="720" loading="lazy" decoding="async" alt="${esc(alt)}"></figure>`).join('')}
-</div></details>`;
-  return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead'), back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${t('guideDoc').map(sec).join('')}</div></section>`;
+</div></section>`;
+  return `${banners(romeNow())}${pageHead(t('guideTitle'), { lead: t('guideLead'), back: ['#/altro', t('tabMore')] })}<div class="gd-tabs" role="tablist">${doc.map(tab).join('')}</div><div class="gd-pages">${doc.map(page).join('')}</div>`;
+}
+function bindGuida() {
+  const pages = $app.querySelector('.gd-pages');
+  const tabs = [...$app.querySelectorAll('.gd-tabs [role=tab]')];
+  if (!pages || !tabs.length) return;
+  guideCur = Math.min(guideCur, tabs.length - 1);
+  const mark = (i) => {
+    guideCur = i;
+    fit(); ro.disconnect(); ro.observe(pages.children[i]);
+    tabs.forEach((b, k) => { b.setAttribute('aria-selected', k === i); b.tabIndex = k === i ? 0 : -1; });
+    const b = tabs[i], bar = b.parentElement;
+    bar.scrollTo({ left: b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  };
+  // l'altezza segue la pagina visibile: una scheda lunga non lascia vuoto sotto le altre
+  const fit = () => { const pg = pages.children[guideCur]; if (pg) pages.style.height = `${pg.offsetHeight}px`; };
+  const ro = new ResizeObserver(fit);
+  ro.observe(pages.children[guideCur]);
+  const go = (i) => pages.scrollTo({ left: i * pages.clientWidth, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  tabs.forEach((b, i) => b.addEventListener('click', () => go(i)));
+  tabs.forEach((b, i) => b.addEventListener('keydown', (e) => {
+    const n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
+    if (n < 0 || n >= tabs.length) return;
+    e.preventDefault(); tabs[n].focus(); go(n);
+  }));
+  let tm;
+  pages.addEventListener('scroll', () => {
+    clearTimeout(tm);
+    tm = setTimeout(() => { const i = Math.round(pages.scrollLeft / pages.clientWidth); if (i !== guideCur) mark(i); }, 60);
+  }, { passive: true });
+  fit();
+  pages.scrollLeft = guideCur * pages.clientWidth;
+  tabs[guideCur].parentElement.scrollLeft = Math.max(0, tabs[guideCur].offsetLeft - 16);
 }
 
 function viewInfo() {
@@ -1022,7 +1058,7 @@ const routes = [
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/altro$/, () => viewMore(), 'more'],
   [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],
-  [/^\/guida$/, () => viewGuida(), 'more'],
+  [/^\/guida$/, () => viewGuida(), 'more', bindGuida],
   [/^\/info$/, () => viewInfo(), 'more'],
   [/^\/privacy$/, () => viewPrivacy(), 'more'],
 ];
@@ -1052,7 +1088,7 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
-document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); const g = e.target.dataset?.guide; if (g) e.target.open ? guideOpen.add(g) : guideOpen.delete(g); }, true);
+document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); }, true);
 // Cambio schermata: dissolvenza breve con View Transitions dove esistono; senza, resta il solo `rise` della cifra.
 // Si salta con "riduci movimento" e da/verso la mappa (WebGL: l'istantanea costa più di quanto serve).
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
