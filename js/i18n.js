@@ -1,7 +1,7 @@
 // Traduzioni italiano / inglese. L'italiano è la lingua di riferimento.
 
 const IT = {
-  flightsTitle: 'Voli · Trapani-Birgi', flightsLead: 'Arrivi e partenze di oggi all’aeroporto Vincenzo Florio, aggiornati ogni minuto.', flightsArr: 'Arrivi', flightsDep: 'Partenze', flightsLoading: 'Carico i voli…', flightsNone: 'Nessun volo in elenco oggi.', flightsErr: 'Voli non disponibili al momento. Riprova tra poco.', flightsTerm: 'terminal', flightsUpdated: (h) => `Aggiornato alle ${h}`, flightsSource: 'Fonte: Airgest, aeroporto di Trapani-Birgi', flightsOpen: 'Arrivi e partenze in tempo reale',
+  flightsTitle: 'Voli · Trapani-Birgi', flightsLead: 'Arrivi e partenze di oggi all’aeroporto Vincenzo Florio, aggiornati ogni minuto.', flightsArr: 'Arrivi', flightsDep: 'Partenze', flightsLoading: 'Carico i voli…', flightsNone: 'Nessun volo in elenco oggi.', flightsErr: 'Voli non disponibili al momento. Riprova tra poco.', flightsTerm: 'terminal', flightsUpdated: (h) => `Aggiornato alle ${h}`, flightsSource: 'Fonte: Airgest, aeroporto di Trapani-Birgi', flightsOpen: 'Arrivi e partenze in tempo reale', flightsShort: 'Voli',
   appName: 'Marsala TPL',
   tabHome: 'Home', tabPlan: 'Percorso', tabNear: 'Vicino', tabLines: 'Linee', tabMap: 'Mappa', tabInfo: 'Info', tabMore: 'Altro', moreInfoSub: 'Fonti, licenze, lingua e tema', morePrivacySub: 'Dati, statistiche e consenso',
   coinTitle: 'Treni, pullman e aeroporti', coinSub: 'Coincidenze con le altre linee extraurbane', coinTabTrain: 'Treni', coinTabBus: 'Pullman', coinTabAir: 'Aeroporti',
@@ -225,7 +225,7 @@ const IT = {
 
 const EN = {
   ...IT,
-  flightsTitle: 'Flights · Trapani-Birgi', flightsLead: 'Today’s arrivals and departures at Vincenzo Florio airport, updated every minute.', flightsArr: 'Arrivals', flightsDep: 'Departures', flightsLoading: 'Loading flights…', flightsNone: 'No flights listed today.', flightsErr: 'Flights not available right now. Try again shortly.', flightsTerm: 'terminal', flightsUpdated: (h) => `Updated at ${h}`, flightsSource: 'Source: Airgest, Trapani-Birgi airport', flightsOpen: 'Live arrivals and departures',
+  flightsTitle: 'Flights · Trapani-Birgi', flightsLead: 'Today’s arrivals and departures at Vincenzo Florio airport, updated every minute.', flightsArr: 'Arrivals', flightsDep: 'Departures', flightsLoading: 'Loading flights…', flightsNone: 'No flights listed today.', flightsErr: 'Flights not available right now. Try again shortly.', flightsTerm: 'terminal', flightsUpdated: (h) => `Updated at ${h}`, flightsSource: 'Source: Airgest, Trapani-Birgi airport', flightsOpen: 'Live arrivals and departures', flightsShort: 'Flights',
   tabHome: 'Home', tabPlan: 'Journey', tabNear: 'Nearby', tabLines: 'Lines', tabMap: 'Map', tabInfo: 'Info', tabMore: 'More', moreInfoSub: 'Sources, licences, language and theme', morePrivacySub: 'Data, statistics and consent',
   coinTitle: 'Trains, coaches and airports', coinSub: 'Connections with other intercity services', coinTabTrain: 'Trains', coinTabBus: 'Coaches', coinTabAir: 'Airports',
   coinLead: 'Weekday times from the Municipality of Marsala. Provisional timetable: it can change even during the day. Trains are those scheduled by RFI; coach times are indicative.',

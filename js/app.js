@@ -1216,7 +1216,7 @@ ${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', 
   const secs = [['train', 'train', t('coinTabTrain'), treni], ['bus', 'bus', t('coinTabBus'), pull], ['air', 'plane', t('coinTabAir'), air]];
   const tab = ([id, ic, ti], i) => `<button type="button" role="tab" id="ct-${id}" data-gi="${i}" aria-controls="cp-${id}" aria-selected="${i === coinCur}" tabindex="${i === coinCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(ti)}</span></button>`;
   const page = ([id, , , body]) => `<section class="gd-page" role="tabpanel" id="cp-${id}" aria-labelledby="ct-${id}"><div class="guide-body">${body}</div></section>`;
-  return `${banners(romeNow())}${pageHead(t('coinTitle'), { lead: t('coinLead'), back: ['#/', t('tabHome')] })}<div class="gd-tabs" role="tablist">${secs.map(tab).join('')}</div><div class="gd-pages">${secs.map(page).join('')}</div>
+  return `${banners(romeNow())}${pageHead(t('coinTitle'), { lead: t('coinLead'), back: ['#/', t('tabHome')] })}<div class="gd-tabs" role="tablist">${secs.map(tab).join('')}<a class="gd-tab-link" href="#/voli">${icon('plane', 18)}<span>${esc(t('flightsShort'))}</span></a></div><div class="gd-pages">${secs.map(page).join('')}</div>
 <p class="note"><a href="${esc(FONTE)}" target="_blank" rel="noopener">${esc(t('coinSource'))}</a></p>`;
 }
 function bindCoincidenze() { bindPager(coinCur, (i) => { coinCur = i; }); }
