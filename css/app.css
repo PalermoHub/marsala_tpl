@@ -194,7 +194,8 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .btn-quiet { background: var(--glaze-2); color: var(--ink); }
 .btn-on-field { background: var(--ocra); color: var(--on-ocra); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; padding-block: 20px 4px; }
-.actions-hero { flex-direction: column; align-items: stretch; padding: 24px 0 0; }
+.actions-hero { flex-wrap: nowrap; align-items: stretch; padding: 24px 0 0; }
+.actions-hero .btn { flex: 1 1 0; min-width: 0; padding: 0 12px; gap: 8px; font-size: 16px; line-height: 1.2; text-align: center; }
 .actions-hero .btn-quiet { background: oklch(100% 0 0 / 0.14); color: var(--on-cobalt); }
 .actions-hero .btn:first-child { background: var(--ocra); color: var(--on-ocra); }
 .note { margin: 10px 0 0; color: var(--ink-2); font-size: 16px; }
