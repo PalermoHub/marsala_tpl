@@ -954,7 +954,7 @@ function bindAvvisi() {
   });
 }
 
-const infoOpen = new Set(['look']);
+let infoCur = 0, privCur = 0;
 let guideCur = 0;
 // Guida: una pagina per sezione, affiancate in orizzontale con snap; la barra di linguette segue lo scorrimento.
 function viewGuida() {
@@ -1013,7 +1013,7 @@ function viewInfo() {
   const theme = store.get('theme', 'auto');
   const seg = (name, opts, cur) => `<div class="seg seg-inline" role="radiogroup">${opts.map(([v, l, ic]) => `<button role="radio" aria-checked="${v === cur}" data-act="${name}" data-v="${v}">${ic ? icon(ic, 18) + ' ' : ''}${esc(l)}</button>`).join('')}</div>`;
   const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
-  const acc = (id, tone, ic, title, body) => `<details class="acc" data-acc="${id}"${infoOpen.has(id) ? ' open' : ''}><summary><span class="acc-ico acc-${tone}">${icon(ic, 26)}</span><span class="acc-t">${esc(title)}</span><span class="acc-pm" aria-hidden="true"></span></summary><div class="acc-body">${body}</div></details>`;
+  const acc = (id, tone, ic, title, body) => [id, ic, title, body];
   const en = getLang() === 'en';
   const sections = [
     acc('src', 'rame', 'scale', t('sourcesLicenses'), `<p>${esc(t('sourceText'))}</p>
@@ -1032,16 +1032,21 @@ function viewInfo() {
     acc('priv', 'cobalt', 'shield', t('privacy'), `<p>${esc(t('privacyText'))}</p><h2 class="h3">${esc(t('consentManage'))}</h2>${seg('consent', [['granted', t('consentOn'), 'check'], ['denied', t('consentOff'), 'close']], getConsent())}${getConsent() ? '' : `<p class="muted">${esc(t('consentNone'))}</p>`}<p><a href="#/privacy">${esc(t('privacyFull'))}</a></p>`),
     acc('cred', 'ocra', 'heart', t('credits'), `<p>${esc(t('creditsText'))}</p><div class="info-links">${ext('https://www.linkedin.com/in/gbvitrano/', '@gbvitrano · LinkedIn', 'linkedin')}${ext('https://claude.ai/', 'Claude AI · Anthropic', 'spark')}</div>`),
   ];
-  return `${banners(now)}${pageHead(t('info'), { back: ['#/altro', t('tabMore')] })}<section class="block"><div class="acc-list">${sections.join('')}</div></section>`;
+  const tab = ([id, ic, title], i) => `<button type="button" role="tab" id="it-${id}" data-gi="${i}" aria-controls="ip-${id}" aria-selected="${i === infoCur}" tabindex="${i === infoCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(title)}</span></button>`;
+  const page = ([id, , title, body]) => `<section class="gd-page" role="tabpanel" id="ip-${id}" aria-labelledby="it-${id}"><div class="guide-body"><h2 class="gd-h">${esc(title)}</h2>${body}</div></section>`;
+  return `${banners(now)}${pageHead(t('info'), { back: ['#/altro', t('tabMore')] })}<div class="gd-tabs" role="tablist">${sections.map(tab).join('')}</div><div class="gd-pages">${sections.map(page).join('')}</div>`;
 }
+function bindInfo() { bindPager(infoCur, (i) => { infoCur = i; }); }
 
 function viewPrivacy() {
   const link = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-  return `${pageHead(t('privacyFull'), { lead: t('privacyUpdated'), back: ['#/info', t('info')] })}<section class="block prose">
-${t('privacyDoc').map(([h, ps]) => `<h2>${esc(h)}</h2>${ps.map((p) => `<p>${link(p)}</p>`).join('')}`).join('')}
-<h2>${esc(t('consentManage'))}</h2>
-<div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn'), 'check'], ['denied', t('consentOff'), 'close']].map(([v, l, ic]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${icon(ic, 18)} ${esc(l)}</button>`).join('')}</div></section>`;
+  const consent = `<div class="seg seg-inline" role="radiogroup">${[['granted', t('consentOn'), 'check'], ['denied', t('consentOff'), 'close']].map(([v, l, ic]) => `<button role="radio" aria-checked="${v === getConsent()}" data-act="consent" data-v="${v}">${icon(ic, 18)} ${esc(l)}</button>`).join('')}</div>`;
+  const secs = [...t('privacyDoc').map(([h, ps]) => [h, ps.map((p) => `<p>${link(p)}</p>`).join('')]), [t('consentManage'), consent]];
+  const tab = ([h], i) => `<button type="button" role="tab" id="pt-${i}" data-gi="${i}" aria-controls="pp-${i}" aria-selected="${i === privCur}" tabindex="${i === privCur ? 0 : -1}"><span>${esc(h)}</span></button>`;
+  const page = ([h, body], i) => `<section class="gd-page prose" role="tabpanel" id="pp-${i}" aria-labelledby="pt-${i}"><h2>${esc(h)}</h2>${body}</section>`;
+  return `${pageHead(t('privacyFull'), { lead: t('privacyUpdated'), back: ['#/info', t('info')] })}<div class="gd-tabs" role="tablist">${secs.map(tab).join('')}</div><div class="gd-pages">${secs.map(page).join('')}</div>`;
 }
+function bindPrivacy() { bindPager(privCur, (i) => { privCur = i; }); }
 
 // Banner del consenso: non blocca l'uso dell'app, Accetta e Rifiuta hanno lo stesso peso.
 function renderConsent() {
@@ -1086,8 +1091,8 @@ const routes = [
   [/^\/altro$/, () => viewMore(), 'more'],
   [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],
   [/^\/guida$/, () => viewGuida(), 'more', bindGuida],
-  [/^\/info$/, () => viewInfo(), 'more'],
-  [/^\/privacy$/, () => viewPrivacy(), 'more'],
+  [/^\/info$/, () => viewInfo(), 'more', bindInfo],
+  [/^\/privacy$/, () => viewPrivacy(), 'more', bindPrivacy],
 ];
 let current = null;
 
@@ -1115,7 +1120,6 @@ function rerenderKeepScroll() {
   window.scrollTo(0, y);
 }
 
-document.addEventListener('toggle', (e) => { const id = e.target.dataset?.acc; if (id) e.target.open ? infoOpen.add(id) : infoOpen.delete(id); }, true);
 // Cambio schermata: dissolvenza breve con View Transitions dove esistono; senza, resta il solo `rise` della cifra.
 // Si salta con "riduci movimento" e da/verso la mappa (WebGL: l'istantanea costa più di quanto serve).
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
