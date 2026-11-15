@@ -854,10 +854,7 @@ ${savedRoutesHtml()}
       <button type="button" role="radio" aria-checked="${atMode}" data-act="timemode" data-v="at">${icon('clock', 18)} ${esc(t('planAt'))}</button>
     </div>
     <input id="pf-time" class="time-in" type="time" aria-label="${esc(t('planAt'))}" ${atMode ? '' : 'hidden'}>
-  </div>
-  <div class="pf-time pf-day">
-    <label class="pf-label" for="pf-day">${esc(t('planDay'))}</label>
-    <input id="pf-day" class="time-in" type="date" value="${ymdToInput(state.plan.ymd ?? now.ymd)}">
+    <input id="pf-day" class="time-in day-in" type="date" aria-label="${esc(t('planDay'))}" value="${ymdToInput(state.plan.ymd ?? now.ymd)}">
     <button type="button" class="btn btn-quiet" data-act="dayreset" id="pf-today" ${state.plan.ymd ? '' : 'hidden'}>${esc(t('planToday'))}</button>
   </div>
 </section>

@@ -619,10 +619,11 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 /* Popup di scelta partenza/arrivo: X di chiusura con area di tocco comoda, senza coprire il titolo */
 .maplibregl-popup:has(.civico-pop .pick-btns) .maplibregl-popup-close-button { top: 2px; right: 2px; width: 32px; height: 32px; font-size: 22px; line-height: 1; color: #1b1b1b; border-radius: 8px; }
 .maplibregl-popup:has(.civico-pop .pick-btns) .civico-pop > div:first-child { padding-right: 24px; }
-.pf-day { margin-top: 10px; }
-.pf-day .pf-label { margin: 0; }
 .saved-routes { padding-bottom: 0; }
 .saved-row { display: flex; align-items: center; gap: 4px; }
 .saved-row .row { flex: 1; min-width: 0; }
 .saved-row .icon-btn { min-width: 48px; min-height: 48px; }
-.pf-day [hidden] { display: none; }
+.pf-time [hidden] { display: none; }
+.pf-time { flex-wrap: wrap; gap: 8px; }
+.pf-time .seg button { padding-inline: 10px; }
+.day-in { min-width: 0; width: 9.6em; padding: 0 6px; font-size: 14px; }
