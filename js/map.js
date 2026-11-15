@@ -590,7 +590,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130], go: '#/voli' }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] }].filter(Boolean);
     try { await Promise.all([badge('bus'), badge('plane')]); } catch { /* senza icone restano le etichette */ }
     if (!destroyed) {
-      map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n, k: q.k }, geometry: { type: 'Point', coordinates: q.c } })) } });
+      map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n, k: q.k, go: q.go ?? '' }, geometry: { type: 'Point', coordinates: q.c } })) } });
       map.addLayer({ id: 'poi', type: 'symbol', source: 'poi', layout: { 'icon-image': ['concat', 'poi-', ['get', 'k']], 'icon-size': 0.8, 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.7], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });
     }
   }
