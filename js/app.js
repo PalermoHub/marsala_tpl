@@ -932,7 +932,7 @@ function viewInfo() {
 <p>${esc(t('citeBuildings'))} <a href="https://doi.org/10.5194/essd-17-6647-2025" target="_blank" rel="noopener">doi:10.5194/essd-17-6647-2025</a> · <a href="https://github.com/zhu-xlab/GlobalBuildingAtlas" target="_blank" rel="noopener">GlobalBuildingAtlas</a></p>
 <p>${esc(t('citeOrtho'))} <a href="https://map.sitr.regione.sicilia.it/gis/rest/services/ortofoto/ortofoto_2022_20cm_sicilia/ImageServer" target="_blank" rel="noopener">SITR Regione Siciliana</a></p>
 <p>${esc(t('osmWalk'))} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, ODbL.</p>
-<p>${esc(t('citeAddresses'))} <a href="https://palermohub.opendatasicilia.it/anncus.html" target="_blank" rel="noopener">ANNCSU · PalermoHub</a></p>
+<p>${esc(t('citeAddresses'))} <a href="https://palermohub.opendatasicilia.it/anncus.html" target="_blank" rel="noopener">PalermoHub</a> · <a href="https://www.anncsu.gov.it/it/consultazione-dellarchivio/open-data/" target="_blank" rel="noopener">ANNCSU</a></p>
 <p>${esc(t('approxInfo'))}</p>
 <p>${esc(t('notOfficial'))}</p>
 <h2 class="h3">${esc(t('licenses'))}</h2>
