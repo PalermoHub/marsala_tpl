@@ -21,10 +21,21 @@ const MOVING_MS = 4.2;
 const POS_OLD_MIN = 5;
 const FAR_M = 5000;
 /** Salva una lettura GPS con l'ora e la velocità (del GPS, o stimata dallo spostamento dalla lettura precedente). */
+/**
+ * Per provare l'app lontano da Marsala: «?pos=37.7937,12.4351» (opzionale «&speed=10» in m/s) al posto del GPS.
+ * Solo in memoria, nessun salvataggio; la home la segnala come «posizione simulata».
+ */
+function fakePos() {
+  const q = new URLSearchParams(location.search);
+  const v = q.get('pos')?.split(',').map(Number);
+  if (!v || v.length < 2 || v.slice(0, 2).some((n) => !Number.isFinite(n)) || Math.abs(v[0]) > 85 || Math.abs(v[1]) > 180) return null;
+  const sp = q.get('speed');
+  return { coords: { latitude: v[0], longitude: v[1], speed: sp != null && Number.isFinite(Number(sp)) ? Number(sp) : 0 }, fake: true };
+}
 function setLoc(p) {
   const prev = state.loc;
   const at = Date.now();
-  const loc = { lat: p.coords.latitude, lon: p.coords.longitude, at };
+  const loc = { lat: p.coords.latitude, lon: p.coords.longitude, at, fake: !!p.fake };
   let v = p.coords.speed;
   if (v == null && prev && at - prev.at > 3000 && at - prev.at < 300000) v = distanceM(prev.lat, prev.lon, loc.lat, loc.lon) / ((at - prev.at) / 1000);
   loc.moving = v != null && v > MOVING_MS;
@@ -311,7 +322,7 @@ function viewHomeScreen() {
     const [n0] = near;
     body = `<div class="here-card here-on">
   <span class="here-ico" aria-hidden="true">${icon('pin', 20)}</span>
-  <div class="here-main"><span class="here-sub">${esc(old ? t('posOld') : t('posAgo', ageMin))}</span>${n0 ? `<span class="here-name">${esc(t('youAreNear'))} ${esc(stopTitle(n0.i).name)}</span>` : ''}</div>
+  <div class="here-main"><span class="here-sub">${esc(loc.fake ? t('posFake') : old ? t('posOld') : t('posAgo', ageMin))}</span>${n0 ? `<span class="here-name">${esc(t('youAreNear'))} ${esc(stopTitle(n0.i).name)}</span>` : ''}</div>
   ${refreshBtn(t('refresh'))}
 </div>
 <ul class="plain">${near.map((n, k) => stopRow(n.i, n.m, isExactWalk(state.walkMap, n.i), k === 0)).join('')}</ul>`;
@@ -841,6 +852,8 @@ function viewPlan(m) {
 function getLoc() {
   return new Promise((res) => {
     if (state.loc) return res(true);
+    const fake = fakePos();
+    if (fake) { setLoc(fake); state.locStatus = 'ok'; refreshWalk(state.loc); return res(true); }
     if (!navigator.geolocation) return res(false);
     state.locStatus = 'asking';
     navigator.geolocation.getCurrentPosition(
@@ -1373,6 +1386,7 @@ async function refreshWalk(loc) {
  */
 async function autoLocate() {
   try {
+    if (fakePos()) { if (!state.loc) locate(); return; }
     if (state.locStatus === 'asking' || !navigator.geolocation || !navigator.permissions) return;
     if (state.loc && Date.now() - state.loc.at < POS_OLD_MIN * 60000) return;
     if (Date.now() - (state.autoAt ?? 0) < 60000) return;
@@ -1383,6 +1397,8 @@ async function autoLocate() {
 }
 
 function locate() {
+  const fake = fakePos();
+  if (fake) { setLoc(fake); state.locStatus = 'ok'; state.walkMap = null; rerenderKeepScroll(); refreshWalk(state.loc); return; }
   if (!navigator.geolocation) { state.locStatus = 'denied'; rerenderKeepScroll(); return; }
   state.locStatus = 'asking';
   rerenderKeepScroll();

@@ -311,6 +311,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
     map.addLayer({ id: 'me', type: 'circle', source: 'me', paint: { 'circle-radius': 8, 'circle-color': '#1B3A94', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
   }
   const locBtn = mkBtn('map-loc', ICON.locate, t('mapLocate'), () => {
+    if (loc?.fake) { placeMe(loc.lon, loc.lat); map.flyTo({ center: [loc.lon, loc.lat], zoom: Math.max(map.getZoom(), 15.5), duration: reduced ? 0 : 900 }); return; } // posizione simulata (?pos=)
     if (meBusy || !navigator.geolocation) return;
     meBusy = true;
     locBtn.setAttribute('aria-busy', 'true');
