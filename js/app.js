@@ -767,7 +767,9 @@ function setPlanPoint(side, id) {
   state.mapRoute = null;
   location.hash = planHash();
 }
-async function bindMap(rid, stopId = null) {
+// Luoghi senza fermata nel feed, segnati sulla mappa col solo puntatore (coordinate dei due scali).
+const LUOGHI = { florio: { lat: 37.9130, lon: 12.4926 }, palermo: { lat: 38.1765, lon: 13.0916 } };
+async function bindMap(rid, stopId = null, luogo = null) {
   const msg = document.getElementById('map-msg');
   const sheet = document.getElementById('stop-sheet');
   const showStopSheet = (id) => { const si = stopById(id); if (si < 0 || !sheet) return; sheet.innerHTML = stopSheetHtml(si); sheet.hidden = false; };
@@ -778,7 +780,7 @@ async function bindMap(rid, stopId = null) {
   });
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet, pin: stopId && stopById(stopId) >= 0 ? state.data.stops[stopById(stopId)] : null });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet, pin: LUOGHI[luogo] || (stopId && stopById(stopId) >= 0 ? state.data.stops[stopById(stopId)] : null) });
     if (stopId) showStopSheet(stopId);
     state.cleanup = () => ctl.destroy();
   } catch (e) {
@@ -1155,13 +1157,14 @@ function viewCoincidenze() {
     return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${head.map((h) => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => (i ? `<td>${cell(c, i)}</td>` : `<th scope="row">${cell(c, i)}</th>`)).join('')}</tr>`).join('')}</tbody></table></div>`;
   };
   const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
-  const stz = STAZIONI.map((s) => `<li class="coin-card"><div class="coin-head"><h3>${esc(s.n)}</h3>${s.m ? `<span class="coin-walk"><span class="wbadge wbadge-strong">${icon('walk', 14)}<span>${esc(t('meters', s.m))}</span></span><b>${esc(t('coinMinShort', Math.max(1, Math.round(s.m / 1.2 / 60))))}</b></span>` : ''}</div><p class="muted">${esc(t('coinLines'))} ${lineHtml(s.lines)}</p><p>${L(s.d)}</p>${s.stop && stopById(s.stop) >= 0 ? `<p><a class="coin-stop" href="#/stop/${esc(s.stop)}">${icon('pin', 18)} ${esc(stopTitle(stopById(s.stop)).name)}</a></p>` : ''}</li>`).join('');
+  const mapLink = (id, place = false) => `<a class="coin-stop" href="#/mappa/${place ? 'luogo' : 'fermata'}/${esc(id)}">${icon('map', 18)} ${esc(t('showOnMap'))}</a>`;
+  const stz = STAZIONI.map((s) => `<li class="coin-card"><div class="coin-head"><h3>${esc(s.n)}</h3>${s.m ? `<span class="coin-walk"><span class="wbadge wbadge-strong">${icon('walk', 14)}<span>${esc(t('meters', s.m))}</span></span><b>${esc(t('coinMinShort', Math.max(1, Math.round(s.m / 1.2 / 60))))}</b></span>` : ''}</div><p class="muted">${esc(t('coinLines'))} ${lineHtml(s.lines)}</p><p>${L(s.d)}</p>${s.stop && stopById(s.stop) >= 0 ? `<p><a class="coin-stop" href="#/stop/${esc(s.stop)}">${icon('pin', 18)} ${esc(stopTitle(stopById(s.stop)).name)}</a> ${mapLink(s.stop)}</p>` : ''}</li>`).join('');
   const treni = `<h2 class="gd-h">${esc(t('coinStations'))}</h2><p>${rich(t('coinStationsLead'))}</p><ul class="plain coin-list">${stz}</ul>
 <h2 class="h3">${esc(t('coinToTrain'))}</h2><p>${esc(t('coinToTrainLead'))}</p>
 ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap(([h, to, bus]) => bus.map(([l, p], k) => [k ? '' : `${h} ${t('coinToward')} ${to}`, l, p])), [1], [2])}
 <p class="note">${esc(t('coinNoRfiTable'))}</p>
 <div class="info-links">${LINK.slice(0, 2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
-  const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${rich(t('coinOperatorsLead'))}</p><ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
+  const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${rich(t('coinOperatorsLead'))}</p>${stopById('20984') >= 0 ? `<p>${mapLink('20984')}</p>` : ''}<ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
 <h2 class="h3">${esc(t('coinToBus'))}</h2><p>${rich(t('coinToBusLead'))}</p>${tbl([t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')], flat(A_PULLMAN), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${rich(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
 <div class="info-links">${LINK.slice(2, 6).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
@@ -1171,8 +1174,8 @@ ${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap
   const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
   const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
   const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${rich(t('coinAirLead'))}</p><ul class="plain coin-list">
-${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`)}
-${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'))}</ul>
+${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p>${mapLink('florio', true)}</p>`)}
+${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'), `<p>${mapLink('palermo', true)}</p>`)}</ul>
 <h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${tbl(toHead, rowsTo('Palermo · Salemi'), [1], [2], [0])}
 <h2 class="h3">${esc(t('coinLinks'))}</h2><div class="info-links">${LINK.slice(2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
@@ -1317,6 +1320,7 @@ const routes = [
     return viewLine(rid, o?.i);
   }, 'lines', (m) => { bindLine(); if (m[2]) setTimeout(() => document.querySelector('.route-stops .here')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/bus\/([^/]+)\/(.+)$/, (m) => viewBus(decodeURIComponent(m[1])), 'map', (m) => bindBus(decodeURIComponent(m[1]), decodeURIComponent(m[2]))],
+  [/^\/mappa\/luogo\/(florio|palermo)$/, () => viewMap(null), 'map', (m) => bindMap(null, null, m[1])],
   [/^\/mappa\/fermata\/(.+)$/, () => viewMap(null), 'map', (m) => bindMap(null, decodeURIComponent(m[1]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/coincidenze$/, () => viewCoincidenze(), 'home', bindCoincidenze],

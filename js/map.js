@@ -574,6 +574,15 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   }
   poll();
 
+  // Punti fissi dei collegamenti extraurbani: capolinea pullman in Viale Fazio e i due aeroporti (visibili anche da lontano).
+  {
+    const fazio = data.stops.find((x) => x.id === '20984');
+    const pts = [fazio && { n: t('poiTerminus'), c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), c: [12.4926, 37.9130] }, { n: t('poiPalermo'), c: [13.0916, 38.1765] }].filter(Boolean);
+    map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n }, geometry: { type: 'Point', coordinates: q.c } })) } });
+    map.addLayer({ id: 'poi', type: 'circle', source: 'poi', paint: { 'circle-radius': 7, 'circle-color': '#1B3A94', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
+    map.addLayer({ id: 'poi-label', type: 'symbol', source: 'poi', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });
+  }
+
   // Fermata cercata: puntatore con alone e vista centrata su di lei.
   if (pin) {
     map.addSource('pin', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [pin.lon, pin.lat] } } });
