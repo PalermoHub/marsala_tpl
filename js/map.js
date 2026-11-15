@@ -578,6 +578,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   {
     const GLYPH = {
       bus: '<rect x="4.5" y="3.5" width="15" height="14" rx="3"/><path d="M4.5 11h15M7.5 17.5v2.5M16.5 17.5v2.5M8 14.5h.01M16 14.5h.01"/>',
+      train: '<rect x="5" y="3.5" width="14" height="13" rx="3"/><path d="M5 11h14M9 20l-2 1.5M15 20l2 1.5M8.5 14h.01M15.5 14h.01"/>',
       plane: '<path d="M21 15.5l-8.5-4.5V5.5a1.5 1.5 0 00-3 0V11L1 15.5V17l8.5-2v3.5L7.5 20v1.5l4.5-1 4.5 1V20l-2-1.5V15l6.5 2z"/>',
     };
     const badge = async (kind) => {
@@ -587,8 +588,10 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
       if (!map.hasImage(`poi-${kind}`)) map.addImage(`poi-${kind}`, img, { pixelRatio: 2 });
     };
     const fazio = data.stops.find((x) => x.id === '20984');
-    const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130], go: '#/voli' }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] }].filter(Boolean);
-    try { await Promise.all([badge('bus'), badge('plane')]); } catch { /* senza icone restano le etichette */ }
+    const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat], go: '#/orari/marsala' }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130], go: '#/voli' }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] },
+      // Stazioni con orari di partenza e arrivo (scheda «Coincidenze»); posizione = fermata urbana più vicina.
+      ...[['21066', 'Terrenove', 'terrenove'], ['21120', 'Petrosino-Strasatti', 'petrosino'], ['21465', 'Spagnuola', 'spagnuola'], ['21488', 'Mozia-Birgi', 'mozia']].map(([id, n, l]) => { const s = data.stops.find((x) => x.id === id); return s && { n, k: 'train', c: [s.lon, s.lat], go: `#/orari/${l}` }; })].filter(Boolean);
+    try { await Promise.all([badge('bus'), badge('plane'), badge('train')]); } catch { /* senza icone restano le etichette */ }
     if (!destroyed) {
       map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n, k: q.k, go: q.go ?? '' }, geometry: { type: 'Point', coordinates: q.c } })) } });
       map.addLayer({ id: 'poi', type: 'symbol', source: 'poi', layout: { 'icon-image': ['concat', 'poi-', ['get', 'k']], 'icon-size': 0.8, 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.7], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });

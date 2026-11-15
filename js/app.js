@@ -1,5 +1,7 @@
 // Marsala TPL: router, viste e stato. Vanilla ES modules, nessun framework.
 import { loadVoli, VOLI_SOURCE } from './voli.js';
+import { luogoById, righeLuogo } from './luoghi.js';
+import { ORARI } from './orari-luoghi.js';
 import { LINEA_ID, STAZIONI, AL_TRENO, PULLMAN, A_PULLMAN, DA_PULLMAN, LINK, FONTE } from './coincidenze.js';
 import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM } from './schedule.js';
 import { loadWalk, walkFrom, walkDist, walkBetween, isExactWalk } from './walk.js';
@@ -1152,14 +1154,15 @@ function bindVoli() {
   const row = (f) => {
     const late = f.actual && f.scheduled && f.actual > f.scheduled;
     const name = getLang() === 'en' ? f.destinationEN : f.destinationIT, st = getLang() === 'en' ? f.statusEN : f.statusIT;
-    return `<li class="row"><span class="row-main"><span class="row-title">${esc(f.scheduled)}${f.actual && f.actual !== f.scheduled ? ` <span class="${late ? 'flight-late' : 'flight-early'}">→ ${esc(f.actual)}</span>` : ''} · ${esc(name)}</span><span class="row-sub">${esc(f.flightCode)} · ${esc(f.airline)}${f.terminal ? ` · ${esc(t('flightsTerm'))} ${esc(f.terminal)}` : ''}</span></span><span class="flight-st flight-${esc(f.statusClass || 'info')}">${esc(st)}</span></li>`;
+    const changed = f.actual && f.actual !== f.scheduled;
+    return `<li class="fl"><b class="ol-time">${esc(f.scheduled)}</b><span class="ol-main"><span class="ol-dest">${esc(name)}</span><span class="ol-note">${esc(f.flightCode)} · ${esc(f.airline)}${f.terminal ? ` · ${esc(t('flightsTerm'))} ${esc(f.terminal)}` : ''}</span>${changed ? `<span class="${late ? 'flight-late' : 'flight-early'} ol-note">→ ${esc(f.actual)}</span>` : ''}</span><span class="flight-st flight-${esc(f.statusClass || 'info')}">${esc(st)}</span></li>`;
   };
   const tick = async () => {
     abort = new AbortController();
     try {
       const { arrivi: arr, partenze: dep } = await loadVoli(abort.signal);
       if (destroyed) return;
-      for (const [k, list] of [['arr', arr], ['dep', dep]]) document.getElementById(`vp-${k}`).innerHTML = list.length ? `<ul class="plain flights">${list.map(row).join('')}</ul>` : `<p class="note">${esc(t('flightsNone'))}</p>`;
+      for (const [k, list] of [['arr', arr], ['dep', dep]]) document.getElementById(`vp-${k}`).innerHTML = list.length ? `<ol class="ol flights">${list.map(row).join('')}</ol>` : `<p class="note">${esc(t('flightsNone'))}</p>`;
       document.getElementById('voli-upd').textContent = t('flightsUpdated', new Date().toLocaleTimeString(getLang() === 'en' ? 'en-GB' : 'it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }));
     } catch {
       if (destroyed || abort.signal.aborted) return;
@@ -1170,6 +1173,31 @@ function bindVoli() {
   bindPager(0, () => {});
   tick();
   state.cleanup = () => { destroyed = true; clearTimeout(timer); abort?.abort(); };
+}
+
+// Elenco corse di un luogo: ora grande a sinistra, destinazione e servizio; le corse già passate sbiadiscono, la prossima è evidenziata.
+function orariList(rows, nowSecs) {
+  const next = rows.findIndex((r) => r.secs >= nowSecs);
+  return `<ol class="ol">${rows.map((r, i) => {
+    const sv = `${r.s === 'fs' ? '' : `${ORARI.servizi[r.s]?.sigla || r.s} `}${r.n}`.trim();
+    return `<li class="${r.secs < nowSecs ? 'past' : i === next ? 'next' : ''}"><b class="ol-time">${esc(r.ora)}</b><span class="ol-main"><span class="ol-dest">${esc(r.cap)}</span>${r.nota ? `<span class="ol-note">${esc(r.nota)}</span>` : ''}</span>${i === next ? `<span class="ol-next">${esc(t('orariNext'))}</span>` : ''}${sv ? `<span class="ol-svc">${esc(sv)}</span>` : ''}</li>`;
+  }).join('')}</ol>`;
+}
+
+// Partenze e arrivi di un luogo (stazione, fermata pullman) con le corse del Comune: si apre toccando il luogo sulla mappa.
+function viewOrariLuogo(id) {
+  const l = luogoById(id);
+  if (!l) return `${pageHead(t('coinTitle'), { back: ['#/coincidenze', t('coinTitle')] })}<p class="note">${esc(t('loadError'))}</p>`;
+  const now = romeNow();
+  const page = (k, verso) => {
+    const rows = righeLuogo(id, verso, now.ymd, now.dow, l.servizi);
+    return `<section class="gd-page" role="tabpanel" id="vp-${k}" aria-labelledby="vt-${k}"><p class="note ol-count">${esc(t('orariCount', rows.length))}</p>${rows.length ? orariList(rows, now.secs) : `<p class="note">${esc(t('orariNone'))}</p>`}</section>`;
+  };
+  const tabs = [['dep', 'orariDep', 'partenze'], ['arr', 'orariArr', 'arrivi']];
+  return `${banners(now)}${pageHead(l.nome, { lead: l.testo || '', back: ['#/coincidenze', t('coinTitle')] })}<section class="block">
+<div class="gd-tabs" role="tablist">${tabs.map(([k, key], i) => `<button type="button" role="tab" data-gi="${i}" id="vt-${k}" aria-controls="vp-${k}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><span>${esc(t(key))}</span></button>`).join('')}</div>
+<div class="gd-pages">${tabs.map(([k, , v]) => page(k, v)).join('')}</div>
+${l.daVerificare ? `<p class="note">${esc(t('orariVerify'))}</p>` : ''}<p class="note">${esc(t('orariSource', ORARI.aggiornato))}</p></section>`;
 }
 
 // Coincidenze con treni, pullman extraurbani e aeroporti (dati del Comune, in js/coincidenze.js).
@@ -1185,36 +1213,42 @@ function viewCoincidenze() {
     return r ? `<a class="coin-line" href="#/linea/${esc(r.id)}" aria-label="${esc(t('line'))} ${n}">${tileSvg(r, 28)}</a>` : n;
   };
   const lineHtml = (str) => str.split(' / ').map((seg) => { const [ls, ...rest] = seg.split(' · '); return `<span class="nw">${[ls.replace(/\d+/g, chip), ...rest.map((x) => `<b>${esc(x)}</b>`)].join(' · ')}</span>`; }).join(' / ');
-  // Colonne AST/Salemi: il nome dell'azienda sta già nell'intestazione, gli orari vanno in grassetto.
-  const timesHtml = (c) => esc(c.replace(/^(AST|Salemi) /, '')).replace(/\d{1,2}\.\d{2}/g, '<b class="nw">$&</b>');
-  const plain = (c) => esc(c);
-  const flat = (rows) => rows.flatMap(([h, buses]) => buses.map(([l, p], k) => [k ? '' : h, l, p]));
-  const tbl = (head, rows, lineCols = [], boldCols = [], timeCols = []) => {
-    const cell = (c, i) => (lineCols.includes(i) ? lineHtml(c) : timeCols.includes(i) ? timesHtml(c) : boldCols.includes(i) ? `<b>${plain(c)}</b>` : plain(c));
-    return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${head.map((h) => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => (i ? `<td>${cell(c, i)}</td>` : `<th scope="row">${cell(c, i)}</th>`)).join('')}</tr>`).join('')}</tbody></table></div>`;
-  };
+  // Stesso elenco a schede delle corse: ora in riquadro, destinazione, azienda a destra e sotto «Parti col bus» con linea e orario.
+  const coinList = (entries) => `<ol class="ol">${entries.map(([time, dest, svc, note, buses]) => `<li><b class="ol-time">${esc(time)}</b><span class="ol-main"><span class="ol-head"><span class="ol-dest">${esc(dest)}</span>${svc ? `<span class="ol-svc">${esc(svc)}</span>` : ''}</span>${note ? `<span class="ol-note">${esc(note)}</span>` : ''}${buses.map(([l, p]) => `<span class="ol-bus"><span class="ol-bus-l">${lineHtml(l)}</span><span class="ol-bus-t">${esc(t('coinBusLeaves'))} <b class="nw">${esc(p.replace(/^(AST|Salemi) /, ''))}</b></span></span>`).join('')}</span></li>`).join('')}</ol>`;
+  const trainEntries = AL_TRENO.map(([h, to, bus]) => [h, `${t('coinToward')} ${to}`, '', '', bus]);
+  const pullEntries = (list) => list.map(([h, bus]) => { const m = /^(\d{1,2}\.\d{2}) (.*?)(?: \((.*)\))?$/.exec(h); const [dest, az] = m[2].split(' · '); return [m[1], dest, az || '', m[3] || '', bus]; });
   const ext = (href, label, ic) => `<a class="info-link" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(href)}">${icon(ic, 20)}<span>${esc(label)}</span>${icon('external', 16)}</a>`;
   const mapLink = (id, place = false) => `<a class="coin-stop" href="#/mappa/${place ? 'luogo' : 'fermata'}/${esc(id)}">${icon('map', 18)} ${esc(t('showOnMap'))}</a>`;
   const stz = STAZIONI.map((s) => `<li class="coin-card"><div class="coin-head"><h3>${esc(s.n)}</h3>${s.m ? `<span class="coin-walk"><span class="wbadge wbadge-strong">${icon('walk', 14)}<span>${esc(t('meters', s.m))}</span></span><b>${esc(t('coinMinShort', Math.max(1, Math.round(s.m / 1.2 / 60))))}</b></span>` : ''}</div><p class="muted">${esc(t('coinLines'))} ${lineHtml(s.lines)}</p><p>${L(s.d)}</p>${s.stop && stopById(s.stop) >= 0 ? `<p><a class="coin-stop" href="#/stop/${esc(s.stop)}">${icon('pin', 18)} ${esc(stopTitle(stopById(s.stop)).name)}</a> ${mapLink(s.stop)}</p>` : ''}</li>`).join('');
+  // Partenze e arrivi di oggi per luogo (corse del Comune): una scheda a comparsa per luogo, come le altre tabelle.
+  const now = romeNow();
+  const orariLuoghi = (ids, servizi, open = true) => `<h2 class="h3">${esc(t('orariTitle'))}</h2><p>${esc(t('orariLead'))}</p><ul class="plain coin-list">${ids.map((id, k) => {
+    const l = luogoById(id);
+    const rows = (verso) => righeLuogo(id, verso, now.ymd, now.dow, servizi);
+    const part = rows('partenze'), arr = rows('arrivi');
+    const one = (key, head, list) => `<h4 class="coin-sub">${esc(t(key))} <span class="note">· ${esc(t('orariCount', list.length))}</span></h4>${list.length ? orariList(list, now.secs) : `<p class="note">${esc(t('orariNone'))}</p>`}`;
+    return `<li class="coin-card"><details${open && k === 0 ? ' open' : ''}><summary><h3>${esc(l.breve || (l.tipo === 'pullman' ? l.nome.replace('Fermata AST di ', 'AST ') : l.nome.replace('Stazione di ', '')))}</h3><span class="note">${esc(t('orariCount', part.length + arr.length))}</span></summary>${l.daVerificare ? `<p class="note">${esc(t('orariVerify'))}</p>` : ''}${one('orariDep', 'orariTo', part)}${one('orariArr', 'orariFrom', arr)}</details></li>`;
+  }).join('')}</ul><p class="note">${esc(t('orariSource', ORARI.aggiornato))}</p>`;
   const treni = `<h2 class="gd-h">${esc(t('coinStations'))}</h2><p>${rich(t('coinStationsLead'))}</p><ul class="plain coin-list">${stz}</ul>
 <h2 class="h3">${esc(t('coinToTrain'))}</h2><p>${esc(t('coinToTrainLead'))}</p>
-${tbl([t('coinTrainAt'), t('coinLineCol'), t('coinBusLeaves')], AL_TRENO.flatMap(([h, to, bus]) => bus.map(([l, p], k) => [k ? '' : `${h} ${t('coinToward')} ${to}`, l, p])), [1], [2])}
+${coinList(trainEntries)}
 <p class="note">${esc(t('coinNoRfiTable'))}</p>
+${orariLuoghi(['marsala', 'terrenove', 'petrosino', 'spagnuola', 'mozia'], ['fs'])}
 <div class="info-links">${LINK.slice(0, 2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const pull = `<h2 class="gd-h">${esc(t('coinOperators'))}</h2><p>${rich(t('coinOperatorsLead'))}</p>${stopById('20984') >= 0 ? `<p>${mapLink('20984')}</p>` : ''}<ul class="plain coin-list">${PULLMAN.map((p) => `<li class="coin-card"><h3>${esc(p.az)}</h3><p><strong>${L(p.t)}</strong></p><p>${L(p.d)}</p></li>`).join('')}</ul>
-<h2 class="h3">${esc(t('coinToBus'))}</h2><p>${rich(t('coinToBusLead'))}</p>${tbl([t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')], flat(A_PULLMAN), [1], [2], [0])}
-<h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${rich(t('coinFromBusLead'))}</p>${tbl([t('coinColPullmanArr'), t('coinLineCol'), t('coinBusLeaves')], flat(DA_PULLMAN), [1], [2], [0])}
+<h2 class="h3">${esc(t('coinToBus'))}</h2><p>${rich(t('coinToBusLead'))}</p>${coinList(pullEntries(A_PULLMAN))}
+<h2 class="h3">${esc(t('coinFromBus'))}</h2><p>${rich(t('coinFromBusLead'))}</p>${coinList(pullEntries(DA_PULLMAN))}
+${orariLuoghi(['marsala', 'ast-terrenove', 'ast-strasatti'], ['ast', 'salemi'])}
 <div class="info-links">${LINK.slice(2, 6).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const wk = (m) => t('coinMinWalk', Math.round(m / 1.2 / 60));
   // Stesso schema delle stazioni: nome, badge con il mezzo e tempo in grassetto, linee, dettagli.
   const airCard = (name, badge, time, linesStr, text, extra = '') => `<li class="coin-card"><div class="coin-head"><h3>${esc(name)}</h3><span class="coin-walk"><span class="wbadge wbadge-strong">${icon('bus', 14)}<span>${esc(badge)}</span></span><b>${esc(time)}</b></span></div>${linesStr ? `<p class="muted">${esc(t('coinLines'))} ${lineHtml(linesStr)}</p>` : ''}<p>${rich(text)}</p>${extra}</li>`;
-  const rowsTo = (key) => flat(A_PULLMAN.filter(([h]) => h.includes(key)));
-  const toHead = [t('coinColPullman'), t('coinLineCol'), t('coinBusLeaves')];
   const air = `<h2 class="gd-h">${esc(t('coinAirports'))}</h2><p>${rich(t('coinAirLead'))}</p><ul class="plain coin-list">
 ${airCard(t('coinFlorio'), t('coinAirCoach'), t('coinMinShort', 30), '4', `${t('coinFlorioText')} ${t('coinFlorioWalk', wk(1600))}`, `<p class="coin-links">${mapLink('florio', true)}</p><p class="coin-links"><a class="coin-stop" href="#/voli">${icon('plane', 18)} ${esc(t('flightsOpen'))}</a></p>`)}
 ${airCard(t('coinPalermo'), t('coinAirCoach'), `${t('coinHoursShort', 2)}`, '', t('coinPalermoText'), `<p>${mapLink('palermo', true)}</p>`)}</ul>
-<h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${tbl(toHead, rowsTo('Trapani · AST'), [1], [2], [0])}
-<h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${tbl(toHead, rowsTo('Palermo · Salemi'), [1], [2], [0])}
+<h2 class="h3">${esc(t('coinToFlorio'))}</h2><p>${esc(t('coinToFlorioLead'))}</p>${coinList(pullEntries(A_PULLMAN.filter(([h]) => h.includes('Trapani · AST'))))}
+<h2 class="h3">${esc(t('coinToPalermo'))}</h2><p>${esc(t('coinToPalermoLead'))}</p>${coinList(pullEntries(A_PULLMAN.filter(([h]) => h.includes('Palermo · Salemi'))))}
+${orariLuoghi(['aeroporto'], null)}
 <h2 class="h3">${esc(t('coinLinks'))}</h2><div class="info-links">${LINK.slice(2).map(([u, l, ic]) => ext(u, l[en ? 1 : 0], ic)).join('')}</div>`;
   const secs = [['train', 'train', t('coinTabTrain'), treni], ['bus', 'bus', t('coinTabBus'), pull], ['air', 'plane', t('coinTabAir'), air]];
   const tab = ([id, ic, ti], i) => `<button type="button" role="tab" id="ct-${id}" data-gi="${i}" aria-controls="cp-${id}" aria-selected="${i === coinCur}" tabindex="${i === coinCur ? 0 : -1}">${icon(ic, 20)}<span>${esc(ti)}</span></button>`;
@@ -1361,6 +1395,7 @@ const routes = [
   [/^\/mappa\/fermata\/(.+)$/, () => viewMap(null), 'map', (m) => bindMap(null, decodeURIComponent(m[1]))],
   [/^\/mappa(?:\/(.+))?$/, (m) => viewMap(m[1] && decodeURIComponent(m[1])), 'map', (m) => bindMap(m[1] && decodeURIComponent(m[1]))],
   [/^\/voli$/, () => viewVoli(), 'home', bindVoli],
+  [/^\/orari\/([\w-]+)$/, (m) => viewOrariLuogo(m[1]), 'home', () => { bindPager(0, () => {}); setTimeout(() => document.querySelector('.gd-page .ol li.next')?.scrollIntoView({ block: 'center' }), 0); }],
   [/^\/coincidenze$/, () => viewCoincidenze(), 'home', bindCoincidenze],
   [/^\/altro$/, () => viewMore(), 'more'],
   [/^\/avvisi$/, () => viewAvvisi(), 'more', bindAvvisi],

@@ -672,7 +672,6 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .hit-map { flex: none; }
 
 /* ---------- voli (Trapani-Birgi) ---------- */
-.flights .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .flight-st { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--ink, #14213D) 10%, transparent); }
 .flight-success { background: color-mix(in srgb, #2E7D4F 18%, transparent); color: #1F5C38; }
 .flight-warning { background: color-mix(in srgb, #D98E04 22%, transparent); color: #7A4F00; }
@@ -680,3 +679,42 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .flight-late { color: #B5532F; font-weight: 700; }
 .flight-early { color: #1F5C38; font-weight: 700; }
 @media (prefers-color-scheme: dark) { .flight-success { color: #8FD3A8; } .flight-warning { color: #F2C66B; } .flight-danger { color: #F4A6A0; } .flight-late { color: #F0A584; } .flight-early { color: #8FD3A8; } }
+
+/* Partenze e arrivi per luogo, dentro le schede di Coincidenze */
+.coin-card details > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; cursor: pointer; list-style: none; }
+.coin-card details > summary::-webkit-details-marker { display: none; }
+.coin-card details > summary h3 { margin: 0; }
+.coin-card details > summary::after { content: '▾'; font-weight: 700; }
+.coin-card details[open] > summary::after { content: '▴'; }
+.coin-sub { margin: 16px 0 4px; font-size: 16px; }
+
+/* Elenco corse per luogo (partenze/arrivi) */
+.ol { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 6px; }
+.ol li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 12px; row-gap: 2px; padding: 8px 12px 8px 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--glaze-2); }
+.ol-time { grid-row: span 2; min-width: 4.4em; padding: 8px 6px; border-radius: var(--r-tile); background: var(--cobalt); color: var(--on-cobalt); font-size: 19px; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+.ol-main { display: grid; min-width: 0; grid-row: span 2; }
+.ol-dest { font-weight: 700; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.ol-note { font-size: 14px; color: var(--ink-2); }
+.ol-svc { grid-column: 3; grid-row: 1 / span 2; align-self: center; padding: 3px 9px; border-radius: var(--r-pill); border: 1px solid var(--edge); font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.ol li.past { opacity: 0.55; background: transparent; }
+.ol li.past .ol-time { background: var(--ink-2); }
+.ol li.next { border: 2px solid var(--ocra); background: var(--ocra-soft); }
+.ol li.next .ol-time { background: var(--ocra); color: var(--on-ocra); }
+.ol-next { grid-column: 3; grid-row: 1; justify-self: end; align-self: end; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); }
+.ol li.next .ol-svc { grid-row: 2; align-self: start; }
+.ol-count { margin: 0 0 4px; }
+.ol li.next .ol-time { color: var(--on-ocra); }
+.ol li.fl { grid-template-columns: auto 1fr auto; }
+.ol li.fl .ol-time { grid-row: 1; align-self: stretch; display: grid; place-items: center; }
+.ol li.fl .ol-main { grid-row: 1; }
+.ol li.fl .flight-st { align-self: center; text-align: center; }
+.ol li.fl .ol-note.flight-late, .ol li.fl .ol-note.flight-early { font-size: 15px; }
+.ol li.fl .ol-note.flight-late { color: #B5532F; font-weight: 700; }
+.ol li.fl .ol-note.flight-early { color: #1F5C38; font-weight: 700; }
+@media (prefers-color-scheme: dark) { .ol li.fl .ol-note.flight-late { color: #F0A584; } .ol li.fl .ol-note.flight-early { color: #8FD3A8; } }
+.ol-bus { display: grid; grid-template-columns: 4.6em 1fr; align-items: center; gap: 0 8px; margin-top: 4px; font-size: 15px; color: var(--ink-2); }
+.ol-bus-l { display: inline-flex; align-items: center; }
+.ol-bus-t b { color: var(--ink); font-size: 16px; }
+.ol-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.ol-head .ol-svc { grid-column: auto; grid-row: auto; padding: 1px 8px; }
+.ol li:has(.ol-head) { grid-template-columns: auto 1fr; }

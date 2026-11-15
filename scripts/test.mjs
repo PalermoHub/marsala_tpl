@@ -429,3 +429,22 @@ test('hash del percorso: round-trip con ora e data', () => {
   assert.equal(buildPlanHash({ from: 'x', to: 'y', time: null, ymd: 20261117, mode: 'bus' }), '#/percorso/x/y/0000/20261117');
   assert.equal(buildPlanHash({ from: null, to: 'y' }), '#/percorso');
 });
+
+import { righeLuogo, corsaAttiva, LUOGHI } from '../js/luoghi.js';
+import { ORARI } from '../js/orari-luoghi.js';
+
+test('orari per luogo: ogni luogo ha corse in un giorno feriale e i treni a Mozia vanno in entrambi i versi', () => {
+  const ymd = 20261117, dow = dowOf(ymd); // martedì
+  for (const l of LUOGHI) assert.ok(righeLuogo(l.id, 'partenze', ymd, dow).length + righeLuogo(l.id, 'arrivi', ymd, dow).length > 0, l.id);
+  const p = righeLuogo('mozia', 'partenze', ymd, dow), a = righeLuogo('mozia', 'arrivi', ymd, dow);
+  assert.ok(p.length && a.length);
+  assert.deepEqual(p.map((r) => r.secs), [...p.map((r) => r.secs)].sort((x, y) => x - y));
+});
+
+test('orari per luogo: i festivi seguono le regole H/DF e il capolinea non ha partenze in arrivo', () => {
+  const dom = ORARI.corse.find((c) => c.g === 'H');
+  assert.ok(corsaAttiva(dom, 20261122, dowOf(20261122)), 'domenica');
+  assert.ok(!corsaAttiva(dom, 20261117, dowOf(20261117)), 'martedì feriale');
+  assert.ok(corsaAttiva(dom, 20261208, dowOf(20261208)), 'festivo infrasettimanale');
+  assert.ok(righeLuogo('aeroporto', 'arrivi', 20261117, 1).every((r) => r.cap !== 'Aeroporto Vincenzo Florio'));
+});
