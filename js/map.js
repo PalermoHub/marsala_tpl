@@ -412,7 +412,7 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
   });
   // Tocco su un punto vuoto: partenza/arrivo da lì (o subito il punto richiesto da «Scegli sulla mappa»).
   if (plan) map.on('click', (e) => {
-    const layers = ['stops', 'civici', 'buses-body', 'buses-nose', 'bus-clusters'].filter((id) => map.getLayer(id));
+    const layers = ['stops', 'civici', 'buses-body', 'buses-nose', 'bus-clusters', 'poi'].filter((id) => map.getLayer(id));
     if (map.queryRenderedFeatures(e.point, { layers }).length) return;
     const { lat, lng } = e.lngLat;
     const label = labelAt(lat, lng), id = planId(lat, lng, label);
