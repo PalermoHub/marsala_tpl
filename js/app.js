@@ -9,12 +9,13 @@ import { planJourney, groupOf, walkable } from './planner.js';
 import { loadIndirizzi, searchIndirizzi } from './indirizzi.js';
 import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
+import { listRoutes, saveRoute, removeRoute, isSaved, ymdFromInput, ymdToInput, parsePlanHash, buildPlanHash } from './plans.js';
 import { getConsent, setConsent, applyConsent } from './consent.js';
 
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { mapRoute: null, plan: { from: null, to: null, time: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null };
+const state = { mapRoute: null, plan: { from: null, to: null, time: null, ymd: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null };
 
 /** Oltre ~15 km/h (4,2 m/s) non si sta camminando: si è su un mezzo e i metri a piedi non servono. Dopo 5 minuti la posizione è «vecchia». */
 const MOVING_MS = 4.2;
@@ -808,12 +809,22 @@ const sideLabel = (sd) => (sd.kind === 'gps' ? t('planMyPos') : sd.name);
 const WALK_MAX_CROW_M = 5000, WALK_MAX_M = 7000; // a piedi: oltre queste distanze (linea d'aria / sulla rete) non si propone il percorso
 const pointId = (lat, lon, label) => `@${lat.toFixed(5)},${lon.toFixed(5)},${label}`;
 
+/** Percorsi salvati: ogni riga riapre Da→A a oggi/adesso. Le fermate sparite dal feed si saltano. */
+function savedRoutesHtml() {
+  const rows = listRoutes().map((r, i) => {
+    const a = resolveSide(r.from), b = resolveSide(r.to);
+    if (!a || !b) return '';
+    return `<li class="saved-row"><button type="button" class="row row-btn" data-act="openroute" data-i="${i}"><span class="row-main"><span class="row-title">${r.mode === 'walk' ? `${icon('walk', 18)} ` : ''}${esc(sideLabel(a))} → ${esc(sideLabel(b))}</span></span></button><button type="button" class="icon-btn icon-btn-quiet" data-act="delroute" data-i="${i}" aria-label="${esc(t('planDelete'))}">${icon('close', 20)}</button></li>`;
+  }).join('');
+  return rows ? `<section class="block saved-routes"><h2>${esc(t('planSavedH'))}</h2><ul class="plain">${rows}</ul></section>` : '';
+}
+
 function viewPlan(m) {
   if (m[1]) {
-    state.plan.from = resolveSide(decodeURIComponent(m[1])); state.plan.to = resolveSide(decodeURIComponent(m[2]));
-    state.plan.mode = m[4] ? 'walk' : 'bus';
-    const hh = m[3] ? Number(m[3].slice(0, 2)) : NaN, mm = m[3] ? Number(m[3].slice(2)) : NaN;
-    state.plan.time = hh < 24 && mm < 60 ? hh * 3600 + mm * 60 : null;
+    const h = parsePlanHash(m);
+    state.plan.from = resolveSide(h.from); state.plan.to = resolveSide(h.to);
+    state.plan.mode = h.mode; state.plan.time = h.time;
+    state.plan.ymd = h.ymd && h.ymd !== romeNow().ymd ? h.ymd : null;
   }
   const now = romeNow();
   const field = (side, key, ph) => `<div class="pf">
@@ -828,6 +839,7 @@ function viewPlan(m) {
   <h1 class="plan-h1">${esc(t('planTitle'))}</h1>
   <p class="lead">${esc(t('planHint'))}</p>
 </section>
+${savedRoutesHtml()}
 <section class="block plan-form">
   <div class="seg seg-inline pf-mode" role="radiogroup" aria-label="${esc(t('planModeLabel'))}">
     <button type="button" role="radio" aria-checked="${state.plan.mode !== 'walk'}" data-act="travelmode" data-v="bus">${icon('bus', 20)} ${esc(t('planModeBus'))}</button>
@@ -842,6 +854,11 @@ function viewPlan(m) {
       <button type="button" role="radio" aria-checked="${atMode}" data-act="timemode" data-v="at">${icon('clock', 18)} ${esc(t('planAt'))}</button>
     </div>
     <input id="pf-time" class="time-in" type="time" aria-label="${esc(t('planAt'))}" ${atMode ? '' : 'hidden'}>
+  </div>
+  <div class="pf-time pf-day">
+    <label class="pf-label" for="pf-day">${esc(t('planDay'))}</label>
+    <input id="pf-day" class="time-in" type="date" value="${ymdToInput(state.plan.ymd ?? now.ymd)}">
+    <button type="button" class="btn btn-quiet" data-act="dayreset" id="pf-today" ${state.plan.ymd ? '' : 'hidden'}>${esc(t('planToday'))}</button>
   </div>
 </section>
 <section id="plan-out" class="block plan-out" aria-live="polite"></section>`;
@@ -908,6 +925,13 @@ function planShareText(o, tomorrow) {
   return t('planShareText', sideLabel(from), sideLabel(to), `${tomorrow && !o.walkOnly ? t('planTomorrow') + ' ' : ''}${fmtHm(o.start)} → ${fmtHm(o.end)}`, lines);
 }
 
+/** Pulsanti sotto i risultati: condividi (solo con risultati) e salva/rimuovi il percorso. */
+function planActions(share) {
+  const saved = isSaved(currentRoute());
+  return `${share ? `<button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button>` : ''}<button type="button" class="btn btn-quiet" data-act="saveplan" aria-pressed="${saved}">${icon('star', 22, saved)} ${esc(t(saved ? 'planSaved' : 'planSave'))}</button>`;
+}
+const currentRoute = () => ({ from: state.plan.from.id, to: state.plan.to.id, mode: state.plan.mode });
+
 async function runPlan() {
   const out = document.getElementById('plan-out');
   if (!out) return;
@@ -930,7 +954,8 @@ async function runPlan() {
     } else { ends.push(sd.stops.map((stop) => ({ stop, walk: 0 }))); ctx.push({ at: null, wm: null }); }
   }
   const now = romeNow();
-  const secs = time ?? now.secs;
+  const day = state.plan.ymd; // null = oggi
+  const secs = time ?? (day ? 0 : now.secs);
 
   if (walkMode) { // solo a piedi: un unico percorso sulla rete pedonale
     const pt = (sd, c) => c.at ?? (sd.kind === 'group' ? state.data.stops[sd.stops[0]] : null);
@@ -941,17 +966,17 @@ async function runPlan() {
     state.planOpts = wo ? [wo] : [];
     state.planShareText = wo ? planShareText(wo, false) : '';
     out.innerHTML = wo ? `<ul class="plain opts">${optionHtml(wo, 0, false)}</ul>
-<div class="actions"><button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button></div>` : `<p class="note">${esc(t('planWalkNone'))}</p>`;
+<div class="actions">${planActions(true)}</div>` : `<p class="note">${esc(t('planWalkNone'))}</p><div class="actions">${planActions(false)}</div>`;
     return;
   }
 
-  let opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: now.ymd, secs });
+  let opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: day ?? now.ymd, secs });
   let tomorrow = false, msg = '';
-  if (!opts.length) {
+  if (!opts.length && !day) {
     opts = planJourney(state.data, state.index, { from: ends[0], to: ends[1], ymd: addDays(now.ymd, 1), secs: 0 });
     tomorrow = opts.length > 0;
     msg = t(tomorrow ? 'planNoneNow' : 'planNone');
-  }
+  } else if (!opts.length) msg = t('planNone');
   let shapes = null;
   try { shapes = await loadShapes(); } catch { /* senza shape il tratto in bus è una retta fra le fermate */ }
   for (const o of opts) o.geo = routeGeometry(state.data, shapes, o, { from: ctx[0], to: ctx[1] });
@@ -959,14 +984,12 @@ async function runPlan() {
   const best = opts[0];
   state.planShareText = best ? planShareText(best, tomorrow) : '';
   out.innerHTML = `${msg ? `<p class="note">${esc(msg)}</p>` : ''}${opts.length ? `<ul class="plain opts">${opts.map((o, i) => optionHtml(o, i, tomorrow)).join('')}</ul><p class="muted note">${esc(t('scheduledNote'))}</p>
-<div class="actions"><button type="button" class="btn btn-quiet" data-act="shareplan">${icon('share', 22)} ${esc(t('planShare'))}</button></div>` : ''}`;
+<div class="actions">${planActions(true)}</div>` : `<div class="actions">${planActions(false)}</div>`}`;
 }
 
 function planHash() {
-  const { from, to } = state.plan;
-  const tm = state.plan.time;
-  const hhmm = tm == null ? '' : `/${String(Math.floor(tm / 3600) % 24).padStart(2, '0')}${String(Math.floor((tm % 3600) / 60)).padStart(2, '0')}`;
-  return from && to ? `#/percorso/${encodeURIComponent(from.id)}/${encodeURIComponent(to.id)}${hhmm}${state.plan.mode === 'walk' ? '/piedi' : ''}` : '#/percorso';
+  const { from, to, time, ymd, mode } = state.plan;
+  return buildPlanHash({ from: from?.id, to: to?.id, time, ymd, mode });
 }
 function syncPlanUrl() {
   const h = planHash();
@@ -1027,6 +1050,13 @@ function bindPlan() {
   $time.addEventListener('change', () => {
     const [h, mi] = $time.value.split(':').map(Number);
     if (Number.isFinite(h)) { state.plan.time = h * 3600 + mi * 60; runPlan(); }
+  });
+  const $day = document.getElementById('pf-day');
+  $day.addEventListener('change', () => {
+    const y = ymdFromInput($day.value);
+    state.plan.ymd = y && y !== romeNow().ymd ? y : null;
+    document.getElementById('pf-today').hidden = !state.plan.ymd;
+    syncPlanUrl(); runPlan();
   });
   runPlan();
 }
@@ -1222,7 +1252,7 @@ const routes = [
   [/^\/vicino$/, () => viewNear(), 'home'],
   [/^\/stop\/(.+)$/, (m) => viewStop(decodeURIComponent(m[1])), 'home'],
   [/^\/cerca$/, () => viewSearch(), 'home', bindSearch],
-  [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?(?:\/(piedi))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
+  [/^\/percorso(?:\/([^/]+)\/([^/]+)(?:\/(\d{4}))?(?:\/(\d{8}))?(?:\/(piedi))?)?$/, (m) => viewPlan(m), 'plan', bindPlan],
   [/^\/linee$/, () => viewLines(), 'lines'],
   [/^\/linea\/([^/]+)(?:\/fermata\/(.+))?$/, (m) => {
     state.lineFocus = m[2] ? stopById(decodeURIComponent(m[2])) : -1;
@@ -1341,9 +1371,31 @@ $app.addEventListener('click', async (e) => {
     [state.plan.from, state.plan.to] = [state.plan.to, state.plan.from];
     for (const sd of ['from', 'to']) { const $i = document.getElementById(`pf-${sd}`); $i.value = state.plan[sd] ? sideLabel(state.plan[sd]) : ''; }
     syncPlanUrl(); runPlan();
+  } else if (act === 'saveplan') {
+    const r = currentRoute();
+    if (isSaved(r)) removeRoute(r); else saveRoute(r);
+    runPlan();
+  } else if (act === 'openroute') {
+    const r = listRoutes()[Number(b.dataset.i)];
+    const from = r && resolveSide(r.from), to = r && resolveSide(r.to);
+    if (from && to) {
+      state.plan = { from, to, time: null, ymd: null, mode: r.mode };
+      state.planOpts = null; state.planShareText = ''; state.mapRoute = null;
+      history.replaceState(null, '', planHash());
+      $app.innerHTML = viewPlan([]); bindPlan();
+    }
+  } else if (act === 'delroute') {
+    const r = listRoutes()[Number(b.dataset.i)];
+    if (r) removeRoute(r);
+    $app.innerHTML = viewPlan([]); bindPlan();
+  } else if (act === 'dayreset') {
+    state.plan.ymd = null;
+    document.getElementById('pf-day').value = ymdToInput(romeNow().ymd);
+    b.hidden = true;
+    syncPlanUrl(); runPlan();
   } else if (act === 'resetplan') {
     // Azzera partenza, arrivo, orario, modalità e il percorso aperto in mappa.
-    state.plan = { from: null, to: null, time: null, mode: 'bus' };
+    state.plan = { from: null, to: null, time: null, ymd: null, mode: 'bus' };
     state.planOpts = null; state.planShareText = ''; state.mapRoute = null;
     history.replaceState(null, '', '#/percorso');
     $app.innerHTML = viewPlan([]); bindPlan();
