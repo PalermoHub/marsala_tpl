@@ -780,7 +780,7 @@ async function bindMap(rid, stopId = null, luogo = null) {
   });
   try {
     const [{ mountMap }, shapes] = await Promise.all([import('./map.js'), loadShapes()]);
-    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet, pin: LUOGHI[luogo] || (stopId && stopById(stopId) >= 0 ? state.data.stops[stopById(stopId)] : null) });
+    const ctl = await mountMap(document.getElementById('map'), { data: state.data, shapes, focus: rid ? routeById(rid) : -1, route: rid ? null : state.mapRoute, plan: rid ? null : { pick: state.pickSide, onPlan: setPlanPoint }, loc: state.loc, countEl: document.getElementById('bus-count'), t, onStop: state.pickSide ? null : showStopSheet, pin: LUOGHI[luogo] ? { ...LUOGHI[luogo], hide: true } : stopId && stopById(stopId) >= 0 ? { ...state.data.stops[stopById(stopId)], hide: stopId === '20984' } : null });
     if (stopId) showStopSheet(stopId);
     state.cleanup = () => ctl.destroy();
   } catch (e) {

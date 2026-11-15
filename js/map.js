@@ -576,18 +576,32 @@ export async function mountMap(el, { data, shapes, focus, loc, countEl, t, route
 
   // Punti fissi dei collegamenti extraurbani: capolinea pullman in Viale Fazio e i due aeroporti (visibili anche da lontano).
   {
+    const GLYPH = {
+      bus: '<rect x="4.5" y="3.5" width="15" height="14" rx="3"/><path d="M4.5 11h15M7.5 17.5v2.5M16.5 17.5v2.5M8 14.5h.01M16 14.5h.01"/>',
+      plane: '<path d="M21 15.5l-8.5-4.5V5.5a1.5 1.5 0 00-3 0V11L1 15.5V17l8.5-2v3.5L7.5 20v1.5l4.5-1 4.5 1V20l-2-1.5V15l6.5 2z"/>',
+    };
+    const badge = async (kind) => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#1B3A94" stroke="#FFFFFF" stroke-width="3"/><g transform="translate(10 10) scale(1.17)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GLYPH[kind]}</g></svg>`;
+      const img = new Image(); img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      await img.decode();
+      if (!map.hasImage(`poi-${kind}`)) map.addImage(`poi-${kind}`, img, { pixelRatio: 2 });
+    };
     const fazio = data.stops.find((x) => x.id === '20984');
-    const pts = [fazio && { n: t('poiTerminus'), c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), c: [12.4926, 37.9130] }, { n: t('poiPalermo'), c: [13.0916, 38.1765] }].filter(Boolean);
-    map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n }, geometry: { type: 'Point', coordinates: q.c } })) } });
-    map.addLayer({ id: 'poi', type: 'circle', source: 'poi', paint: { 'circle-radius': 7, 'circle-color': '#1B3A94', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
-    map.addLayer({ id: 'poi-label', type: 'symbol', source: 'poi', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });
+    const pts = [fazio && { n: t('poiTerminus'), k: 'bus', c: [fazio.lon, fazio.lat] }, { n: t('poiFlorio'), k: 'plane', c: [12.4926, 37.9130] }, { n: t('poiPalermo'), k: 'plane', c: [13.0916, 38.1765] }].filter(Boolean);
+    try { await Promise.all([badge('bus'), badge('plane')]); } catch { /* senza icone restano le etichette */ }
+    if (!destroyed) {
+      map.addSource('poi', { type: 'geojson', data: { type: 'FeatureCollection', features: pts.map((q) => ({ type: 'Feature', properties: { n: q.n, k: q.k }, geometry: { type: 'Point', coordinates: q.c } })) } });
+      map.addLayer({ id: 'poi', type: 'symbol', source: 'poi', layout: { 'icon-image': ['concat', 'poi-', ['get', 'k']], 'icon-size': 0.8, 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0, 1.7], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': isDark() ? '#FBF7EE' : '#14213D', 'text-halo-color': isDark() ? '#14213D' : '#FFFFFF', 'text-halo-width': 2 } });
+    }
   }
 
   // Fermata cercata: puntatore con alone e vista centrata su di lei.
   if (pin) {
+    if (!pin.hide) {
     map.addSource('pin', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [pin.lon, pin.lat] } } });
     map.addLayer({ id: 'pin-halo', type: 'circle', source: 'pin', paint: { 'circle-radius': 20, 'circle-color': '#B5532F', 'circle-opacity': 0.22 } });
     map.addLayer({ id: 'pin', type: 'circle', source: 'pin', paint: { 'circle-radius': 9, 'circle-color': '#B5532F', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } });
+    }
     map.jumpTo({ center: [pin.lon, pin.lat], zoom: Math.max(map.getZoom(), 16.5) });
   }
 
