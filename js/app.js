@@ -275,8 +275,8 @@ function stopRow(si, meters, exact = true, strong = false) {
 const brandBar = () => `<div class="brandbar"><img src="img/icon-192.png" alt="" width="28" height="28"><b>${esc(t('appName'))}</b></div>`;
 
 /** Distanza a piedi dalla posizione dell'utente: icona dell'omino e metri. `strong` = la fermata più vicina. */
-const walkBadge = (m, { exact = true, strong = false, near = false } = {}) =>
-  `<span class="wbadge${strong ? ' wbadge-strong' : ''}">${icon('walk', 14)}<span>${esc((exact ? '' : '≈ ') + t('meters', m))}${near ? ` ${esc(t('fromYou'))}` : ''}</span></span>`;
+const walkBadge = (m, { exact = true, strong = false, near = false, air = false } = {}) =>
+  `<span class="wbadge${strong ? ' wbadge-strong' : ''}${air ? ' wbadge-air' : ''}"${air ? ` title="${esc(t('airDist'))}"` : ''}>${icon(air ? 'pin' : 'walk', 14)}<span>${esc((exact && !air ? '' : '≈ ') + t('meters', m))}${near ? ` ${esc(t('fromYou'))}` : ''}</span></span>`;
 
 /**
  * Home: testata (cosa è l'app), poi i due gesti (posizione / cerca), poi «Vicino a te» che dice dove sei
@@ -592,16 +592,14 @@ function viewLine(rid, tripSel) {
     const sel = (tripSel != null && pool.find((x) => x.i === tripSel)) || upcoming;
     // con la posizione recente e da fermo, ogni fermata dice quanto dista a piedi da te; la più vicina è in evidenza
     const wd = walkDist(state.walkMap);
-    // fermate fuori dalla rete pedonale (distanza non finita) o oltre 5 km (turista da casa): niente badge
-    let dists = state.loc && !state.loc.moving && !state.loc.far && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const m = wd(si, distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon)); return Number.isFinite(m) && m <= 5000 ? m : null; }) : null;
-    const known = dists ? dists.filter((m) => m != null) : [];
-    if (!known.length) dists = null;
-    const nearK = dists ? dists.indexOf(Math.min(...known)) : -1;
+    // metri a piedi dalla rete pedonale; per le fermate che non ci arrivano (periferia) la distanza in linea d'aria, segnata come tale
+    const dists = state.loc && !state.loc.moving && !state.loc.far && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const crow = distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon); const w = wd(si, crow); return Number.isFinite(w) ? { m: w, air: false } : { m: crow, air: true }; }) : null;
+    const nearK = dists ? dists.reduce((b, d, k) => (d.m < dists[b].m ? k : b), 0) : -1;
     const stopsHtml = sel ? sel.tr.s.map((si, k) => {
       const { name } = stopTitle(si);
       const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
       const here = si === focus;
-      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span>${dists?.[k] != null ? walkBadge(dists[k], { exact: isExactWalk(state.walkMap, si), strong: k === nearK, near: k === nearK }) : ''}<span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
+      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span>${dists ? walkBadge(dists[k].m, { exact: isExactWalk(state.walkMap, si), air: dists[k].air, strong: k === nearK, near: k === nearK }) : ''}<span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
     }).join('') : '';
     const dayPool = todays.filter((x) => x.tr.d === d).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
     const starts = dayPool.map((x) => x.tr.t[0]);
