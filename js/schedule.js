@@ -134,6 +134,93 @@ export function formatClock(secs) {
   return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}`;
 }
 
+/** Orario come nel GTFS (`start_time`): senza ridurre le corse dopo la mezzanotte, quindi 25:10 resta 25:10. */
+export function hms(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * Ritardo (secondi) per ogni fermata della corsa, a partire dagli aggiornamenti del feed trip_updates.
+ * Nel feed un ritardo vale da quella fermata in avanti finché non ne arriva uno nuovo: qui si propaga.
+ * Le fermate prima del primo aggiornamento restano `null` (il mezzo le ha già passate).
+ * Le fermate si riconoscono per stop_id e, in mancanza, per stop_sequence (1-based).
+ */
+export function delaysByPos(stopIds, updates) {
+  const known = new Map();
+  for (const u of updates) {
+    if (u.delay == null) continue; // solo l'ora prevista: il ritardo resta quello del punto prima
+    let pos = u.stopId ? stopIds.indexOf(u.stopId) : -1;
+    if (pos < 0 && Number.isFinite(u.seq) && u.seq > 0 && u.seq <= stopIds.length) pos = u.seq - 1;
+    if (pos < 0) continue;
+    known.set(pos, u.delay);
+  }
+  const out = new Array(stopIds.length).fill(null);
+  let cur = null;
+  for (let k = 0; k < stopIds.length; k++) {
+    if (known.has(k)) cur = known.get(k);
+    out[k] = cur;
+  }
+  return out;
+}
+
+/**
+ * Aggancia una corsa agli aggiornamenti del feed trip_updates. Il feed del Comune non manda il trip_id
+ * del GTFS statico, quindi si confrontano linea e ora di partenza (più la data, se c'è) e si tiene solo
+ * l'aggiornamento le cui fermate esistono davvero in questa corsa: così non si scambiano corse omonime.
+ * `start` è `hms` del primo orario della corsa, `stopIds` gli id delle sue fermate nell'ordine.
+ * Ritorna l'aggiornamento con `delays` allineati alla corsa, oppure null.
+ */
+export function matchTripUpdate(updates, { routeId, start, day, stopIds }) {
+  for (const u of updates) {
+    if (u.routeId !== routeId || u.startTime !== start) continue;
+    if (u.startDate && Number(u.startDate) !== day) continue;
+    const delays = delaysByPos(stopIds, u.stops);
+    if (!delays.some((d) => d != null)) continue;
+    return { ...u, delays };
+  }
+  return null;
+}
+
+/**
+ * Partenze con l'orario stimato dal feed: `secs` diventa quello previsto (programmato + ritardo), `sched`
+ * resta il programmato e `delay` è il ritardo in secondi. Rimescola per ora prevista; le corse di domani
+ * restano come sono (il feed non ne sa nulla).
+ */
+export function withDelays(data, rtTrips, items, now) {
+  if (!rtTrips?.length) return items;
+  return items
+    .map((it) => {
+      if (it.dayOffset) return it;
+      const trip = data.trips[it.trip];
+      const m = matchTripUpdate(rtTrips, {
+        routeId: data.routes[trip.r].id,
+        start: hms(trip.t[0]),
+        day: now.ymd,
+        stopIds: trip.s.map((si) => data.stops[si].id),
+      });
+      const d = m?.delays[it.pos];
+      if (d == null) return it;
+      const est = it.secs + d;
+      return { ...it, delay: d, sched: it.secs, secs: est, mins: Math.floor((est - now.secs) / 60) };
+    })
+    .sort((a, b) => a.secs - b.secs);
+}
+
+/**
+ * Partenze da una fermata con i ritardi del feed.
+ * Con i ritardi si guarda anche un quarto d'ora indietro: una corsa che da orario è già passata ma che il
+ * feed dà in ritardo deve ancora comparire. `mins` è sempre ricalcolato sull'ora attuale.
+ */
+export function departuresAt(data, index, stopIdx, now, rtTrips = [], limit = 7) {
+  const back = rtTrips?.length ? 900 : 0;
+  const { items, tomorrow } = nextDepartures(data, index, stopIdx, { ...now, secs: now.secs - back }, limit + (back ? 4 : 0));
+  const shown = withDelays(data, rtTrips, items, now)
+    .map((it) => ({ ...it, mins: Math.floor((it.secs - now.secs) / 60) }))
+    .filter((it) => it.secs >= now.secs - 30);
+  return { items: shown.slice(0, limit), tomorrow };
+}
+
 /** Stato di validità del feed rispetto a oggi: ok | soon (scade entro 14 giorni) | expired. */
 export function feedStatus(meta, ymd) {
   if (!meta.validTo) return { state: 'ok', daysLeft: null };

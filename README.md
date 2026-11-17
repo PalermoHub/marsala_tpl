@@ -6,9 +6,9 @@ Web app installabile (PWA) per il trasporto pubblico locale di Marsala: quando p
 
 ## Cosa fa
 
-- **Prossime partenze** da ogni fermata, con minuti mancanti in grande. Le partenze sono sempre etichettate *da orario*: il feed del Comune non dice a quale corsa appartiene un bus, quindi l'app non inventa ritardi.
+- **Prossime partenze** da ogni fermata, con minuti mancanti in grande. Ogni partenza dice se l'orario è *da orario* o *stimato*: quando il feed del Comune pubblica il ritardo di quella corsa, l'app mostra l'ora prevista (e quella programmata barrata) invece di inventarlo.
 - **Fermate vicine** con la geolocalizzazione (resta nel browser, non viene inviata), ricerca per nome, fermate preferite, link condivisibile per ogni fermata (`#/stop/<id>`).
-- **Linee**: percorso, fermate e orari di ogni corsa. Ogni linea ha una piastrella semplice con colore e numero propri.
+- **Linee**: percorso, fermate e orari di ogni corsa, con il ritardo della corsa scelta. Ogni linea ha una piastrella semplice con colore e numero propri.
 - **Mappa** con i percorsi e i bus in servizio (posizione recente e fuori dal deposito).
 - Italiano e inglese, tema chiaro/scuro, calendario in fuso `Europe/Rome`, festivi e servizi speciali (es. 1-2 novembre).
 
@@ -18,8 +18,11 @@ Web app installabile (PWA) per il trasporto pubblico locale di Marsala: quando p
 |---|---|
 | [GTFS statico del Comune](https://www.comune.marsala.tp.it/it/page/orari-del-trasporto-pubblico-locale) | orari, fermate, percorsi (CC BY 4.0) |
 | GTFS-Realtime `vehicle_positions` | posizione dei bus sulla mappa |
+| GTFS-Realtime `trip_updates` | ritardo della corsa e ora prevista alle fermate |
 
-Il feed `trip_updates` oggi è vuoto e `vehicle_positions` non contiene corsa o linea: per questo non ci sono ritardi per singola corsa. La mappa mostra i mezzi in servizio (anello ocra, spostamento animato) e quelli fermi o in deposito (grigi); toccando un mezzo compaiono targa e ora dell'ultimo aggiornamento. Se il Comune li pubblicherà, vanno agganciati in `js/rt.js`.
+`vehicle_positions` non contiene corsa né linea: la mappa mostra i mezzi in servizio (anello ocra, spostamento animato) e quelli fermi o in deposito (grigi); toccando un mezzo compaiono targa e ora dell'ultimo aggiornamento.
+
+`trip_updates` è pubblicato dal 17 novembre 2026 ma non è conforme allo standard: il Comune scrive `route_id` nel campo 5, `start_time` nel 2 e `start_date` nel 3, e il `trip_id` (`58222`) non è quello del GTFS statico (`INV3R01`). `js/rt.js` rimette i campi al loro posto e `matchTripUpdate` in `js/schedule.js` aggancia la corsa per **linea + ora di partenza + fermate**, non per `trip_id`. Il feed manda una o due fermate per corsa: il ritardo vale da lì in avanti. Quando una corsa non c'è (bus non ancora partito, GPS spento, `route_id` assente dal GTFS come il `1973`), restano gli orari programmati: niente ritardi inventati.
 
 ### Correzione dei festivi
 
@@ -51,7 +54,7 @@ js/app.js                                 router e viste
 js/schedule.js                            logica orari, pura e testata
 js/planner.js                             pianificatore di percorso (diretto o un cambio), puro e testato
 js/tiles.js                               piastrelle-linea (colore + numero)
-js/rt.js, js/map.js                       feed realtime e mappa (caricata solo quando serve)
+js/rt.js, js/map.js                       feed realtime (posizioni e ritardi) e mappa (caricata solo quando serve)
 dati/                                     generato da scripts/build-gtfs.mjs
 scripts/                                  build dei dati e test
 ```

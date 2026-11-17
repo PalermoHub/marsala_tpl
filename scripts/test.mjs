@@ -448,3 +448,124 @@ test('orari per luogo: i festivi seguono le regole H/DF e il capolinea non ha pa
   assert.ok(corsaAttiva(dom, 20261208, dowOf(20261208)), 'festivo infrasettimanale');
   assert.ok(righeLuogo('aeroporto', 'arrivi', 20261117, 1).every((r) => r.cap !== 'Aeroporto Vincenzo Florio'));
 });
+
+// ---------- ritardi: feed trip_updates ----------
+import { decodeTripUpdates } from '../js/rt.js';
+import { hms, delaysByPos, matchTripUpdate } from '../js/schedule.js';
+
+// Mini-codificatore protobuf per i test: solo i tipi usati dal feed trip_updates.
+const pb = {
+  varint(n) { const out = []; let v = n; do { const b = v % 128; v = Math.floor(v / 128); out.push(v ? b | 0x80 : b); } while (v); return out; },
+  tag(f, w) { return pb.varint(f * 8 + w); },
+  num(f, n) { return [...pb.tag(f, 0), ...pb.varint(n)]; },
+  str(f, s) { const b = [...Buffer.from(s, 'utf8')]; return [...pb.tag(f, 2), ...pb.varint(b.length), ...b]; },
+  msg(f, bytes) { return [...pb.tag(f, 2), ...pb.varint(bytes.length), ...bytes]; },
+};
+
+// Il feed del Comune: route_id nel campo 5, start_time nel 2, start_date nel 3 (fuori standard).
+const tripDescriptorComune = [...pb.str(1, '58222'), ...pb.str(2, '07:00:00'), ...pb.str(3, '20261117'), ...pb.str(5, '1906')];
+const stopUpdate = (seq, stopId, delay, time) => [
+  ...pb.num(1, seq),
+  ...pb.msg(2, delay == null ? pb.num(2, time) : [...pb.num(1, delay), ...pb.num(2, time)]),
+  ...pb.str(4, stopId),
+];
+const tripUpdate = (desc, stops, vehicle) => [
+  ...pb.msg(1, desc), ...stops.flatMap((s) => pb.msg(2, s)), ...pb.msg(3, pb.str(1, vehicle)), ...pb.num(4, 1794898205),
+];
+const feedMessage = (tu) => new Uint8Array([
+  ...pb.msg(1, [...pb.str(1, '2.0'), ...pb.num(3, 1794898221)]),
+  ...pb.msg(2, [...pb.str(1, '1641482'), ...pb.msg(3, tu)]),
+]);
+
+test('trip_updates: campi rimessi al loro posto anche se il Comune li sposta', () => {
+  const feed = decodeTripUpdates(feedMessage(tripUpdate(tripDescriptorComune, [
+    stopUpdate(55, '21448', 573, 1794898173),
+    stopUpdate(56, '21449', null, 1794898233),
+  ], '90017')));
+  assert.equal(feed.headerTs, 1794898221);
+  assert.equal(feed.trips.length, 1);
+  const t = feed.trips[0];
+  assert.deepEqual(
+    { routeId: t.routeId, startTime: t.startTime, startDate: t.startDate, tripId: t.tripId, vehicleId: t.vehicleId },
+    { routeId: '1906', startTime: '07:00:00', startDate: '20261117', tripId: '58222', vehicleId: '90017' },
+  );
+  assert.deepEqual(t.stops, [
+    { seq: 55, stopId: '21448', delay: 573, time: 1794898173 },
+    { seq: 56, stopId: '21449', delay: null, time: 1794898233 },
+  ]);
+});
+
+test('trip_updates: accetta anche il TripDescriptor standard', () => {
+  const std = [...pb.str(1, 'INV3R01'), ...pb.str(2, '1906'), ...pb.num(3, 1), ...pb.str(4, '07:00:00'), ...pb.str(5, '20261117')];
+  const t = decodeTripUpdates(feedMessage(tripUpdate(std, [stopUpdate(55, '21448', 60, 1794898173)], '90017'))).trips[0];
+  assert.deepEqual([t.routeId, t.startTime, t.startDate, t.tripId], ['1906', '07:00:00', '20261117', 'INV3R01']);
+  assert.equal(t.stops[0].delay, 60);
+});
+
+test('delaysByPos: il ritardo vale dalla fermata indicata in avanti', () => {
+  const ids = ['21397', '21398', '21399', '21448', '21449'];
+  assert.deepEqual(delaysByPos(ids, [{ stopId: '21448', seq: 4, delay: 573 }, { stopId: '21449', seq: 5, delay: null }]), [null, null, null, 573, 573]);
+  assert.deepEqual(delaysByPos(ids, [{ stopId: '', seq: 4, delay: 60 }]), [null, null, null, 60, 60], 'stop_sequence quando manca lo stop_id');
+  assert.deepEqual(delaysByPos(ids, [{ stopId: '21398', delay: 120 }, { stopId: '21449', delay: 0 }]), [null, 120, 120, 120, 0], 'un nuovo valore sostituisce il precedente');
+  assert.deepEqual(delaysByPos(ids, [{ stopId: 'nope', delay: 60 }]), [null, null, null, null, null], 'fermata sconosciuta: niente ritardo');
+});
+
+test('hms: ora di partenza come nel GTFS, senza ridurre le corse dopo la mezzanotte', () => {
+  assert.equal(hms(7 * 3600), '07:00:00');
+  assert.equal(hms(25 * 3600 + 10 * 60), '25:10:00');
+  assert.equal(hms(0), '00:00:00');
+});
+
+test('aggancio della corsa: linea + ora di partenza + fermate vere di app.json', () => {
+  const trips = decodeTripUpdates(feedMessage(tripUpdate(tripDescriptorComune, [
+    stopUpdate(55, '21448', 573, 1794898173),
+  ], '90017'))).trips;
+  const tr = data.trips.find((x) => data.routes[x.r].id === '1906' && x.t[0] === 7 * 3600);
+  assert.ok(tr, 'corsa della linea 3 in partenza alle 07:00');
+  const stopIds = tr.s.map((si) => data.stops[si].id);
+  const m = matchTripUpdate(trips, { routeId: '1906', start: hms(tr.t[0]), day: 20261117, stopIds });
+  assert.ok(m, 'la corsa si aggancia');
+  assert.equal(m.delays.filter((d) => d != null)[0], 573);
+  assert.ok(m.delays.indexOf(573) > 0, 'il ritardo parte dalla fermata 55, non dalla prima');
+  assert.equal(matchTripUpdate(trips, { routeId: '1906', start: '07:05:00', day: 20261117, stopIds }), null, 'altra ora: nessun aggancio');
+  assert.equal(matchTripUpdate(trips, { routeId: '1906', start: hms(tr.t[0]), day: 20261116, stopIds }), null, 'altro giorno: nessun aggancio');
+  assert.equal(matchTripUpdate(trips, { routeId: '1925', start: hms(tr.t[0]), day: 20261117, stopIds }), null, 'altra linea: nessun aggancio');
+  const other = data.trips.find((x) => x.r !== tr.r && x.t[0] === tr.t[0] && !x.s.some((si) => data.stops[si].id === '21448'));
+  if (other) assert.equal(matchTripUpdate(trips, { routeId: data.routes[other.r].id, start: hms(other.t[0]), day: 20261117, stopIds: other.s.map((si) => data.stops[si].id) }), null, 'stessa ora ma fermate diverse: nessun aggancio');
+});
+
+import { withDelays, departuresAt } from '../js/schedule.js';
+
+test('ritardi nelle partenze: ora stimata, minuti ricalcolati e corsa già «passata» da orario', () => {
+  const ti = data.trips.findIndex((x) => data.routes[x.r].id === '1925' && x.t[0] === 8 * 3600 && isServiceActive(data.services[x.v], 20261117));
+  assert.ok(ti >= 0, 'corsa delle 08:00 sulla linea 1, attiva martedì 17 novembre');
+  const tr = data.trips[ti];
+  const pos = 10; // fermata a metà percorso
+  const stopIdx = tr.s[pos];
+  const sched = tr.t[pos];
+  const now = { ymd: 20261117, dow: 1, secs: sched + 120 }; // due minuti dopo l'orario programmato
+  const rt = [{
+    routeId: '1925', startTime: hms(tr.t[0]), startDate: '20261117',
+    stops: [{ seq: pos + 1, stopId: data.stops[stopIdx].id, delay: 600, time: 0 }],
+  }];
+  // senza feed la corsa è svanita (l'orario è passato), con il feed resta e si sposta di 10 minuti
+  const plain = departuresAt(data, index, stopIdx, now, [], 50).items.find((x) => x.trip === ti);
+  assert.equal(plain, undefined);
+  const delayed = departuresAt(data, index, stopIdx, now, rt, 50).items.find((x) => x.trip === ti);
+  assert.ok(delayed, 'la corsa in ritardo compare');
+  assert.equal(delayed.delay, 600);
+  assert.equal(delayed.sched, sched);
+  assert.equal(delayed.secs, sched + 600);
+  assert.equal(delayed.mins, Math.floor((sched + 600 - now.secs) / 60));
+  // e l'elenco resta ordinato per ora prevista
+  const all = departuresAt(data, index, stopIdx, now, rt, 50).items;
+  assert.deepEqual(all.map((x) => x.secs), [...all.map((x) => x.secs)].sort((a, b) => a - b));
+});
+
+test('withDelays: senza aggiornamento per la corsa le partenze restano programmate', () => {
+  const now = { ymd: 20261117, dow: 1, secs: 9 * 3600 };
+  const items = nextDepartures(data, index, data.trips.find((x) => x.t.length).s[2], now, 5).items;
+  const rt = [{ routeId: 'nessuna', startTime: '00:00:00', startDate: '20261117', stops: [{ stopId: '20984', delay: 300 }] }];
+  assert.deepEqual(withDelays(data, rt, items, now), items);
+  assert.deepEqual(withDelays(data, [], items, now), items);
+});

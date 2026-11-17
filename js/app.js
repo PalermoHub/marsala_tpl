@@ -3,11 +3,11 @@ import { loadVoli, VOLI_SOURCE } from './voli.js';
 import { luogoById, righeLuogo } from './luoghi.js';
 import { ORARI } from './orari-luoghi.js';
 import { LINEA_ID, STAZIONI, AL_TRENO, PULLMAN, A_PULLMAN, DA_PULLMAN, LINK, FONTE } from './coincidenze.js';
-import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM } from './schedule.js';
+import { romeNow, buildIndex, nextDepartures, nearestStops, splitStopName, siblingStops, formatClock, feedStatus, isServiceActive, addDays, isApprox, distanceM, hms, matchTripUpdate, departuresAt } from './schedule.js';
 import { loadWalk, walkFrom, walkDist, walkBetween, isExactWalk } from './walk.js';
 import { routeGeometry, streetNames } from './route.js';
 import { tileSvg, motifField, lineStyle } from './tiles.js';
-import { fetchVehicles } from './rt.js';
+import { fetchVehicles, fetchTripUpdates } from './rt.js';
 import { buildRouteLines, candidateRoutes, locateBus, stopsAlong, placeOnStops } from './match.js';
 import { planJourney, groupOf, walkable } from './planner.js';
 import { loadIndirizzi, searchIndirizzi } from './indirizzi.js';
@@ -19,7 +19,7 @@ import { getConsent, setConsent, applyConsent } from './consent.js';
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
 
-const state = { mapRoute: null, plan: { from: null, to: null, time: null, ymd: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null };
+const state = { mapRoute: null, plan: { from: null, to: null, time: null, ymd: null, mode: 'bus' }, groups: null, data: null, index: null, stopRoutes: null, loc: null, locStatus: 'idle', walkMap: null, cleanup: null, pickSide: null, rt: { at: 0, headerTs: null, trips: [] } };
 
 /** Oltre ~15 km/h (4,2 m/s) non si sta camminando: si è su un mezzo e i metri a piedi non servono. Dopo 5 minuti la posizione è «vecchia». */
 const MOVING_MS = 4.2;
@@ -142,6 +142,60 @@ const stopById = (id) => state.data.stops.findIndex((s) => s.id === id);
 const routeById = (id) => state.data.routes.findIndex((r) => r.id === id);
 const isFav = (id) => store.get('favs', []).includes(id);
 
+// ---------- ritardi (feed trip_updates) ----------
+// Il feed del Comune pubblica il ritardo in secondi per le fermate che il mezzo sta per fare. Non manda
+// il trip_id del GTFS statico: la corsa si aggancia per linea + ora di partenza, controllando che le
+// fermate citate dal feed siano davvero quelle della corsa (serve a scartare gli omonimi di altre corse).
+const RT_TTL_MS = 30000;
+let rtBusy = false;
+
+/** Ritardo in minuti arrotondati: 573 s -> 10. */
+const delayMin = (secs) => Math.round(secs / 60);
+/** «In ritardo di 10 min» / «In orario» / «In anticipo di 2 min». */
+const delayText = (secs) => {
+  const m = delayMin(secs);
+  return m > 0 ? t('rtLate', m) : m < 0 ? t('rtEarly', -m) : t('rtOnTime');
+};
+/** Ora di un istante epoch del feed, nel fuso di Marsala. */
+const feedClock = (epochS) => (epochS ? formatClock(romeNow(new Date(epochS * 1000)).secs) : '');
+
+/**
+ * Ritardo della corsa secondo il feed, o null se la corsa non c'è.
+ * Ritorna { delays, delay, at, vehicleId }: `delays[pos]` è il ritardo in secondi a ogni fermata.
+ */
+function rtFor(trip, day) {
+  const feed = state.rt;
+  if (!feed.trips.length) return null;
+  const m = matchTripUpdate(feed.trips, {
+    routeId: state.data.routes[trip.r].id,
+    start: hms(trip.t[0]),
+    day,
+    stopIds: trip.s.map((si) => state.data.stops[si].id),
+  });
+  if (!m) return null;
+  return { delays: m.delays, delay: m.delays.find((d) => d != null), at: m.ts || feed.headerTs, vehicleId: m.vehicleId };
+}
+
+/** Partenze da una fermata con i ritardi del feed già applicati (logica pura in schedule.js). */
+const departures = (si, now, limit = 7) => departuresAt(state.data, state.index, si, now, state.rt.trips, limit);
+
+/** Scarica i ritardi quando la schermata li può mostrare e ridisegna se sono cambiati. */
+function ensureRt() {
+  const path = current?.path ?? '/';
+  const wanted = path === '/' || /^\/(vicino|stop|linea|bus|mappa)(\/|$)/.test(path);
+  if (!wanted || rtBusy || !navigator.onLine || Date.now() - state.rt.at < RT_TTL_MS) return;
+  rtBusy = true;
+  fetchTripUpdates()
+    .then((d) => {
+      const changed = JSON.stringify(d.trips) !== JSON.stringify(state.rt.trips);
+      state.rt = { at: Date.now(), headerTs: d.headerTs, trips: d.trips };
+      // niente ridisegno su mappa e «mezzo»: la mappa si muoverebbe e il mezzo ha il suo ciclo di aggiornamento
+      if (changed && current && !document.hidden && !/^\/(mappa|bus)/.test(current.path)) rerenderKeepScroll();
+    })
+    .catch(() => { /* il feed non risponde: restano gli orari programmati */ })
+    .finally(() => { rtBusy = false; });
+}
+
 function routesOfStop(si, size = 26, max = 3) {
   const set = state.stopRoutes.get(si);
   if (!set) return '';
@@ -175,7 +229,8 @@ function pageHead(title, { lead = '', back = null } = {}) {
 
 function departureRow(item) {
   const trip = state.data.trips[item.trip];
-  const approx = isApprox(trip, item.pos);
+  const late = item.delay != null && Math.abs(item.delay) >= 60;
+  const approx = !late && isApprox(trip, item.pos);
   const clock = (approx ? '≈ ' : '') + formatClock(item.secs);
   const soon = item.mins < 60;
   const first = soon ? (item.mins < 1 ? t('now') : `${item.mins} ${t('min')}`) : clock;
@@ -183,7 +238,7 @@ function departureRow(item) {
   return `<li class="dep">
   <a class="dep-link" href="#/linea/${esc(routeOfTrip(item.trip).id)}">
     ${tileSvg(routeOfTrip(item.trip), 40)}
-    <span class="dep-main"><span class="dep-head">${esc(headOf(trip))}</span></span>
+    <span class="dep-main"><span class="dep-head">${esc(headOf(trip))}</span>${late ? `<span class="dep-sub">${esc(delayText(item.delay))}</span>` : ''}</span>
     <span class="dep-when"${approx ? ` title="${esc(t('approxTitle'))}"` : ''}><span class="dep-first">${esc(first)}</span><span class="dep-second">${esc(second)}</span></span>
   </a>
 </li>`;
@@ -209,7 +264,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   const now = romeNow();
   const s = state.data.stops[si];
   const { name, dir, code } = stopTitle(si);
-  const { items, tomorrow } = nextDepartures(state.data, state.index, si, now, 7);
+  const { items, tomorrow } = departures(si, now, 7);
   const fav = isFav(s.id);
   const first = items[0];
 
@@ -217,10 +272,11 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   if (first) {
     const w = whenParts(first);
     const trip = state.data.trips[first.trip];
+    const late = first.delay != null && Math.abs(first.delay) >= 60 ? first.delay : null;
     nextBlock = `<div class="next">
   <div class="next-line">${tileSvg(routeOfTrip(first.trip), 72)}<p class="next-head">${esc(headOf(trip))}</p></div>
   <p class="next-when${first.mins <= 2 ? ' soon' : ''}" aria-live="polite"><span class="num">${esc(w.num)}</span>${w.unit ? `<span class="unit">${esc(w.unit)}</span>` : ''}</p>
-  <p class="next-sub">${icon('clock', 16)}<span>${esc(t('scheduled'))} · ${esc(w.sub || formatClock(first.secs))}${isApprox(trip, first.pos) ? ` · ${esc(t('approxShort'))}` : ''}</span></p>
+  <p class="next-sub">${icon('clock', 16)}<span>${late != null ? `${esc(t('rtEstimated'))} · ${esc(w.sub || formatClock(first.secs))} · ${esc(delayText(late))}` : `${esc(t('scheduled'))} · ${esc(w.sub || formatClock(first.secs))}${isApprox(trip, first.pos) ? ` · ${esc(t('approxShort'))}` : ''}`}</span></p>
 </div>`;
   } else {
     nextBlock = `<div class="next next-empty">
@@ -237,7 +293,7 @@ function stopScreen(si, { home = false, origin = null } = {}) {
   const here = [...(state.stopRoutes.get(si) ?? [])].sort((a, b) => key(a).localeCompare(key(b), 'it', { numeric: true }));
   // per ogni linea che passa qui: il prossimo passaggio di oggi, così la lista dice anche "quando", non solo "quali"
   const nextByRoute = new Map();
-  for (const it of nextDepartures(state.data, state.index, si, now, 80).items) { const r = state.data.trips[it.trip].r; if (!nextByRoute.has(r)) nextByRoute.set(r, it); }
+  for (const it of departures(si, now, 80).items) { const r = state.data.trips[it.trip].r; if (!nextByRoute.has(r)) nextByRoute.set(r, it); }
   const hereSub = (r) => { const it = nextByRoute.get(r); return it ? `${t('nextPass')} ${formatClock(it.secs)} · ${relText(it)}` : t('noMoreLine'); };
   const hereHtml = here.length ? `<section class="block"><h2>${esc(t('linesHere'))}</h2><ul class="plain">${here.map((r) => `<li><a class="row" href="#/linea/${esc(state.data.routes[r].id)}/fermata/${esc(state.data.stops[si].id)}">
   ${tileSvg(state.data.routes[r], 44)}
@@ -606,12 +662,22 @@ function viewLine(rid, tripSel) {
     // metri a piedi dalla rete pedonale; per le fermate che non ci arrivano (periferia) la distanza in linea d'aria, segnata come tale
     const dists = state.loc && !state.loc.moving && !state.loc.far && sel ? sel.tr.s.map((si) => { const o = state.data.stops[si]; const crow = distanceM(state.loc.lat, state.loc.lon, o.lat, o.lon); const w = wd(si, crow); return Number.isFinite(w) ? { m: w, air: false } : { m: crow, air: true }; }) : null;
     const nearK = dists ? dists.reduce((b, d, k) => (d.m < dists[b].m ? k : b), 0) : -1;
+    // ritardo del feed per la corsa scelta: fermate con orario stimato e targhetta con l'aggiornamento
+    const rt = isToday && sel ? rtFor(sel.tr, day) : null;
     const stopsHtml = sel ? sel.tr.s.map((si, k) => {
       const { name } = stopTitle(si);
-      const past = isToday && todays.length && sel.tr.t[k] < now.secs && sel.tr.t[0] <= now.secs;
+      const dly = rt?.delays[k] ?? null;
+      // con il ritardo del feed la fermata è passata solo se è passata l'ora prevista, non quella programmata
+      const at = dly != null ? sel.tr.t[k] + dly : sel.tr.t[k];
+      const past = isToday && todays.length && at < now.secs && sel.tr.t[0] <= now.secs;
       const here = si === focus;
-      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span>${dists ? walkBadge(dists[k].m, { exact: isExactWalk(state.walkMap, si), air: dists[k].air, strong: k === nearK, near: k === nearK }) : ''}<span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span></a></li>`;
+      const late = dly != null && Math.abs(dly) >= 60 && !past;
+      const timeHtml = late
+        ? `<span class="st-time st-rt" title="${esc(t('rtStopTitle', delayMin(dly)))}"><span class="st-exp">${esc(formatClock(sel.tr.t[k] + dly))}</span><span class="st-sched">${esc(formatClock(sel.tr.t[k]))}</span></span>`
+        : `<span class="st-time">${isApprox(sel.tr, k) ? '≈ ' : ''}${formatClock(sel.tr.t[k])}</span>`;
+      return `<li class="${k === 0 ? 'first' : ''}${k === sel.tr.s.length - 1 ? ' last' : ''}${past ? ' past' : ''}${here ? ' here' : ''}"><a href="#/stop/${esc(state.data.stops[si].id)}"${here ? ' aria-current="location"' : ''}><span class="st-name">${esc(name)}</span>${dists ? walkBadge(dists[k].m, { exact: isExactWalk(state.walkMap, si), air: dists[k].air, strong: k === nearK, near: k === nearK }) : ''}${timeHtml}</a></li>`;
     }).join('') : '';
+    const rtHtml = rt && rt.delay != null ? `<div class="rt-line"><span class="rt-pill${delayMin(rt.delay) === 0 ? ' ok' : ''}">${icon('clock', 15)}<span>${esc(delayText(rt.delay))}</span></span>${rt.at ? `<span class="rt-note">${esc(t('rtUpdated', feedClock(rt.at)))}</span>` : ''}</div>` : '';
     const dayPool = todays.filter((x) => x.tr.d === d).sort((a, b) => a.tr.t[0] - b.tr.t[0]);
     const starts = dayPool.map((x) => x.tr.t[0]);
     const first = starts[0], last = starts[starts.length - 1];
@@ -619,7 +685,7 @@ function viewLine(rid, tripSel) {
     return `<section class="gd-page" role="tabpanel" data-d="${d}" data-i="${sel?.i ?? ''}">
 <section class="block line-stats">${stats}</section>
 <section class="block"><h2>${esc(t(isToday ? 'departuresToday' : 'departuresDay'))}${pool[0] ? ` · ${esc(t('firstStopOf', stopTitle(pool[0].tr.s[0]).name))}` : ''}</h2>
-<ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul></section>
+<ul class="chips" role="listbox" aria-label="${esc(t('departuresToday'))}">${pool.map((x) => `<li><button role="option" aria-selected="${sel && x.i === sel.i}" data-act="trip" data-r="${esc(rid)}" data-i="${x.i}">${formatClock(x.tr.t[0])}</button></li>`).join('')}</ul>${rtHtml}</section>
 <section class="block"><div class="near-head"><h2>${esc(t('stops'))}</h2>${state.loc?.far ? `<span class="muted far-note">${esc(t('farNote'))}</span>` : state.loc ? '' : `<button class="btn btn-ghost" data-act="geo">${icon('locate', 18)}<span>${esc(t('showDistances'))}</span></button>`}</div><ol class="route-stops">${stopsHtml}</ol></section></section>`;
   };
 
@@ -686,6 +752,7 @@ async function bindBus(rid, vid) {
     if (!evals.length) { $info.innerHTML = `<p><strong>${esc(t('busNum'))} ${esc(v.id)}</strong></p><p>${esc(t('busLost'))}</p>`; return; }
     const { ri, tr, pl } = evals[0];
     const route = state.data.routes[ri];
+    const rt = rtFor(tr, now.ymd);
     $head.innerHTML = `${tileSvg(route, 60)}<h1>${esc(route.long)}</h1>`;
     const name = (k) => stopTitle(tr.s[k]).name;
     const where = pl.at ? t('busAtStop', name(pl.k)) : pl.k < 0 ? t('busBefore') : pl.k >= tr.s.length - 1 ? t('busAfter') : t('busBetween', name(pl.k), name(pl.k + 1));
@@ -697,10 +764,15 @@ async function bindBus(rid, vid) {
     $info.innerHTML = `<p class="bus-where">${icon('pin', 22)}<span>${esc(where)}</span></p>
 <p>${esc(t('busToward', headOf(tr)))}</p>
 <p class="bus-meta">${esc(t('busNum'))} ${esc(v.id)}${v.plate ? ` · ${esc(t('busPlate'))} ${esc(v.plate)}` : ''} · ${esc(t('busUpdated', hh))}</p>
-${guess}<p class="bus-meta">${esc(t('busSchedNote'))}</p>`;
+${guess}${rt && rt.delay != null ? `<p class="bus-meta bus-delay">${esc(delayText(rt.delay))}${rt.at ? ` · ${esc(t('rtUpdated', feedClock(rt.at)))}` : ''}</p>` : `<p class="bus-meta">${esc(t('busSchedNote'))}</p>`}`;
     $stops.innerHTML = tr.s.map((si, k) => {
       const cls = [k === 0 ? 'first' : '', k === tr.s.length - 1 ? 'last' : '', k < pl.k || (k === pl.k && !pl.at) ? 'past' : '', pl.at && k === pl.k ? 'here' : ''].filter(Boolean).join(' ');
-      const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span><span class="st-time">${isApprox(tr, k) ? '≈ ' : ''}${formatClock(tr.t[k])}</span></a></li>`;
+      const dly = rt?.delays[k];
+      const late = dly != null && Math.abs(dly) >= 60 && !(k < pl.k || (k === pl.k && !pl.at));
+      const timeHtml = late
+        ? `<span class="st-time st-rt" title="${esc(t('rtStopTitle', delayMin(dly)))}"><span class="st-exp">${esc(formatClock(tr.t[k] + dly))}</span><span class="st-sched">${esc(formatClock(tr.t[k]))}</span></span>`
+        : `<span class="st-time">${isApprox(tr, k) ? '≈ ' : ''}${formatClock(tr.t[k])}</span>`;
+      const row = `<li class="${cls}"${pl.at && k === pl.k ? ' aria-current="location"' : ''}><a href="#/stop/${esc(state.data.stops[si].id)}"><span class="st-name">${esc(stopTitle(si).name)}</span>${timeHtml}</a></li>`;
       return !pl.at && k === pl.k && k < tr.s.length - 1 ? `${row}<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>` : row;
     }).join('');
     if (pl.k < 0) $stops.insertAdjacentHTML('afterbegin', `<li class="bus-between" aria-label="${esc(t('busHere'))}"><span>${icon('route', 18)} ${esc(t('busHere'))}</span></li>`);
@@ -734,7 +806,8 @@ function mapLinesRow(rid) {
 function stopSheetHtml(si) {
   const s = state.data.stops[si];
   const { name, dir } = stopTitle(si);
-  const { items, tomorrow } = nextDepartures(state.data, state.index, si, romeNow(), 1);
+  const now = romeNow();
+  const { items, tomorrow } = departures(si, now, 1);
   const it = items[0];
   let when;
   if (it) when = `${tileSvg(routeOfTrip(it.trip), 30)}<span>${esc(t('nextPass'))} <b>${esc(formatClock(it.secs))}</b> · ${esc(relText(it))}</span>`;
@@ -1290,18 +1363,25 @@ function bindPager(cur, onChange) {
     onChange(i);
   };
   const go = (i) => pages.scrollTo({ left: i * pages.clientWidth, behavior: smooth() });
+  // La linguetta sceglie subito: se un ridisegno sostituisce le pagine mentre lo scorrimento anima,
+  // lo scroll non arriva mai e la direzione tornerebbe indietro. Con mark() la scelta è già registrata.
+  const pick = (i) => { mark(i); go(i); };
   tabs.forEach((b, i) => {
-    b.addEventListener('click', () => go(i));
+    b.addEventListener('click', () => pick(i));
     b.addEventListener('keydown', (e) => {
       const n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
       if (n < 0 || n >= tabs.length) return;
-      e.preventDefault(); tabs[n].focus(); go(n);
+      e.preventDefault(); tabs[n].focus(); pick(n);
     });
   });
   let tm;
   pages.addEventListener('scroll', () => {
     clearTimeout(tm);
-    tm = setTimeout(() => { const i = Math.round(pages.scrollLeft / pages.clientWidth); if (i !== i0) mark(i); }, 60);
+    tm = setTimeout(() => {
+      if (!pages.clientWidth) return;
+      const i = Math.round(pages.scrollLeft / pages.clientWidth);
+      if (Number.isInteger(i) && i !== i0 && i >= 0 && i < pages.children.length) mark(i);
+    }, 60);
   }, { passive: true });
   fit(); ro.observe(pages.children[i0]);
   pages.scrollLeft = i0 * pages.clientWidth;
@@ -1408,6 +1488,7 @@ let current = null;
 function render(nav = false) {
   if (!state.data) return;
   autoLocate();
+  ensureRt();
   const path = location.hash.replace(/^#/, '') || '/';
   if (state.cleanup) { state.cleanup(); state.cleanup = null; }
   for (const [re, view, tab, bind] of routes) {
@@ -1447,6 +1528,7 @@ window.addEventListener('hashchange', () => {
 
 // Aggiorna i minuti mentre l'app è aperta (non sulla mappa, né mentre si digita).
 setInterval(() => {
+  ensureRt();
   if (document.hidden || !current || current.tab === 'map' || document.activeElement?.id === 'q') return;
   if (/^\/(vicino|stop|linea)/.test(current.path)) rerenderKeepScroll();
 }, 20000);
