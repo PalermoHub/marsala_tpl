@@ -729,3 +729,13 @@ html.embed::-webkit-scrollbar, html.embed body::-webkit-scrollbar { display: non
 .ol-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
 .ol-head .ol-svc { grid-column: auto; grid-row: auto; padding: 1px 8px; }
 .ol li:has(.ol-head) { grid-template-columns: auto 1fr; }
+
+/* ---------- invito a installare ---------- */
+.install { position: fixed; inset-inline: 12px; bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom) + 10px + var(--consent-h, 0px)); max-width: var(--col); margin-inline: auto; padding: 14px 16px; border-radius: var(--r-lg); background: var(--ink); color: var(--glaze); box-shadow: var(--shadow-modal); z-index: 8; animation: install-in 0.35s var(--ease); }
+.install p { margin: 0 0 12px; font-size: 15px; line-height: 1.4; }
+.install-btns { display: flex; justify-content: flex-end; gap: 10px; }
+.install-btns .btn { min-height: 44px; padding: 0 20px; font-weight: 700; }
+.install-yes { background: var(--ocra); color: var(--on-ocra); }
+.install-no { background: transparent; color: inherit; border: 2px solid currentColor; }
+@keyframes install-in { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .install { animation: none; } }

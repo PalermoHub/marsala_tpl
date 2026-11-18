@@ -15,6 +15,7 @@ import { t, setLang, getLang, detectLang } from './i18n.js';
 import * as store from './store.js';
 import { listRoutes, saveRoute, removeRoute, isSaved, ymdFromInput, ymdToInput, parsePlanHash, buildPlanHash } from './plans.js';
 import { getConsent, setConsent, applyConsent } from './consent.js';
+import { initInstall, rerenderInstall } from './install.js';
 
 const $app = document.getElementById('app');
 const $nav = document.getElementById('tabs');
@@ -1635,7 +1636,7 @@ $app.addEventListener('click', async (e) => {
     p.hidden = !p.hidden;
     document.getElementById('legend-btn').setAttribute('aria-expanded', String(!p.hidden));
   }
-  else if (act === 'lang') { store.set('lang', b.dataset.v); setLang(b.dataset.v); renderChrome(); renderConsent(); rerenderKeepScroll(); }
+  else if (act === 'lang') { store.set('lang', b.dataset.v); setLang(b.dataset.v); renderChrome(); renderConsent(); rerenderInstall(); rerenderKeepScroll(); }
   else if (act === 'consent') { setConsent(b.dataset.v === 'granted'); renderConsent(); rerenderKeepScroll(); toast(t('consentSaved')); }
   else if (act === 'theme') { store.set('theme', b.dataset.v); applyTheme(); rerenderKeepScroll(); }
 });
@@ -1750,6 +1751,7 @@ async function boot() {
   renderChrome();
   applyConsent();
   renderConsent();
+  initInstall();
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
   window.addEventListener('online', rerenderKeepScroll);
   window.addEventListener('offline', rerenderKeepScroll);
