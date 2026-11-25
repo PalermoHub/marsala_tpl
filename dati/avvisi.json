@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-24T23:52:33.370Z",
+ "updated": "2026-11-25T08:25:19.581Z",
  "items": [
   {
    "title": "“Giornata internazionale delle Persone con disabilità”",
@@ -7,6 +7,22 @@
    "date": "2026-11-24T17:43:21Z",
    "summary": "L'Amministrazione comunale di Marsala promuove l'iniziativa \"La Città è di tutti, ...",
    "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/3-disabilita.jpeg",
+   "transport": false
+  },
+  {
+   "title": "3 milioni e mezzo di euro per la De Gasperi",
+   "link": "https://www.comune.marsala.tp.it/it/news/3-milioni-e-mezzo-di-euro-per-la-de-gasperi",
+   "date": "2026-11-24T16:50:32Z",
+   "summary": "3 milioni e mezzo di euro dal Ministero dell'Istruzione per ripristinare la scuola Alcide De Gasperi di Marsala. La sindaca Patti: “Attendiamo a...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/scuola.jpeg",
+   "transport": false
+  },
+  {
+   "title": "Gran Tour della Biodiversità in West Sicily",
+   "link": "https://www.comune.marsala.tp.it/it/news/gran-tour-della-biodiversita-in-west-sicily",
+   "date": "2026-11-24T09:45:17Z",
+   "summary": "Giovedì la presentazione a Marsala Sarà presentato a Marsala giovedì prossimo - 26 novembre - nell'hub tu...",
+   "img": "https://marsala-api.cloud.municipiumapp.it/s3/640x480/s3/3885/media/monumento-ai-mille-jpg.webp",
    "transport": false
   },
   {
